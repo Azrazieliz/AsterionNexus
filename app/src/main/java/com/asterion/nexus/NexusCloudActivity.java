@@ -281,7 +281,7 @@ public final class NexusCloudActivity extends Activity {
         LinearLayout v=new LinearLayout(this);v.setOrientation(LinearLayout.VERTICAL);
         v.setPadding(dp(17),dp(17),dp(17),dp(15));
         v.setBackground(box(PANEL));v.setClickable(true);v.setFocusable(true);
-        v.setMinHeight(dp(70));v.setContentDescription("Open "+title);
+        v.setMinimumHeight(dp(70));v.setContentDescription("Open "+title);
         v.addView(label(title,16,WHITE,true));v.addView(label(detail,12,SECONDARY,false),spacing(7));
         return v;
     }
