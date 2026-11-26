@@ -83,7 +83,7 @@ public final class NexusBookIndex {
     Pending nextPending(){
         DB helper=new DB(app);
         try(Cursor c=helper.getReadableDatabase().rawQuery(
-            "SELECT sha,mime,title,next_chapter FROM books WHERE state IN ('queued','running','failed') ORDER BY updated ASC LIMIT 1",null)){
+            "SELECT sha,mime,title,next_chapter FROM books WHERE state IN ('queued','running') ORDER BY updated ASC LIMIT 1",null)){
             return c.moveToFirst()?new Pending(c.getString(0),c.getString(1),c.getString(2),c.getInt(3)):null;
         }finally{helper.close();}
     }
@@ -91,9 +91,9 @@ public final class NexusBookIndex {
         Pending pending=nextPending();
         if(pending==null)return false;
         NexusRegistry.Item source=new NexusRegistry(app).find(pending.sha);
-        if(source==null){mark(pending.sha,"failed","Original registry item is unavailable",pending.next,-1);return hasQueued();}
+        if(source==null){mark(pending.sha,"failed","Original registry item is unavailable",-1,-1);return hasQueued();}
         if(!supported(source.mime)){
-            mark(pending.sha,"unsupported","No verified local-text reader",pending.next,-1);
+            mark(pending.sha,"unsupported","No verified local-text reader",-1,-1);
             return hasQueued();
         }
         mark(pending.sha,"running","",pending.next,-1);
@@ -102,9 +102,9 @@ public final class NexusBookIndex {
             else indexDocx(pending,stop);
         }catch(Exception error){
             if(stop.get()||Thread.currentThread().isInterrupted()){
-                mark(pending.sha,"queued","Interrupted safely; will resume",pending.next,-1);
+                mark(pending.sha,"queued","Interrupted safely; will resume",-1,-1);
             }else{
-                mark(pending.sha,"failed",error.getClass().getSimpleName(),pending.next,-1);
+                mark(pending.sha,"failed",error.getClass().getSimpleName(),-1,-1);
             }
         }
         return hasQueued();
@@ -188,8 +188,10 @@ public final class NexusBookIndex {
         DB helper=new DB(app);
         try{
             SQLiteDatabase db=helper.getWritableDatabase();
-            db.execSQL("UPDATE books SET state=?,error=?,next_chapter=?,updated=? WHERE sha=?",
+            if(chapter>=0)db.execSQL("UPDATE books SET state=?,error=?,next_chapter=?,updated=? WHERE sha=?",
                 new Object[]{state,error,chapter,System.currentTimeMillis(),sha});
+            else db.execSQL("UPDATE books SET state=?,error=?,updated=? WHERE sha=?",
+                new Object[]{state,error,System.currentTimeMillis(),sha});
             if(total>=0)db.execSQL("UPDATE books SET chapter_count=? WHERE sha=?",
                 new Object[]{total,sha});
         }finally{helper.close();}
