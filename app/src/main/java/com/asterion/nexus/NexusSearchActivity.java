@@ -159,9 +159,9 @@ public final class NexusSearchActivity extends Activity {
         worker.submit(()->{
             try{
                 StandaloneRuntime.INSTANCE.initialize(getApplicationContext());
-                List<Map<String,Object>> records=StandaloneRuntime.INSTANCE.searchByFilename(query,1,100);
+                var records=StandaloneRuntime.INSTANCE.searchByFilename(query,1,100);
                 ArrayList<Result> found=new ArrayList<>();
-                for(Map<String,Object> item:records){
+                for(var item:records){
                     String original=String.valueOf(item.getOrDefault("uri",
                         item.getOrDefault("image_uri","")));
                     if(!original.startsWith("content://"))continue;
