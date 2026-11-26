@@ -555,6 +555,51 @@ private fun NexusUnifiedOrganize(){
     var rows by remember{mutableStateOf<List<String>>(emptyList())}
     var tag by remember{mutableStateOf("")}
     var family by remember{mutableStateOf("")}
+    val importPicker=rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()){uri->
+        if(uri!=null)scope.launch{
+            status="Importing selected Fusion JSON"
+            runCatching{withContext(Dispatchers.IO){
+                val buffer=java.io.ByteArrayOutputStream()
+                ctx.contentResolver.openInputStream(uri)?.use{input->
+                    val block=ByteArray(32768)
+                    while(true){
+                        val n=input.read(block)
+                        if(n<0)break
+                        if(buffer.size()+n>32*1024*1024)
+                            throw java.io.IOException("Fusion import exceeds 32 MiB")
+                        buffer.write(block,0,n)
+                    }
+                }?:throw java.io.IOException("Input is not readable")
+                val db=LocalDatabase(ctx)
+                try{
+                    FusionDatabaseRepository(db)
+                        .importJson(buffer.toString("UTF-8"),false).toMap().toString()
+                }finally{db.close()}
+            }}.onSuccess{status=it}.onFailure{
+                status="Fusion import failed: "+it.message.orEmpty().take(140)
+            }
+        }
+    }
+    val exportPicker=rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")){uri->
+        if(uri!=null)scope.launch{
+            status="Exporting Fusion records"
+            runCatching{withContext(Dispatchers.IO){
+                val db=LocalDatabase(ctx)
+                val json=try{FusionDatabaseRepository(db).exportJson(true)}
+                    finally{db.close()}
+                if(json.length>96*1024*1024)
+                    throw java.io.IOException("Export exceeds safe in-memory JSON size")
+                ctx.contentResolver.openOutputStream(uri,"wt")?.use{
+                    it.write(json.toByteArray(Charsets.UTF_8));it.flush()
+                }?:throw java.io.IOException("Export target unavailable")
+                "Fusion JSON exported to selected destination"
+            }}.onSuccess{status=it}.onFailure{
+                status="Fusion export failed: "+it.message.orEmpty().take(140)
+            }
+        }
+    }
     fun run(label:String,task:()->List<String>){
         scope.launch{
             status=label
@@ -579,23 +624,33 @@ private fun NexusUnifiedOrganize(){
                 StandaloneRuntime.initialize(ctx)
                 StandaloneRuntime.getReviewQueue().take(120).map{it.toString().take(300)}
             })
+            "Scanning"->run("Reading scan status",{
+                StandaloneRuntime.initialize(ctx)
+                StandaloneRuntime.scanStatus().map{it.key+": "+it.value}
+            })
         }
     }
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
         UnifiedHeading("Organize","Shared Fusion knowledge, tags and Core review queue")
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            listOf("Fusion","Tags","Reviews").forEach{label->
+            listOf("Fusion","Tags","Reviews","Scanning").forEach{label->
                 FilterChip(selected=page==label,onClick={page=label},
                     label={Text(label,fontSize=12.sp)})
             }
         }
-        if(page=="Fusion")UnifiedButton("Validate Fusion"){
-            run("Validating",{
-                val db=LocalDatabase(ctx)
-                try{listOf(FusionDatabaseRepository(db).validateDatabase(false)
-                    .toMap().toString().take(2500))}
-                finally{db.close()}
-            })
+        if(page=="Fusion"){
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                UnifiedButton("Validate"){
+                    run("Validating Fusion",{
+                        val db=LocalDatabase(ctx)
+                        try{listOf(FusionDatabaseRepository(db).validateDatabase(false)
+                            .toMap().toString().take(2500))}
+                        finally{db.close()}
+                    })
+                }
+                UnifiedButton("Import JSON"){importPicker.launch(arrayOf("application/json"))}
+                UnifiedButton("Export JSON"){exportPicker.launch("nexus-fusion.json")}
+            }
         }
         if(page=="Tags"){
             UnifiedField(tag,{tag=it},"Canonical tag")
@@ -607,6 +662,40 @@ private fun NexusUnifiedOrganize(){
                     StandaloneRuntime.getTags().take(250)
                 })
                 tag=""
+            }
+        }
+        if(page=="Scanning"){
+            UnifiedButton("Scan authorized source"){
+                val options=NexusSourceRegistry(ctx).roots()
+                if(options.isEmpty())status="Connect a source folder in Cloud first"
+                else android.app.AlertDialog.Builder(ctx)
+                    .setTitle("Choose granted image source")
+                    .setItems(options.map{it.lastPathSegment}.toTypedArray()){_,index->
+                        val source=options[index].toString()
+                        run("Starting Core scan",{
+                            StandaloneRuntime.initialize(ctx)
+                            listOf(StandaloneRuntime.startScan(source).toString())
+                        })
+                    }.show()
+            }
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                UnifiedButton("Pause"){
+                    run("Pausing scan",{listOf(StandaloneRuntime.pauseScan().toString())})
+                }
+                UnifiedButton("Resume"){
+                    run("Resuming scan",{listOf(StandaloneRuntime.resumeScan().toString())})
+                }
+                UnifiedButton("Stop"){
+                    android.app.AlertDialog.Builder(ctx)
+                        .setTitle("Cancel active scan?")
+                        .setMessage("Stop indexing without deleting original files.")
+                        .setNegativeButton("Keep scanning",null)
+                        .setPositiveButton("Stop scan"){_,_->
+                            run("Cancelling scan",{
+                                listOf(StandaloneRuntime.cancelScan().toString())
+                            })
+                        }.show()
+                }
             }
         }
         Text(status,color=C_MUTED,fontSize=12.sp,
