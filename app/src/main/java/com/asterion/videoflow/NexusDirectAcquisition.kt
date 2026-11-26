@@ -9,7 +9,11 @@ import java.util.UUID
 /** Actual native Downloader original -> verified bytes -> persistent Nexus registry. */
 object NexusDirectAcquisition {
     @JvmStatic
-    fun acquire(context: Context, url: String): NexusRegistry.Item {
+    fun acquire(context: Context, url: String): NexusRegistry.Item =
+        acquire(context,url,null)
+
+    @JvmStatic
+    fun acquire(context: Context, url: String, referer: String?): NexusRegistry.Item {
         val uri = URI(url)
         require(uri.scheme.equals("https", true) && uri.host != null && uri.userInfo == null) {
             "A selected HTTPS media original is required"
@@ -23,7 +27,7 @@ object NexusDirectAcquisition {
         registry.job(url, "QUEUED", 0L, null)
         try {
             registry.job(url, "RECEIVING", 0L, null)
-            val media = NativeMediaDownloader.download(url, null, privateStage,
+            val media = NativeMediaDownloader.download(url, referer, privateStage,
                 filenameStem = "selected-original")
             val receipt = File(privateStage, media.name + ".receipt")
             check(NativeMediaReceipt.matches(media, receipt)) {

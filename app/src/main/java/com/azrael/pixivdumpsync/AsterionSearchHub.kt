@@ -187,6 +187,32 @@ object AsterionSearchHub {
         }
         return Reply(unique,errors,checked+peerCompleted)
     }
+    /** Nexus read-only discovery API: real existing provider search, no substitute results.
+     * A public network search must be explicitly initiated by the owner.
+     * Hits represent candidates; receipt verification happens only after transfer.
+     */
+    @JvmStatic
+    fun searchForNexus(a:Activity,term:String,mode:Int,page:Int=0):JSONObject {
+        val requested=term.trim()
+        require(requested.length in 2..180) { "Search query must contain 2–180 characters" }
+        require(mode in 0..4 && page in 0..1000) { "Unsupported source search mode/page" }
+        val answer=search(a,requested,mode,page)
+        val rows=JSONArray()
+        for(hit in answer.results.take(120)){
+            rows.put(JSONObject().put("title",hit.title)
+                .put("url",hit.url).put("source",hit.source)
+                .put("thumbnail",hit.thumbnail).put("filename",hit.filename)
+                .put("detail",hit.detail))
+        }
+        val errors=JSONArray()
+        for(error in answer.errors.take(20))errors.put(error.take(180))
+        return JSONObject().put("query",requested)
+            .put("mode",mode).put("page",page)
+            .put("items",rows).put("errors",errors)
+            .put("searched",answer.searched)
+            .put("provenance","public_provider_index")
+    }
+
     fun render(a:Activity,p:LinearLayout,refresh:()->Unit,
                addSource:()->Unit={}){
         p.addView(ui.text(a,"Search",23f,ui.white,true),ui.lp(a,14))
