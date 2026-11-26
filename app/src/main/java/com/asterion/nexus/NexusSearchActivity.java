@@ -120,7 +120,6 @@ public final class NexusSearchActivity extends Activity {
                 });
             }
         });
-    }
         authorizedIndex=new FgSearchIndex(this,new FgSearchIndex.Listener(){
             @Override public void onResult(String response){
                 runOnUiThread(()->receiveSaf(response));
@@ -136,6 +135,7 @@ public final class NexusSearchActivity extends Activity {
                 });
             }
         });
+    }
     private void execute(){
         String query=term.getText().toString().trim();
         if(query.length()<2||query.length()>180){status.setText("Enter 2–180 characters");return;}
