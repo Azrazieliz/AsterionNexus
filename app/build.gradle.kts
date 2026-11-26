@@ -27,7 +27,7 @@ val hasStablePreviewKey = listOf(
 
 android {
     namespace = "com.azrael.pixivdumpsync"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "26.3.11579264"
     externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
     // Android Gradle Plugin instruments only debug by default.
