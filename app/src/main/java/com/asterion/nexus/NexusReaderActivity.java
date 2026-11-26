@@ -141,7 +141,8 @@ public final class NexusReaderActivity extends Activity {
             }
             if(count<=0)throw new IOException("No readable pages in this source");
             int saved=getPreferences(Context.MODE_PRIVATE).getInt(sourceKey,0);
-            final int initial=Math.max(0,Math.min(count-1,saved));
+            int requested=getIntent().getIntExtra("chapter",-1);
+            final int initial=Math.max(0,Math.min(count-1,requested>=0?requested:saved));
             runOnUiThread(()->display(initial));
         }catch(Exception e){
             runOnUiThread(()->position.setText("Reader failed: "+e.getClass().getSimpleName()+

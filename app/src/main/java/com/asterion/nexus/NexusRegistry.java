@@ -59,6 +59,15 @@ public final class NexusRegistry {
         String type=label(mime,"application/octet-stream").toLowerCase(Locale.ROOT);
         if(!type.matches("[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*"))
             type="application/octet-stream";
+        if(type.equals("application/octet-stream")){
+            String filename=label(displayName,"").toLowerCase(Locale.ROOT);
+            if(filename.endsWith(".epub"))type="application/epub+zip";
+            else if(filename.endsWith(".docx"))
+                type="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            else if(filename.endsWith(".cbz"))
+                type="application/vnd.comicbook+zip";
+            else if(filename.endsWith(".pdf"))type="application/pdf";
+        }
         NexusOriginalStore.VerifiedFile bytes=NexusOriginalStore.ingest(
                 input,privateRoot,expectedLength,expectedSha);
         long now=System.currentTimeMillis();
@@ -82,7 +91,12 @@ public final class NexusRegistry {
             }finally{db.endTransaction();}
             try(Cursor c=db.rawQuery("SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.sha256=? AND l.source_kind=? AND l.account_key=? AND l.origin_key=? LIMIT 1",new String[]{bytes.sha256,kind,account,origin})){
                 if(!c.moveToFirst())throw new IOException("Verified original not indexed");
-                return item(c);
+                Item verified=item(c);
+                // Index only supported original book text after byte verification.
+                // Search-index scheduling is best effort; never invalidate the saved original.
+                try{new NexusBookIndex(app).enqueue(verified);}
+                catch(RuntimeException ignored){}
+                return verified;
             }
         }finally{helper.close();}
     }

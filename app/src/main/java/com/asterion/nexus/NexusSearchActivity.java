@@ -45,9 +45,13 @@ public final class NexusSearchActivity extends Activity {
     private static final class Result {
         final String type,title,detail,source,id,mime;
         final long size;
+        final int chapter;
         Result(String type,String title,String detail,String source,String id,String mime,long size){
+            this(type,title,detail,source,id,mime,size,-1);
+        }
+        Result(String type,String title,String detail,String source,String id,String mime,long size,int chapter){
             this.type=type;this.title=title;this.detail=detail;this.source=source;
-            this.id=id;this.mime=mime;this.size=size;
+            this.id=id;this.mime=mime;this.size=size;this.chapter=chapter;
         }
     }
     private int dp(int x){return (int)(x*getResources().getDisplayMetrics().density+.5f);}
@@ -173,6 +177,21 @@ public final class NexusSearchActivity extends Activity {
             }catch(Exception e){runOnUiThread(()->accept(requestId,"Core",
                 Collections.emptyList(),e.getClass().getSimpleName()));}
         });
+        worker.submit(()->{
+            try{
+                List<NexusBookIndex.Hit> hits=new NexusBookIndex(this).search(query,100);
+                ArrayList<Result> found=new ArrayList<>();
+                for(NexusBookIndex.Hit hit:hits){
+                    NexusRegistry.Item source=new NexusRegistry(this).find(hit.sha256);
+                    if(source==null)continue;
+                    found.add(new Result("book",source.displayName,
+                        "Inside book · chapter "+(hit.chapter+1)+" · "+hit.excerpt,
+                        "Private text",hit.sha256,source.mime,source.length,hit.chapter));
+                }
+                runOnUiThread(()->accept(requestId,"Text",found,null));
+            }catch(Exception e){runOnUiThread(()->accept(requestId,"Text",
+                Collections.emptyList(),e.getClass().getSimpleName()));}
+        });
         if(cloud.configured()){
             index.ensure(false);
             index.search(query,"all",0,requestId);
@@ -257,6 +276,7 @@ public final class NexusSearchActivity extends Activity {
         groups.put(source,items);
         render();
         String state="Local "+groups.getOrDefault("Local",Collections.emptyList()).size()+
+            " · Text "+groups.getOrDefault("Text",Collections.emptyList()).size()+
             " · Core "+groups.getOrDefault("Core",Collections.emptyList()).size()+
             " · Folders "+groups.getOrDefault("Folders",Collections.emptyList()).size()+
             " · Cloud "+groups.getOrDefault("Cloud",Collections.emptyList()).size()+
@@ -265,7 +285,7 @@ public final class NexusSearchActivity extends Activity {
     }
     private void render(){
         results.removeAllViews();
-        for(String source:new String[]{"Local","Core","Folders","Cloud","Online"}){
+        for(String source:new String[]{"Local","Text","Core","Folders","Cloud","Online"}){
             if(!groups.containsKey(source))continue;
             List<Result> items=groups.get(source);
             results.addView(text(source+" · "+items.size(),18,true),spaced(18));
@@ -283,6 +303,13 @@ public final class NexusSearchActivity extends Activity {
     }
     private void open(Result r){
         try{
+            if("book".equals(r.type)){
+                Intent reader=new Intent(this,NexusReaderActivity.class);
+                reader.setDataAndType(NexusLibraryProvider.uriFor(this,r.id),r.mime);
+                reader.putExtra("title",r.title);
+                reader.putExtra("chapter",r.chapter);
+                startActivity(reader);return;
+            }
             if("core".equals(r.type)){
                 NexusFileOpen.open(this,Uri.parse(r.id),"image/*",r.title);
                 return;
