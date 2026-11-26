@@ -290,7 +290,9 @@ private fun NexusHome(
                     modifier=Modifier.padding(top=6.dp).semantics{
                         contentDescription=status
                     })
+                }
             }
+            if(section=="Library"){
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()){
                 val columns=when{
                     maxWidth>=900.dp->5
@@ -333,8 +335,10 @@ private fun NexusHome(
                 }
             }
             } else {
-                NexusWorkspace(section=section,onOpen=onWorkspaceOpen,
-                    onLibraryRefresh=onLibraryRefresh)
+                Box(Modifier.weight(1f).fillMaxWidth()){
+                    NexusWorkspace(section=section,onOpen=onWorkspaceOpen,
+                        onLibraryRefresh=onLibraryRefresh)
+                }
             }
             if(!landscape)NavigationBar(containerColor=PaneColor){
                 sections.forEachIndexed{index,name->

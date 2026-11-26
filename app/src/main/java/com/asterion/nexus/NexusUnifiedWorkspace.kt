@@ -350,7 +350,7 @@ private fun NexusUnifiedCloud(
                     val name=j.optString("name",loc)
                     val isFolder=j.optBoolean("folder",j.optInt("isdir")!=0)
                     found.add(NexusUnifiedEntry(name,
-                        if(isFolder)"Folder" else j.optLong("size",0)/1024+" KiB",
+                        if(isFolder)"Folder" else (j.optLong("size",0)/1024).toString()+" KiB",
                         "Cloud",mime=FgTeraboxClient.mime(name),
                         path=loc,size=j.optLong("size",-1),folder=isFolder))
                 }
