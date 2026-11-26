@@ -242,7 +242,7 @@ private fun NexusHome(
 ){
     val configuration=androidx.compose.ui.platform.LocalConfiguration.current
     val landscape=configuration.screenWidthDp>=720
-    val sections=listOf("Library","Search","Cloud","Organize","Intelligence")
+    val sections=listOf("Library","Search","Transfers","Cloud","Organize","Intelligence")
     Row(Modifier.fillMaxSize().background(CanvasColor).systemBarsPadding()){
         if(landscape)NavigationRail(containerColor=CanvasColor){
             Spacer(Modifier.height(20.dp))
@@ -378,6 +378,7 @@ private fun NexusHome(
 private fun navGlyph(name:String)=when(name){
     "Library"->"▦"
     "Search"->"⌕"
+    "Transfers"->"⇵"
     "Cloud"->"◫"
     "Organize"->"▤"
     else->"◇"

@@ -28,13 +28,13 @@ def check():
     assert len(application.findall("activity"))>1, "Native readers/workers must stay registered"
     shell=(APP/"java/com/asterion/nexus/NexusPremiumHomeActivity.kt").read_text()
     workspace=(APP/"java/com/asterion/nexus/NexusUnifiedWorkspace.kt").read_text()
-    expected=['"Library"','"Search"','"Cloud"','"Organize"','"Intelligence"']
+    expected=['"Library"','"Search"','"Transfers"','"Cloud"','"Organize"','"Intelligence"']
     assert all(x in shell for x in expected), "Missing integrated navigation"
     assert 'NexusWorkspace(section=section' in shell, "Section routing must stay in the same Activity"
     assert "startActivity(Intent(this,NexusSearchActivity::class.java))" not in shell
     assert "startActivity(Intent(this,NexusCloudActivity::class.java))" not in shell
     assert "startActivity(Intent(this,NexusCoreActivity::class.java))" not in shell
-    for route in ["NexusUnifiedSearch(", "NexusUnifiedCloud(", "NexusUnifiedOrganize(", "NexusUnifiedIntelligence("]:
+    for route in ["NexusUnifiedSearch(", "NexusUnifiedTransfers(", "NexusUnifiedCloud(", "NexusUnifiedOrganize(", "NexusUnifiedIntelligence("]:
         assert route in workspace, "Missing unified view "+route
     gradle=(ROOT/"app/build.gradle.kts").read_text()
     assert 'applicationId = "com.asterion.nexus"' in gradle

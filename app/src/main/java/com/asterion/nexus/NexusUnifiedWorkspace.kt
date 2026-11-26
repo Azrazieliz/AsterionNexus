@@ -31,6 +31,8 @@ import com.ailm.android.runtime.StandaloneRuntime
 import com.ailm.android.runtime.LocalDatabase
 import com.ailm.android.runtime.FusionDatabaseRepository
 import com.azrael.pixivdumpsync.AsterionSearchHub
+import com.azrael.pixivdumpsync.UnifiedDownloadsUi
+import kotlinx.coroutines.delay
 import com.asterion.videoflow.NexusWebAcquisition
 import com.openlocal.office.core.FgSearchIndex
 import com.openlocal.office.core.FgTeraboxClient
@@ -110,6 +112,7 @@ fun NexusWorkspace(
 ){
     when(section){
         "Search"->NexusUnifiedSearch(onOpen,onLibraryRefresh)
+        "Transfers"->NexusUnifiedTransfers(onOpen)
         "Cloud"->NexusUnifiedCloud(onOpen,onLibraryRefresh)
         "Organize"->NexusUnifiedOrganize()
         "Intelligence"->NexusUnifiedIntelligence()
@@ -306,6 +309,142 @@ private fun NexusUnifiedSearch(
                         Intent(Intent.ACTION_VIEW,Uri.parse(chosen.web)))}
                 }){Text("Visit source")}
             }
+        )
+    }
+}
+
+/** Unified transfer dashboard. All statuses/actions originate from the native
+ * Downloader queue aggregator, including videos, EPUB, torrents, X and cloud.
+ * No module opens a second app; saved original opens through Nexus routing.
+ */
+@Composable
+private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
+    val ctx=LocalContext.current as Activity
+    val scope=rememberCoroutineScope()
+    var entries by remember{mutableStateOf<List<UnifiedDownloadsUi.NexusQueueEntry>>(emptyList())}
+    var filter by remember{mutableStateOf("Unfinished")}
+    var status by remember{mutableStateOf("Reading saved transfer receipts")}
+    var refreshing by remember{mutableStateOf(false)}
+    var pendingRemove by remember{mutableStateOf<UnifiedDownloadsUi.NexusQueueEntry?>(null)}
+    fun refresh(){
+        scope.launch{
+            refreshing=true
+            runCatching{withContext(Dispatchers.IO){
+                UnifiedDownloadsUi.snapshotForNexus(ctx)
+            }}.onSuccess{
+                entries=it
+                status=it.size.toString()+" native transfer records"
+            }.onFailure{
+                status="Transfer queue unavailable: "+it.message.orEmpty().take(120)
+            }
+            refreshing=false
+        }
+    }
+    LaunchedEffect(Unit){
+        while(true){
+            refresh()
+            delay(10000L)
+        }
+    }
+    val visible=remember(entries,filter){
+        entries.filter{row->when(filter){
+            "Active"->row.state=="ACTIVE"
+            "Saved"->row.state=="DONE"
+            "Issues"->row.state in setOf("FAILED","HELD")
+            "All"->true
+            else->row.state!="DONE"
+        }}
+    }
+    Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
+        UnifiedHeading("Transfers",
+            "Every native download queue in one place, with retained progress and recovery")
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
+            verticalAlignment=Alignment.CenterVertically){
+            Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.weight(1f),
+                maxLines=2)
+            UnifiedButton(if(refreshing)"Reading…" else "Refresh",!refreshing){refresh()}
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(
+            androidx.compose.foundation.rememberScrollState()).padding(vertical=10.dp),
+            horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            listOf("Unfinished","Active","Issues","Saved","All").forEach{option->
+                FilterChip(selected=filter==option,onClick={filter=option},
+                    label={Text(option,fontSize=12.sp)})
+            }
+        }
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
+            items(visible,key={it.key}){item->
+                Card(colors=CardDefaults.cardColors(containerColor=C_CARD),
+                    border=BorderStroke(1.dp,C_BORDER),
+                    shape=RoundedCornerShape(15.dp)){
+                    Column(Modifier.fillMaxWidth().padding(15.dp)){
+                        Row(verticalAlignment=Alignment.CenterVertically){
+                            Text(item.title,color=C_TEXT,fontSize=14.sp,
+                                fontWeight=FontWeight.Medium,maxLines=2,
+                                overflow=TextOverflow.Ellipsis,
+                                modifier=Modifier.weight(1f))
+                            Spacer(Modifier.width(10.dp))
+                            Text(item.state,color=C_GOLD,fontSize=11.sp)
+                        }
+                        Text(item.source+" · "+item.detail,
+                            color=C_MUTED,fontSize=12.sp,
+                            maxLines=3,overflow=TextOverflow.Ellipsis,
+                            modifier=Modifier.padding(top=6.dp))
+                        item.progress?.let{value->
+                            val percent=value.coerceIn(0,100)
+                            Text(percent.toString()+"%",color=C_TEXT,fontSize=12.sp,
+                                modifier=Modifier.padding(top=7.dp))
+                            LinearProgressIndicator(
+                                progress={percent/100f},
+                                modifier=Modifier.fillMaxWidth().padding(top=5.dp),
+                                color=C_GOLD,trackColor=C_BORDER)
+                        }
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
+                            modifier=Modifier.padding(top=10.dp)){
+                            if(item.state=="DONE"&&!item.savedUri.isNullOrBlank()){
+                                UnifiedButton("Open"){
+                                    runCatching{onOpen(Uri.parse(item.savedUri),
+                                        item.mime,item.title,-1)}
+                                        .onFailure{status="Cannot open file: "+
+                                            it.message.orEmpty().take(110)}
+                                }
+                            }else if(item.perform!=null&&!item.actionLabel.isNullOrBlank()){
+                                UnifiedButton(item.actionLabel){
+                                    runCatching{item.perform.invoke()}
+                                        .onFailure{status="Action failed: "+
+                                            it.message.orEmpty().take(110)}
+                                    refresh()
+                                }
+                            }
+                            if(item.remove!=null){
+                                UnifiedButton(if(item.state=="DONE")"Hide" else "Remove"){
+                                    pendingRemove=item
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if(visible.isEmpty())item{
+                Text("No "+filter.lowercase()+" transfers",color=C_MUTED,fontSize=13.sp,
+                    modifier=Modifier.fillMaxWidth().padding(top=22.dp))
+            }
+        }
+    }
+    pendingRemove?.let{selected->
+        AlertDialog(onDismissRequest={pendingRemove=null},
+            title={Text(if(selected.state=="DONE")"Hide saved transfer?" else "Remove queued transfer?")},
+            text={Text("Use the existing transfer engine's removal action. "+
+                "Original files are not deleted by Nexus navigation.")},
+            confirmButton={
+                TextButton(onClick={
+                    pendingRemove=null
+                    runCatching{selected.remove?.invoke()}
+                        .onFailure{status="Removal failed: "+it.message.orEmpty().take(110)}
+                    refresh()
+                }){Text("Continue")}
+            },
+            dismissButton={TextButton(onClick={pendingRemove=null}){Text("Cancel")}}
         )
     }
 }

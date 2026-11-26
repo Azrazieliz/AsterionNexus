@@ -1134,6 +1134,28 @@ object UnifiedDownloadsUi {
      * entire screen; stale results from a previous page are discarded.
      */
     @Suppress("UNUSED_PARAMETER")
+    /** Read-only Nexus projection of the SAME durable cross-module queues.
+     * Calls to original queue controls are intentionally unchanged.
+     */
+    data class NexusQueueEntry(
+        val key:String,val source:String,val title:String,val detail:String,
+        val state:String,val progress:Int?,val transferred:Long,val expected:Long,
+        val actionLabel:String?,val perform:(()->Unit)?,val remove:(()->Unit)?,
+        val savedUri:String?,val mime:String
+    )
+    @JvmStatic
+    fun snapshotForNexus(activity:Activity):List<NexusQueueEntry> =
+        collect(activity).take(350).map{row->
+            NexusQueueEntry(
+                rowId(row),row.source,row.filename,row.info,row.state.name,
+                row.percent,row.receivedBytes,row.totalBytes,
+                row.actionText?.takeUnless{it=="COOLDOWN"},
+                if(row.hasPrimaryAction && row.actionText!=null &&
+                    row.actionText!="COOLDOWN")row.action else null,
+                row.onRemove,row.saved,row.mime
+            )
+        }
+
     fun render(a:Activity,parent:LinearLayout,refresh:()->Unit){
         val surface=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL}
         parent.addView(surface)
