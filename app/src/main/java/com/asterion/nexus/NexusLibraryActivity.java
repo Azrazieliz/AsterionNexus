@@ -99,6 +99,16 @@ public final class NexusLibraryActivity extends Activity {
         TextView brand=text("ASTERION  /  NEXUS",11,ACCENT,true);brand.setLetterSpacing(.16f);
         column.addView(brand,space(6));
         column.addView(text("Library",31,TEXT,true),space(14));
+        LinearLayout workspaces=new LinearLayout(this);
+        workspaces.setOrientation(LinearLayout.HORIZONTAL);
+        TextView cloudNav=action("Cloud",()->startActivity(
+            new Intent(this,NexusCloudActivity.class)));
+        LinearLayout.LayoutParams n1=new LinearLayout.LayoutParams(0,dp(52),1);
+        n1.rightMargin=dp(8);workspaces.addView(cloudNav,n1);
+        workspaces.addView(action("Fusion",()->startActivity(
+            new Intent(this,NexusFusionActivity.class))),
+            new LinearLayout.LayoutParams(0,dp(52),1));
+        column.addView(workspaces,space(18));
         searchField=entry("Search indexed originals");column.addView(searchField,space(24));
         searchField.addTextChangedListener(new TextWatcher(){
             @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}

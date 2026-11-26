@@ -111,6 +111,22 @@
         </activity>
         <activity android:name="com.asterion.nexus.NexusPlaybackActivity"
             android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusCloudActivity"
+            android:exported="false" android:windowSoftInputMode="adjustResize"/>
+        <activity android:name="com.asterion.nexus.NexusFusionActivity"
+            android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusRounderPlaybackActivity"
+            android:exported="false" android:configChanges="orientation|screenSize"/>
+        <!-- One distinct authority; never claim or disturb the installed Rounder provider. -->
+        <provider android:name="com.openlocal.office.core.FgTeraboxDocumentsProvider"
+            android:authorities="com.asterion.nexus.terabox.documents"
+            android:permission="android.permission.MANAGE_DOCUMENTS"
+            android:exported="true" android:grantUriPermissions="true">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER"/>
+            </intent-filter>
+        </provider>
+
         <provider android:name="com.asterion.nexus.NexusLibraryProvider"
             android:authorities="${applicationId}.library"
             android:exported="false" android:grantUriPermissions="true"/>
