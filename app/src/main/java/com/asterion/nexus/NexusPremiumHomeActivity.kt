@@ -241,7 +241,7 @@ private fun NexusHome(
                 Row(verticalAlignment=Alignment.CenterVertically,
                     modifier=Modifier.fillMaxWidth().padding(top=3.dp)){
                     Text("Nexus",color=IvoryColor,fontSize=33.sp,
-                        fontWeight=FontWeight.SemiBold,letterSpacing=(-.9).sp,
+                        fontWeight=FontWeight.SemiBold,letterSpacing=(-0.9f).sp,
                         modifier=Modifier.weight(1f))
                     TextButton(onClick=onImport){Text("Import",color=GoldColor)}
                     Spacer(Modifier.width(6.dp))
