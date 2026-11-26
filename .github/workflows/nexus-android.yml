@@ -9,6 +9,7 @@ on:
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
       - 'gradle.properties'
+      - 'scripts/restore_downloader_wheel.sh'
       - '.github/workflows/nexus-android.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
       - 'gradle.properties'
+      - 'scripts/restore_downloader_wheel.sh'
 permissions:
   contents: read
 jobs:
