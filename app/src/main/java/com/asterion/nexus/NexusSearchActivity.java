@@ -15,6 +15,7 @@ import com.asterion.videoflow.NexusWebAcquisition;
 import com.openlocal.office.core.FgTeraboxClient;
 import com.openlocal.office.core.FgTeraboxDocumentsProvider;
 import com.openlocal.office.core.FgTeraboxSearchIndex;
+import com.openlocal.office.core.FgSearchIndex;
 import org.json.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -37,6 +38,8 @@ public final class NexusSearchActivity extends Activity {
     private LinearLayout results;
     private FgTeraboxClient cloud;
     private FgTeraboxSearchIndex index;
+    private FgSearchIndex authorizedIndex;
+    private final Map<String,List<Result>> safMatches=new LinkedHashMap<>();
     private String currentTerm="";
     private static final class Result {
         final String type,title,detail,source,id,mime;
@@ -113,12 +116,33 @@ public final class NexusSearchActivity extends Activity {
             }
         });
     }
+        authorizedIndex=new FgSearchIndex(this,new FgSearchIndex.Listener(){
+            @Override public void onResult(String response){
+                runOnUiThread(()->receiveSaf(response));
+            }
+            @Override public void onProgress(String response){
+                runOnUiThread(()->{
+                    try{
+                        JSONObject progress=new JSONObject(response);
+                        if(progress.optBoolean("building"))
+                            status.setText("Connected folders indexing · "+
+                                progress.optLong("indexed")+" metadata entries");
+                    }catch(Exception ignored){}
+                });
+            }
+        });
     private void execute(){
         String query=term.getText().toString().trim();
         if(query.length()<2||query.length()>180){status.setText("Enter 2–180 characters");return;}
         currentTerm=query;
         final int requestId=request.incrementAndGet();
-        groups.clear();results.removeAllViews();
+        groups.clear();safMatches.clear();results.removeAllViews();
+        List<Uri> authorizedTrees=new NexusSourceRegistry(this).roots();
+        groups.put("Folders",Collections.emptyList());
+        for(Uri selected:authorizedTrees){
+            authorizedIndex.ensure(selected,false);
+            authorizedIndex.search(selected,query,"all",0,requestId);
+        }
         status.setText("Searching local and cloud metadata");
         worker.submit(()->{
             try{
@@ -162,6 +186,34 @@ public final class NexusSearchActivity extends Activity {
             });
         }
     }
+    private void receiveSaf(String raw){
+        try{
+            JSONObject response=new JSONObject(raw);
+            if(response.optInt("token",-1)!=request.get())return;
+            String root=response.optString("root","");
+            if(root.isBlank())return;
+            JSONArray items=response.optJSONArray("items");
+            ArrayList<Result> found=new ArrayList<>();
+            if(items!=null)for(int i=0;i<items.length();i++){
+                JSONObject object=items.optJSONObject(i);
+                if(object==null)continue;
+                String uri=object.optString("uri","");
+                if(!uri.startsWith("content://"))continue;
+                String mime=object.optString("mime","application/octet-stream");
+                found.add(new Result(object.optBoolean("folder")?"saf-folder":"saf",
+                    object.optString("name",uri),
+                    object.optString("searchPath",""),Uri.parse(root).getAuthority(),
+                    uri,mime,object.optLong("size",-1)));
+            }
+            safMatches.put(root,found);
+            ArrayList<Result> all=new ArrayList<>();
+            for(List<Result> rows:safMatches.values())
+                for(Result result:rows)if(all.size()<200)all.add(result);
+            groups.put("Folders",all);
+            render();
+        }catch(Exception ignored){}
+    }
+
     private void receiveCloud(String raw){
         try{
             JSONObject response=new JSONObject(raw);
@@ -193,7 +245,7 @@ public final class NexusSearchActivity extends Activity {
     }
     private void render(){
         results.removeAllViews();
-        for(String source:new String[]{"Local","Cloud","Online"}){
+        for(String source:new String[]{"Local","Folders","Cloud","Online"}){
             if(!groups.containsKey(source))continue;
             List<Result> items=groups.get(source);
             results.addView(text(source+" · "+items.size(),18,true),spaced(18));
@@ -211,6 +263,22 @@ public final class NexusSearchActivity extends Activity {
     }
     private void open(Result r){
         try{
+            if("saf".equals(r.type)){
+                NexusFileOpen.open(this,Uri.parse(r.id),r.mime,r.title);
+                return;
+            }
+            if("saf-folder".equals(r.type)){
+                Uri child=Uri.parse(r.id);
+                for(Uri tree:new NexusSourceRegistry(this).roots()){
+                    if(tree.getAuthority().equals(child.getAuthority())){
+                        Intent intent=new Intent(this,NexusSafBrowserActivity.class);
+                        intent.putExtra("tree",tree.toString());
+                        intent.putExtra("documentId",android.provider.DocumentsContract.getDocumentId(child));
+                        startActivity(intent);return;
+                    }
+                }
+                status.setText("Folder permission no longer granted");return;
+            }
             if("folder".equals(r.type)){
                 Intent open=new Intent(this,NexusCloudActivity.class);
                 open.putExtra("folder",r.id);startActivity(open);return;
@@ -259,6 +327,6 @@ public final class NexusSearchActivity extends Activity {
                 }).show();
     }
     @Override protected void onDestroy(){
-        worker.shutdownNow();index.close();super.onDestroy();
+        worker.shutdownNow();index.close();authorizedIndex.close();super.onDestroy();
     }
 }

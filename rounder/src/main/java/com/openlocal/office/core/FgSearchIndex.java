@@ -260,7 +260,7 @@ public final class FgSearchIndex extends SQLiteOpenHelper {
                 State state=state(db,root);
                 int gen=state.active>0?state.active:state.building;
                 JSONObject reply=new JSONObject();
-                reply.put("token",request).put("offset",Math.max(0,offset))
+                reply.put("token",request).put("root",root).put("offset",Math.max(0,offset))
                     .put("indexed",state.seen).put("building",state.building!=0)
                     .put("error",state.error);
                 JSONArray rows=new JSONArray();
@@ -299,7 +299,7 @@ public final class FgSearchIndex extends SQLiteOpenHelper {
                 listener.onResult(reply.toString());
             }catch(Exception error){
                 android.util.Log.e("FG_SEARCH","Query failed",error);
-                try{listener.onResult(new JSONObject().put("token",request)
+                try{listener.onResult(new JSONObject().put("token",request).put("root",tree.toString())
                     .put("items",new JSONArray()).put("error",
                         String.valueOf(error.getMessage())).toString());}
                 catch(Exception ignored){}

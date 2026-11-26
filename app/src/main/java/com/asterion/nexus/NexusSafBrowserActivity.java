@@ -50,8 +50,20 @@ public final class NexusSafBrowserActivity extends Activity {
         if(selected==null){finish();return;}
         tree=Uri.parse(selected);
         if(!new NexusSourceRegistry(this).roots().contains(tree)){finish();return;}
-        try{documentId=DocumentsContract.getTreeDocumentId(tree);}
-        catch(Exception ex){finish();return;}
+        try{
+            documentId=DocumentsContract.getTreeDocumentId(tree);
+            String specified=getIntent().getStringExtra("documentId");
+            if(specified!=null&&!specified.equals(documentId)){
+                FgSearchIndex verify=new FgSearchIndex(this,new FgSearchIndex.Listener(){
+                    public void onResult(String s){}
+                    public void onProgress(String s){}
+                });
+                try{
+                    if(!verify.contains(tree,specified)){finish();return;}
+                    documentId=specified;
+                }finally{verify.close();}
+            }
+        }catch(Exception ex){finish();return;}
         ScrollView scroller=new ScrollView(this);scroller.setFillViewport(true);
         scroller.setBackgroundColor(BACK);
         LinearLayout root=new LinearLayout(this);root.setPadding(dp(20),dp(26),dp(20),dp(34));
