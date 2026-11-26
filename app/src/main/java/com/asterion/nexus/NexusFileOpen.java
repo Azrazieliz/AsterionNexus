@@ -13,7 +13,9 @@ public final class NexusFileOpen {
         String resolved=mime==null||mime.isBlank()?
             FgTeraboxClient.mime(title==null?"":title):mime;
         Intent intent;
-        if(resolved.startsWith("video/")){
+        if(resolved.startsWith("image/")){
+            intent=new Intent(activity,NexusImageViewerActivity.class);
+        }else if(resolved.startsWith("video/")||resolved.startsWith("audio/")){
             intent=new Intent(activity,NexusRounderPlaybackActivity.class);
         }else if(resolved.equals("application/pdf")||resolved.equals("application/epub+zip")||
             resolved.equals("application/zip")||

@@ -61,6 +61,11 @@ def check():
     assert 'val chosenCategory=category' in shell and 'loadPage(reset=true)' in shell
     assert '"Audio"->m.startsWith("audio/")' in shell
     assert 'listOf("All","Images","Videos","Books","Audio","Other")' in shell
+    viewer=(APP/"java/com/asterion/nexus/NexusImageViewerActivity.kt").read_text()
+    router=(APP/"java/com/asterion/nexus/NexusFileOpen.java").read_text()
+    assert 'NexusImageViewerActivity.class' in router, "Pictures must open inside Nexus"
+    assert 'NexusImageViewerActivity' in [attr(x,"name").split(".")[-1] for x in application.findall("activity")], "Integrated viewer not registered"
+    assert 'boundedImage(source)' in viewer and 'rememberTransformableState' in viewer, "Safe integrated image viewer missing"
     assert 'case "Books":' in registry and 'case "Other":' in registry
     print("PASS: one Nexus launcher; one native Compose workspace; actual transfers; charcoal/silver style; image-first original-aspect library")
 if __name__=="__main__":
