@@ -3,6 +3,7 @@ import java.security.MessageDigest
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // Original v0.6.1 signing key: external/secret only, never committed to Git.
@@ -141,6 +142,7 @@ android {
         }
     }
 
+    buildFeatures { compose = true }
     packaging { jniLibs { useLegacyPackaging = true } }
 
     compileOptions {
@@ -155,6 +157,12 @@ kotlin {
 }
 
 dependencies {
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.activity:activity-compose:1.10.0")
+    implementation("androidx.compose.ui:ui:1.7.6")
+    implementation("androidx.compose.foundation:foundation:1.7.6")
+    implementation("androidx.compose.material3:material3:1.3.1")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
     implementation(project(":fusion"))
     implementation(project(":rounder"))
     implementation("org.jsoup:jsoup:1.18.1")
