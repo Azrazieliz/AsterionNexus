@@ -87,14 +87,19 @@ public final class NexusRegistry {
         }finally{helper.close();}
     }
     public List<Item> search(String query,int limit){
-        if(limit<1||limit>200)throw new IllegalArgumentException("Invalid page limit");
+        return searchPage(query,0,limit);
+    }
+    /** Bounded, stable, non-destructive paging over 300k+ metadata rows. */
+    public List<Item> searchPage(String query,int offset,int limit){
+        if(limit<1||limit>200||offset<0||offset>1000000)
+            throw new IllegalArgumentException("Invalid library page");
         String needle=query==null?"":query.toLowerCase(Locale.ROOT);
         needle=needle.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
         ArrayList<Item> found=new ArrayList<>();
         Database helper=new Database(app);
         try(Cursor c=helper.getReadableDatabase().rawQuery(
-            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE LOWER(l.display_name) LIKE ? ESCAPE '\\' ORDER BY l.created_at DESC,l.id DESC LIMIT ?",
-            new String[]{"%"+needle+"%",Integer.toString(limit)})){
+            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE LOWER(l.display_name) LIKE ? ESCAPE '\\' ORDER BY l.created_at DESC,l.id DESC LIMIT ? OFFSET ?",
+            new String[]{"%"+needle+"%",Integer.toString(limit),Integer.toString(offset)})){
             while(c.moveToNext())found.add(item(c));
         }finally{helper.close();}
         return found;
