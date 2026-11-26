@@ -106,7 +106,7 @@ class NexusCoreActivity : Activity() {
     private fun row(name:String,details:String,action:(()->Unit)?=null){
         val card=LinearLayout(this).apply{
             orientation=LinearLayout.VERTICAL;setPadding(dp(15),dp(15),dp(15),dp(15))
-            background=shape();minHeight=dp(67)
+            background=shape();minimumHeight=dp(67)
         }
         card.addView(text(name,15f,true))
         if(details.isNotBlank())card.addView(text(details,12f),line(6))
