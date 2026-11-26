@@ -22,6 +22,9 @@ on:
       - 'scripts/restore_downloader_wheel.sh'
 permissions:
   contents: read
+concurrency:
+  group: nexus-android-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 jobs:
   compile:
     runs-on: ubuntu-latest
