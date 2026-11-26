@@ -35,13 +35,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Configure Android command-line SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android 36 for Rounder verification
-        run: |
-          set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Materialize actual donor sources and assembled Rounder engines
         run: python scripts/import_native_sources.py
       - name: Source-only security, isolation and provenance preflight
