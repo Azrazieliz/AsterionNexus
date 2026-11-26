@@ -1,0 +1,199 @@
+{
+  "version": "asterion.nexus.owner-decisions.v1",
+  "decided_at": "2026-11-26",
+  "status": "OWNER_APPROVED_SPECIFICATION_ONLY",
+  "source_of_authority": "User-confirmed Nexus three-way merger and interactive architecture decisions through 2026-11-26; no implementation acceptance implied.",
+  "product": {
+    "repo": "Azrazieliz/AsterionNexus",
+    "merge_components": [
+      "Core",
+      "Downloader",
+      "Rounder"
+    ],
+    "purpose": "One integrated native Android intelligent media, acquisition, cloud library and Fusion platform with additional capabilities.",
+    "public_source_only": true,
+    "co_installable_new_app": true,
+    "retire_old_apps_only_after_full_phone_acceptance": true,
+    "ui_language": "en",
+    "outside_immediate_scope": [
+      "Adaptive Study"
+    ],
+    "separate_future_creative_app_merge": true
+  },
+  "ui": {
+    "home": "adaptive_intelligent_library",
+    "navigation": "single_adaptive_contextual_workspace",
+    "content_layouts": [
+      "gallery",
+      "folders",
+      "documents",
+      "media_specific"
+    ],
+    "visual": "new_distinctive_premium_asterion",
+    "highest_achievable_premium_quality": true,
+    "no_slogans_anywhere": true,
+    "no_marketing_or_decorative_copy": true,
+    "advanced_actions": "always_visible_or_immediately_accessible",
+    "readers_and_players": "specialized_gestures_and_controls",
+    "donor_ui_reuse_as_final": false,
+    "device_owner_acceptance_required": true
+  },
+  "migration": {
+    "downloader": [
+      "provider_configs",
+      "subscriptions",
+      "completed_catalogs",
+      "safe_queue_history"
+    ],
+    "core": [
+      "fusion_taxonomy",
+      "canonical_tags",
+      "ratings",
+      "owner_corrections",
+      "processing_history"
+    ],
+    "rounder": [
+      "cloud_indexes",
+      "account_mappings",
+      "bookmarks",
+      "reading_history"
+    ],
+    "bulk_move_original_files": false,
+    "secret_migration_requires_separate_secure_authorization": true,
+    "existing_legacy_apps_preserved": true
+  },
+  "cloud": {
+    "priority_provider": "TeraBox",
+    "additional_providers": "architecture_open",
+    "multiple_isolated_accounts": true,
+    "offline_storage": "adaptive_previews_cache_and_explicit_user_pinned_files",
+    "cloud_verified_local_cleanup": "offer_owner_confirmation_only",
+    "exact_duplicates": "automatically_merge_logical_identity_with_reversible_history_no_silent_byte_deletion",
+    "generated_outputs": "independent_content_items_with_optional_relations"
+  },
+  "search": {
+    "execution": "simultaneous_federation",
+    "scopes": [
+      "local_library",
+      "authorized_cloud_accounts",
+      "enabled_online_providers"
+    ],
+    "no_private_query_leakage": true,
+    "source_onboarding": "native_adapter_if_needed_control_shared_browser_where_useful",
+    "authorized_site_sessions": true,
+    "interactive_auth_actions_surface_to_owner": true
+  },
+  "acquisition": {
+    "same_exact_original_mirror_fallback": true,
+    "unrelated_content_substitution": false,
+    "cosplay": "creator_to_albums_to_full_originals",
+    "torrent_publication": "verify_pieces_essential_security_scan_then_publish",
+    "torrent_auto_stop_seeding": true,
+    "source_sync_and_backfill_independent": true,
+    "provider_failures_to_repair_in_nexus": true
+  },
+  "fusion": {
+    "source": "latest_verified_core",
+    "all_applicable_families_evaluated": true,
+    "unsupported_family": "record_unsupported_prioritize_learning_and_review",
+    "adaptation": "bounded_immediate_correction_learning_plus_held_out_validated_head_training",
+    "organization": "automatic_if_confident_review_uncertain",
+    "character_identity_until_knowledge": "unverified",
+    "below_25_quality": "review_discard_suggestions_only",
+    "models": "few_shared_specialists_plus_bounded_heads",
+    "core_stability_and_consistency_required": true
+  },
+  "books": {
+    "translation_sources": [
+      "ja",
+      "ko",
+      "zh-Hans",
+      "zh-Hant"
+    ],
+    "translation_target": "en",
+    "translation_trigger": "automatic_for_every_verified_eligible_CJK_book_or_comic",
+    "translation_execution": "phone_native_offline_only",
+    "ocr_scope": "books_and_comics_only",
+    "full_private_index_of_all_imported_books": true,
+    "external_book_text_search_egress": false,
+    "source_preservation": true
+  },
+  "editing": {
+    "automatic_video_editing_selected_collections": true,
+    "priority": [
+      "episode_stitching",
+      "cut_trim_highlights_pacing",
+      "automatic_montages_scene_selection"
+    ],
+    "first_episode_opening": "keep",
+    "last_episode_ending": "keep",
+    "intermediate_openings_and_endings": "remove_when_reliably_identified",
+    "redundant_recaps_and_previews": "remove_when_reliably_identified",
+    "uncertain_segments": "preserve_and_offer_review",
+    "unique_narrative_content": "never_remove",
+    "export_as_independent_item": true,
+    "source_originals_untouched": true
+  },
+  "broader_capabilities": [
+    "fusion_visual_semantic_search",
+    "automatic_smart_collections_and_relationships",
+    "file_corruption_detection_repair_recovery",
+    "private_library_recommendations",
+    "automatic_archive_inspection_batch_extraction",
+    "advanced_video_audio_analysis_and_metadata",
+    "local_image_video_conversion_and_derivative_generation",
+    "unified_creator_series_follow_backfill",
+    "direct_cross_app_assets_and_control_orchestrated_creative_workflows"
+  ],
+  "integrations": {
+    "control": "independent_signed_capability_diagnostics_bridge",
+    "general_assistant": "Control",
+    "shared_browser": "Control",
+    "nexus_owns": [
+      "source_adapters",
+      "acquisition",
+      "file_registry",
+      "media_editor",
+      "fusion",
+      "offline_translation"
+    ],
+    "control_owns_complex_workflow_orchestration": true,
+    "nexus_direct_authorized_specialist_actions_without_control": true,
+    "nexus_without_control_must_remain_functional": true,
+    "art_sound_3d_writing": "deep_project_browsing_plus_remote_specialist_actions",
+    "game_pilot_codex_kk_noworld": "project_aware_asset_indexing_and_recommendations"
+  },
+  "execution": {
+    "sequence": [
+      "donor_inventory",
+      "native_three_way_merge",
+      "library_provider_cohesion",
+      "premium_ui_and_functional_validation",
+      "signed_cross_app_integrations",
+      "new_capabilities",
+      "full_verified_data_migration_and_release"
+    ],
+    "first_acceptance": "real_selected_source_to_verified_searchable_organized_openable_file",
+    "phone_test_each_meaningful_gate": true,
+    "job_priority": [
+      "interactive_browsing_playback",
+      "active_transfers",
+      "background_ai_indexing"
+    ],
+    "one_signed_nexus_apk_after_each_evidence_based_release_preflight": true,
+    "autonomous_reversible_actions": true,
+    "irreversible_actions_require_confirmation": true,
+    "broad_architecture_progressive_verified_implementation": true
+  },
+  "engineering_to_verify_not_unanswered_owner_choices": [
+    "installed_donor_apk_and_source_mapping",
+    "new_android_package_signer",
+    "migrator_permission_paths",
+    "device_model_codec_performance",
+    "remote_account_checksum_capability",
+    "actual_site_access_and_selected_originals",
+    "native_cjk_model_ocr_quality",
+    "episodic_real_media_fixtures",
+    "partner_api_availability"
+  ]
+}

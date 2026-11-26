@@ -1,0 +1,237 @@
+{
+  "contract_version": "asterion.episode-assembly.v1",
+  "project_id": "synthetic-episode-e1e3",
+  "collection_id": "synthetic-season",
+  "input_episodes": [
+    {
+      "episode_id": "e1",
+      "order": 1,
+      "source_asset_ref": {
+        "nexus_id": "synthetic-source-1"
+      },
+      "series_identity": "synthetic-series",
+      "episode_number": 1
+    },
+    {
+      "episode_id": "e2",
+      "order": 2,
+      "source_asset_ref": {
+        "nexus_id": "synthetic-source-2"
+      },
+      "series_identity": "synthetic-series",
+      "episode_number": 2
+    },
+    {
+      "episode_id": "e3",
+      "order": 3,
+      "source_asset_ref": {
+        "nexus_id": "synthetic-source-3"
+      },
+      "series_identity": "synthetic-series",
+      "episode_number": 3
+    }
+  ],
+  "segments": [
+    {
+      "segment_id": "e1-op",
+      "source_id": "e1",
+      "start_ms": 0,
+      "end_ms": 90000,
+      "semantic_class": "OPENING",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e1-story",
+      "source_id": "e1",
+      "start_ms": 90000,
+      "end_ms": 1290000,
+      "semantic_class": "STORY",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e1-ed",
+      "source_id": "e1",
+      "start_ms": 1290000,
+      "end_ms": 1380000,
+      "semantic_class": "ENDING",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e1-prev",
+      "source_id": "e1",
+      "start_ms": 1380000,
+      "end_ms": 1410000,
+      "semantic_class": "NEXT_EPISODE_PREVIEW",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e2-recap",
+      "source_id": "e2",
+      "start_ms": 0,
+      "end_ms": 50000,
+      "semantic_class": "RECAP",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e2-op",
+      "source_id": "e2",
+      "start_ms": 50000,
+      "end_ms": 140000,
+      "semantic_class": "OPENING",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e2-story",
+      "source_id": "e2",
+      "start_ms": 140000,
+      "end_ms": 1330000,
+      "semantic_class": "STORY",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e2-ed",
+      "source_id": "e2",
+      "start_ms": 1330000,
+      "end_ms": 1420000,
+      "semantic_class": "ENDING",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e2-prev",
+      "source_id": "e2",
+      "start_ms": 1420000,
+      "end_ms": 1450000,
+      "semantic_class": "NEXT_EPISODE_PREVIEW",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e3-recap",
+      "source_id": "e3",
+      "start_ms": 0,
+      "end_ms": 50000,
+      "semantic_class": "RECAP",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e3-op",
+      "source_id": "e3",
+      "start_ms": 50000,
+      "end_ms": 140000,
+      "semantic_class": "OPENING",
+      "decision": "CUT",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e3-story",
+      "source_id": "e3",
+      "start_ms": 140000,
+      "end_ms": 1330000,
+      "semantic_class": "STORY",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    },
+    {
+      "segment_id": "e3-ed",
+      "source_id": "e3",
+      "start_ms": 1330000,
+      "end_ms": 1420000,
+      "semantic_class": "ENDING",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "method": "MANUAL_REVIEW",
+          "reference": "synthetic-oracle-ONLY"
+        }
+      ],
+      "reviewed_by_owner": false
+    }
+  ],
+  "state": "SPECIFIED",
+  "source_assets_preserved": true,
+  "preserve_first_opening": true,
+  "preserve_last_ending": true,
+  "preserve_uncertain_content": true,
+  "edits_version": 1
+}

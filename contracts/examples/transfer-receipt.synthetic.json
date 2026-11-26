@@ -1,0 +1,20 @@
+{
+  "contract_version": "asterion.transfer-receipt.v1",
+  "receipt_id": "synthetic-original-receipt",
+  "source_item_id": "synthetic-media-source",
+  "job_id": "synthetic-job",
+  "state": "CONTENT_VERIFIED",
+  "observed_bytes": 128,
+  "expected_bytes": 128,
+  "observed_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "verified_original_identity": true,
+  "complete_original": true,
+  "verification": [
+    {
+      "kind": "SIMULATED_SHA_MATCH",
+      "observed": "synthetic-only",
+      "passed": true,
+      "evidence_ref": "fixture"
+    }
+  ]
+}

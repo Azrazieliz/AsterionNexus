@@ -1,0 +1,23 @@
+{
+  "contract_version": "asterion.nexus.source-import-manifest.v1",
+  "status": "NOT_IMPORTED",
+  "provenance_cutoff": "2026-11-26",
+  "source_modules": [],
+  "required_per_import": [
+    "donor_repository",
+    "branch",
+    "commit_sha",
+    "source_path",
+    "destination_path",
+    "role",
+    "license",
+    "dependencies",
+    "manifest_collisions",
+    "tests",
+    "provenance",
+    "build_status",
+    "device_status",
+    "rollback"
+  ],
+  "note": "Template only. Add entries only after verified real source import; never invent an imported module."
+}

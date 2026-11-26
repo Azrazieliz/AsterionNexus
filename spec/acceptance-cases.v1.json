@@ -1,0 +1,327 @@
+{
+  "contract_version": "asterion.nexus.acceptance-cases.v1",
+  "current_overall_status": "SPECIFIED_ONLY",
+  "generated_as_spec_on": "2026-11-26",
+  "cases": [
+    {
+      "id": "M001",
+      "phase": "P0",
+      "requirement": "Donor SHAs, assembled Rounder source, signed baseline and licenses",
+      "evidence": [
+        "source_import_manifest",
+        "audit_report"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "M002",
+      "phase": "P1",
+      "requirement": "New co-installable Nexus package, build, permissions and ABI",
+      "evidence": [
+        "android_compile",
+        "package_identity_report"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "M003",
+      "phase": "P1",
+      "requirement": "Downloader original provider and torrent engines adapted",
+      "evidence": [
+        "native_engine_tests",
+        "manifest_collision_audit"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "M004",
+      "phase": "P1",
+      "requirement": "Latest Core Fusion schema, models and review retained",
+      "evidence": [
+        "fusion_migration_and_core_regressions"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "M005",
+      "phase": "P1",
+      "requirement": "Accepted Rounder cloud readers/player/organizer retained",
+      "evidence": [
+        "assembled_source_hash",
+        "reader_playback_smoke"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "M006",
+      "phase": "P2",
+      "requirement": "Single registry and migration-safe IDs, cloud account isolation",
+      "evidence": [
+        "schema_tests",
+        "multi_account_provenance"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "ACQ-001",
+      "phase": "P2",
+      "requirement": "Selected exact original to readable verified local/cloud file",
+      "evidence": [
+        "original_source_receipt",
+        "sha_or_strong_integrity",
+        "actual_reopen"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "ACQ-002",
+      "phase": "P2",
+      "requirement": "Cosplay selected creator/album original coverage",
+      "evidence": [
+        "enumeration_expected_actual",
+        "source_id",
+        "actual_bytes"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "ACQ-003",
+      "phase": "P2",
+      "requirement": "Actual selected torrent with safe publication and seeding stop",
+      "evidence": [
+        "peer_transfer",
+        "piece_integrity",
+        "security_review",
+        "storage_readback"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "SRCH-001",
+      "phase": "P2",
+      "requirement": "Simultaneous local/cloud/web federated search",
+      "evidence": [
+        "progressive_results",
+        "partial_failure_truth",
+        "privacy_no_egress_test"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "CLOUD-001",
+      "phase": "P2",
+      "requirement": "Multiple isolated TeraBox accounts and selected offline pins",
+      "evidence": [
+        "account_scope_test",
+        "readable_ranges",
+        "cache_budget"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "UI-001",
+      "phase": "P3",
+      "requirement": "Slogan-free distinctive premium native UI on Samsung",
+      "evidence": [
+        "strings_review",
+        "actual_screenshots",
+        "interaction_tests",
+        "owner_visual_acceptance"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "FUS-001",
+      "phase": "P4",
+      "requirement": "All applicable Fusion family and multi-subject evaluation",
+      "evidence": [
+        "real_images_reviewed",
+        "per_family_matrix",
+        "stable_repeat_run"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "FUS-002",
+      "phase": "P4",
+      "requirement": "Reversible correction and trained bounded heads",
+      "evidence": [
+        "source_scoped_corrections",
+        "heldout_quality",
+        "rollback"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "READ-001",
+      "phase": "P3",
+      "requirement": "Accepted Rounder modes, format handling and player",
+      "evidence": [
+        "real_format_readers",
+        "streaming_player",
+        "bookmarks"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "CTRL-001",
+      "phase": "P5",
+      "requirement": "Signed Control bridge and standalone Nexus operation",
+      "evidence": [
+        "capability_evidence",
+        "control_offline_recovery"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "ASSET-001",
+      "phase": "P5",
+      "requirement": "Direct specialist actions and verified project-aware indexing",
+      "evidence": [
+        "signed_request",
+        "source_hash",
+        "partner_output_receipt"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "TXT-001",
+      "phase": "P6",
+      "requirement": "Automatic phone-offline CJK translation of eligible books",
+      "evidence": [
+        "model_runtime_offline",
+        "real_output_quality",
+        "source_preservation"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "IDX-001",
+      "phase": "P6",
+      "requirement": "Private full-text indexing all imported books",
+      "evidence": [
+        "full_coverage_report",
+        "query_result_offsets",
+        "no_egress"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "VID-001",
+      "phase": "P6",
+      "requirement": "Automatic 3-episode assembly including recap/preview cuts",
+      "evidence": [
+        "segment_reference_oracle",
+        "rendered_playback",
+        "unique_scene_preservation"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "VID-002",
+      "phase": "P6",
+      "requirement": "Many episodes, cold opens, unusual credits and restart",
+      "evidence": [
+        "correct_episode_order",
+        "edl_evidence",
+        "job_resume"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "REP-001",
+      "phase": "P6",
+      "requirement": "File recovery and archive safe extraction",
+      "evidence": [
+        "actual_corrupted_file",
+        "independent_repaired_output",
+        "archive_safety"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "SEM-001",
+      "phase": "P6",
+      "requirement": "Visual semantic search and smart collections",
+      "evidence": [
+        "real_embeddings",
+        "owner_reviews",
+        "index_scale"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "DATA-001",
+      "phase": "P7",
+      "requirement": "Transactional migration of approved three-app data",
+      "evidence": [
+        "source_target_count_diff",
+        "no_original_changes",
+        "backup_rollback"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "REL-001",
+      "phase": "P7",
+      "requirement": "One evidence-based signed phone release with old apps preserved",
+      "evidence": [
+        "signer",
+        "phone_install",
+        "full_phone_regressions",
+        "owner_acceptance"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    }
+  ]
+}
