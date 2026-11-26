@@ -52,6 +52,10 @@ def check():
     assert "GoldColor" not in shell and "C_GOLD" not in workspace
     assert "NexusVisual.silver" in workspace and "NexusVisual.silver" in shell
     assert 'NexusUnifiedTransfers(' in workspace, "Native transfer queue must remain in the single workspace"
+    assert 'span={item->' in shell and 'GridItemSpan(maxLineSpan)' in shell, "Featured original gallery tile missing"
+    assert 'listOf("Library","Search","Transfers","More")' in shell, "Compact four-item navigation missing"
+    assert 'ModalBottomSheet(' in shell and 'onRoute(name)' in shell, "Source workflows must remain reachable"
+    assert 'val ratio=thumbnail?.let{' in shell, "Media tiles must preserve original aspect ratio"
     print("PASS: one Nexus launcher; one native Compose workspace; actual transfers; charcoal/silver style; image-first original-aspect library")
 if __name__=="__main__":
     check()

@@ -243,6 +243,7 @@ private fun NexusHome(
     val configuration=androidx.compose.ui.platform.LocalConfiguration.current
     val landscape=configuration.screenWidthDp>=720
     val sections=listOf("Library","Search","Transfers","Cloud","Organize","Intelligence")
+    var showMore by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxSize().background(CanvasColor).systemBarsPadding()){
         if(landscape)NavigationRail(containerColor=CanvasColor){
             Spacer(Modifier.height(20.dp))
@@ -255,59 +256,64 @@ private fun NexusHome(
             }
         }
         Column(Modifier.fillMaxSize()){
-            Column(Modifier.padding(horizontal=20.dp).padding(top=18.dp)){
-                Text("ASTERION",color=SilverColor,fontSize=11.sp,
-                    fontWeight=FontWeight.Bold,letterSpacing=3.sp)
-                Row(verticalAlignment=Alignment.CenterVertically,
-                    modifier=Modifier.fillMaxWidth().padding(top=3.dp)){
-                    Text("Nexus",color=IvoryColor,fontSize=33.sp,
-                        fontWeight=FontWeight.SemiBold,letterSpacing=(-0.9f).sp,
+            // Compact control strip: preserve maximum vertical area for real media.
+            Column(Modifier.padding(horizontal=14.dp).padding(top=5.dp)){
+                Row(modifier=Modifier.fillMaxWidth(),
+                    verticalAlignment=Alignment.CenterVertically){
+                    Text("Nexus",color=IvoryColor,fontSize=22.sp,
+                        fontWeight=FontWeight.SemiBold,letterSpacing=(-0.5f).sp,
                         modifier=Modifier.weight(1f))
-                    TextButton(onClick=onImport){Text("Import",color=SilverColor)}
+                    TextButton(onClick=onImport,modifier=Modifier.heightIn(min=48.dp)){
+                        Text("Import",color=SilverColor,fontSize=13.sp)
+                    }
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick=onAcquire,colors=ButtonDefaults.buttonColors(containerColor=SilverColor),
-                        shape=RoundedCornerShape(12.dp),
-                        modifier=Modifier.heightIn(min=48.dp)){Text("Acquire",color=CanvasColor)}
-                }
-                if(section=="Library"){
-                OutlinedTextField(
-                    value=query,onValueChange=onQuery,singleLine=true,
-                    label={Text("Search indexed files")},
-                    modifier=Modifier.fillMaxWidth().padding(top=14.dp),
-                    shape=RoundedCornerShape(16.dp),
-                    colors=OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor=SilverColor,unfocusedBorderColor=BorderColor,
-                        focusedTextColor=IvoryColor,unfocusedTextColor=IvoryColor,
-                        focusedLabelColor=SilverColor,unfocusedLabelColor=MutedColor,
-                        cursorColor=SilverColor
-                    )
-                )
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                    .padding(top=15.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                    listOf("All","Images","Videos","Books","Other").forEach{kind->
-                        FilterChip(
-                            selected=category==kind,onClick={onCategory(kind)},
-                            label={Text(kind,fontSize=12.sp)},
-                            colors=FilterChipDefaults.filterChipColors(
-                                selectedContainerColor=SilverColor,
-                                selectedLabelColor=CanvasColor,
-                                containerColor=PaneColor,labelColor=MutedColor),
-                            border=FilterChipDefaults.filterChipBorder(
-                                enabled=true,selected=category==kind,
-                                borderColor=BorderColor,selectedBorderColor=SilverColor)
-                        )
+                    Button(onClick=onAcquire,
+                        colors=ButtonDefaults.buttonColors(containerColor=SilverColor),
+                        shape=RoundedCornerShape(11.dp),
+                        modifier=Modifier.heightIn(min=48.dp)){
+                        Text("Acquire",color=CanvasColor,fontSize=13.sp)
                     }
                 }
-                Row(Modifier.fillMaxWidth().padding(top=14.dp),
-                    verticalAlignment=Alignment.CenterVertically){
-                    Text("Library",fontWeight=FontWeight.SemiBold,fontSize=18.sp,
-                        color=IvoryColor,modifier=Modifier.weight(1f))
-                    Text(records.size.toString()+" loaded",fontSize=12.sp,color=MutedColor)
-                }
-                if(status.isNotBlank())Text(status,color=MutedColor,fontSize=12.sp,
-                    modifier=Modifier.padding(top=6.dp).semantics{
-                        contentDescription=status
-                    })
+                if(section=="Library"){
+                    OutlinedTextField(
+                        value=query,onValueChange=onQuery,singleLine=true,
+                        placeholder={Text("Search library",fontSize=14.sp)},
+                        leadingIcon={Text("⌕",fontSize=19.sp,color=SilverColor)},
+                        modifier=Modifier.fillMaxWidth().padding(top=4.dp),
+                        shape=RoundedCornerShape(13.dp),
+                        colors=OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor=SilverColor,
+                            unfocusedBorderColor=BorderColor,
+                            focusedTextColor=IvoryColor,
+                            unfocusedTextColor=IvoryColor,
+                            focusedPlaceholderColor=MutedColor,
+                            unfocusedPlaceholderColor=MutedColor,
+                            cursorColor=SilverColor)
+                    )
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                        .padding(vertical=7.dp),
+                        horizontalArrangement=Arrangement.spacedBy(7.dp)){
+                        listOf("All","Images","Videos","Books","Other").forEach{kind->
+                            FilterChip(selected=category==kind,onClick={onCategory(kind)},
+                                label={Text(kind,fontSize=12.sp)},
+                                colors=FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor=SilverColor,
+                                    selectedLabelColor=CanvasColor,
+                                    containerColor=PaneColor,labelColor=MutedColor),
+                                border=FilterChipDefaults.filterChipBorder(
+                                    enabled=true,selected=category==kind,
+                                    borderColor=BorderColor,selectedBorderColor=SilverColor))
+                        }
+                    }
+                    if(status.contains("failed",true)||
+                       status.contains("unavailable",true)||
+                       status.contains("Indexed ",true)||
+                       status.contains("Verified ",true)){
+                        Text(status,color=MutedColor,fontSize=12.sp,
+                            modifier=Modifier.padding(bottom=5.dp).semantics{
+                                contentDescription=status
+                            })
+                    }
                 }
             }
             if(section=="Library"){
@@ -319,15 +325,28 @@ private fun NexusHome(
                     else->2
                 }
                 val visible=records.filter{categoryMatch(it.mime,category)}
+                // First visual original becomes the wide gallery feature; no
+                // fake artwork, file duplication or alternate data source.
+                val hero=visible.firstOrNull{
+                    it.mime.startsWith("image/")||it.mime.startsWith("video/")
+                }
                 LazyVerticalGrid(
                     columns=GridCells.Fixed(columns),
                     modifier=Modifier.fillMaxSize(),
-                    contentPadding=PaddingValues(start=16.dp,end=16.dp,top=12.dp,bottom=20.dp),
-                    horizontalArrangement=Arrangement.spacedBy(13.dp),
-                    verticalArrangement=Arrangement.spacedBy(15.dp)
+                    contentPadding=PaddingValues(start=3.dp,end=3.dp,top=3.dp,bottom=18.dp),
+                    horizontalArrangement=Arrangement.spacedBy(4.dp),
+                    verticalArrangement=Arrangement.spacedBy(4.dp)
                 ){
-                    items(visible,key={it.locationId}){item->
-                        NexusContentCard(item){onOpen(item)}
+                    items(visible,key={it.locationId},
+                        span={item->
+                            if(item.locationId==hero?.locationId&&columns<=3)
+                                GridItemSpan(maxLineSpan)
+                            else GridItemSpan(1)
+                        }){item->
+                        NexusContentCard(item,
+                            featured=item.locationId==hero?.locationId&&columns<=3){
+                            onOpen(item)
+                        }
                     }
                     if(visible.isEmpty()){
                         item(span={GridItemSpan(maxLineSpan)}){
@@ -359,16 +378,47 @@ private fun NexusHome(
                 }
             }
             if(!landscape)NavigationBar(containerColor=PaneColor){
-                sections.forEachIndexed{index,name->
+                listOf("Library","Search","Transfers","More").forEach{name->
                     NavigationBarItem(
-                        selected=section==name,onClick={onRoute(name)},
-                        icon={Text(navGlyph(name),fontSize=19.sp)},
-                        label={Text(name,fontSize=10.sp)},
+                        selected=section==name||(name=="More"&&
+                            section in listOf("Cloud","Organize","Intelligence")),
+                        onClick={
+                            if(name=="More")showMore=true else onRoute(name)
+                        },
+                        icon={Text(navGlyph(name),fontSize=20.sp)},
+                        label={Text(
+                            if(name=="Search")"Discover" else name,fontSize=11.sp)},
                         colors=NavigationBarItemDefaults.colors(
                             selectedIconColor=SilverColor,selectedTextColor=SilverColor,
                             unselectedIconColor=MutedColor,unselectedTextColor=MutedColor,
                             indicatorColor=CanvasColor)
                     )
+                }
+            }
+            if(showMore){
+                ModalBottomSheet(onDismissRequest={showMore=false},
+                    containerColor=PaneColor,
+                    contentColor=IvoryColor){
+                    Column(Modifier.fillMaxWidth().padding(bottom=24.dp,
+                        start=18.dp,end=18.dp)){
+                        Text("Workspace",color=IvoryColor,fontSize=18.sp,
+                            fontWeight=FontWeight.SemiBold,
+                            modifier=Modifier.padding(bottom=10.dp))
+                        listOf("Cloud","Organize","Intelligence").forEach{name->
+                            TextButton(
+                                onClick={showMore=false;onRoute(name)},
+                                modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),
+                                contentPadding=PaddingValues(horizontal=12.dp)){
+                                Row(Modifier.fillMaxWidth(),
+                                    verticalAlignment=Alignment.CenterVertically){
+                                    Text(navGlyph(name),color=SilverColor,
+                                        fontSize=21.sp,
+                                        modifier=Modifier.width(42.dp))
+                                    Text(name,color=IvoryColor,fontSize=16.sp)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -381,6 +431,7 @@ private fun navGlyph(name:String)=when(name){
     "Transfers"->"⇵"
     "Cloud"->"◫"
     "Organize"->"▤"
+    "More"->"☰"
     else->"◇"
 }
 
@@ -398,23 +449,33 @@ private fun categoryMatch(mime:String,category:String):Boolean{
 }
 
 @Composable
-private fun NexusContentCard(item:NexusRegistry.Item,onClick:()->Unit){
+private fun NexusContentCard(
+    item:NexusRegistry.Item,featured:Boolean=false,onClick:()->Unit
+){
     val context=LocalContext.current
     val thumbnail by produceState<Bitmap?>(null,item.sha256){
         value=withContext(Dispatchers.IO){
             NexusContentThumbnail.load(context,item)
         }
     }
+    val image=item.mime.startsWith("image/")
+    val video=item.mime.startsWith("video/")
+    val visual=image||video
+    val ratio=thumbnail?.let{
+        val native=it.width.toFloat()/it.height.coerceAtLeast(1)
+        native.coerceIn(if(featured)0.85f else 0.70f,
+                        if(featured)2.2f else 1.25f)
+    } ?: if(featured)1.62f else 0.82f
     Card(
         modifier=Modifier.fillMaxWidth().clickable(onClick=onClick)
             .semantics{contentDescription="Open "+item.displayName},
-        shape=RoundedCornerShape(16.dp),
+        shape=RoundedCornerShape(7.dp),
         colors=CardDefaults.cardColors(containerColor=PaneColor),
-        border=BorderStroke(1.dp,BorderColor)
+        border=BorderStroke(0.5.dp,BorderColor)
     ){
         Column{
             Box(
-                Modifier.fillMaxWidth().aspectRatio(0.82f)
+                Modifier.fillMaxWidth().aspectRatio(ratio)
                     .background(NexusVisual.imageBackdrop),
                 contentAlignment=Alignment.Center
             ){
@@ -424,23 +485,48 @@ private fun NexusContentCard(item:NexusRegistry.Item,onClick:()->Unit){
                         modifier=Modifier.fillMaxSize(),
                         contentScale=ContentScale.Fit)
                 }else{
-                    Text(item.mime.substringBefore('/').uppercase(),
-                        color=SilverColor,fontSize=12.sp,
+                    Text(
+                        when {
+                            video->"VIDEO"
+                            image->"IMAGE"
+                            item.mime.contains("pdf")->"PDF"
+                            item.mime.contains("epub")->"EPUB"
+                            item.mime.startsWith("audio/")->"AUDIO"
+                            else->item.mime.substringBefore('/').uppercase()
+                        },
+                        color=SilverColor,fontSize=if(featured)16.sp else 12.sp,
                         fontWeight=FontWeight.Medium,letterSpacing=1.5.sp)
                 }
+                if(video){
+                    Box(Modifier.align(Alignment.Center)
+                        .background(Color.Black.copy(alpha=0.46f),
+                            RoundedCornerShape(50))
+                        .padding(horizontal=13.dp,vertical=7.dp)){
+                        Text("▶",color=Color.White,fontSize=23.sp)
+                    }
+                    Text("VIDEO",color=Color.White,fontSize=10.sp,
+                        modifier=Modifier.align(Alignment.BottomEnd).padding(7.dp)
+                            .background(Color.Black.copy(alpha=0.70f),
+                                RoundedCornerShape(5.dp))
+                            .padding(horizontal=7.dp,vertical=4.dp))
+                }
             }
-            Column(Modifier.padding(horizontal=12.dp, vertical=12.dp)){
-                Text(item.displayName,color=IvoryColor,fontSize=13.sp,
-                    fontWeight=FontWeight.Medium,maxLines=2,
+            // File labels stay readable but never overwhelm the visual gallery.
+            Column(Modifier.padding(horizontal=8.dp,vertical=7.dp)){
+                Text(item.displayName,color=IvoryColor,fontSize=12.sp,
+                    fontWeight=FontWeight.Medium,maxLines=1,
                     overflow=TextOverflow.Ellipsis)
-                Text(item.sourceKind+" · "+formatSize(item.length),
-                    color=MutedColor,fontSize=11.sp,
-                    modifier=Modifier.padding(top=6.dp),
-                    maxLines=1,overflow=TextOverflow.Ellipsis)
+                if(!visual){
+                    Text(item.sourceKind+" · "+formatSize(item.length),
+                        color=MutedColor,fontSize=11.sp,
+                        modifier=Modifier.padding(top=3.dp),
+                        maxLines=1,overflow=TextOverflow.Ellipsis)
+                }
             }
         }
     }
 }
+
 private fun formatSize(bytes:Long):String=when{
     bytes>=1024L*1024L*1024L->"%.1f GiB".format(bytes/1073741824.0)
     bytes>=1024L*1024L->"%.1f MiB".format(bytes/1048576.0)
