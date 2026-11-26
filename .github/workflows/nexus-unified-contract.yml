@@ -1,0 +1,24 @@
+name: Nexus one-app UI contract
+on:
+  push:
+    branches: [work/nexus-harmonization-20261126]
+    paths:
+      - 'scripts/test_unified_nexus_contract.py'
+      - '.github/workflows/nexus-unified-contract.yml'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/src/main/java/com/asterion/nexus/NexusPremiumHomeActivity.kt'
+      - 'app/src/main/java/com/asterion/nexus/NexusUnifiedWorkspace.kt'
+      - 'app/build.gradle.kts'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prove a single integrated Nexus application
+        run: python scripts/test_unified_nexus_contract.py
