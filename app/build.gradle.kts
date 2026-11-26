@@ -36,7 +36,7 @@ android {
 
     defaultConfig {
         applicationId = "com.asterion.nexus"
-        minSdk = 29
+        minSdk = 30
         targetSdk = 35
         versionCode = 119
         versionName = "1.3.90"
