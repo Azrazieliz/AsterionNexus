@@ -17,7 +17,13 @@ Asterion Nexus is the **three-way native Android merger** of **Asterion Core + A
 9. [Control and cross-app contracts](docs/08-ECOSYSTEM-INTEGRATION.md)
 10. [Execution plan, acceptance and release gates](docs/09-EXECUTION-AND-ACCEPTANCE.md)
 11. [Evidence, dependencies and source references](docs/10-SOURCE-BASELINES-AND-EVIDENCE.md)
-12. [Capability and data contract schemas](contracts/README.md)
+12. [Additional library intelligence, files and media operations](docs/11-INTELLIGENT-LIBRARY-OPERATIONS.md)
+13. [Security, privacy, resource and resilience rules](docs/12-SECURITY-PRIVACY-PERFORMANCE.md)
+14. [File-level source adaptation map](docs/13-SOURCE-ADAPTATION-MAP.md)
+15. [Capability and data contract schemas](contracts/README.md)
+16. [Machine-readable approved decisions](spec/owner-decisions.v1.json)
+17. [Acceptance matrix (specified, not tested)](spec/acceptance-cases.v1.json)
+18. [Import provenance template](spec/source-import-manifest.template.json)
 
 ## Product rules
 
@@ -35,3 +41,9 @@ Asterion Nexus is the **three-way native Android merger** of **Asterion Core + A
 This repository was empty when the specification work began. These documents are **binding target requirements and execution design**, not claims that a merger, APK, migration or verification has occurred. Do not copy or replace source donors without a tested migration plan; do not archive or uninstall them before full Nexus phone acceptance.
 
 Scope exclusions: **Adaptive Study** is not part of the cross-app integration audit or immediate Nexus plan. The separate prospective Art + Sound + 3D + Writing creative-app merger is not the Nexus three-way merger.
+
+## Specification verification
+
+The [specification CI workflow](.github/workflows/spec-validation.yml) checks required documents, machine-readable owner decisions, versioned JSON Schemas, synthetic episode-assembly examples, evidence-state honesty, targeted public-source constraints and targeted UI-copy violations. It **does not** compile or test an Android app, download media, perform AI inference or certify physical-phone workflows.
+
+The [import provenance manifest](spec/source-import-manifest.template.json) is intentionally empty until the real source merge occurs. The [acceptance ledger](spec/acceptance-cases.v1.json) starts with all requirements **SPECIFIED**, not passed.
