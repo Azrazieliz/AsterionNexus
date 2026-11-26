@@ -35,6 +35,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Configure Android command-line SDK
+        uses: android-actions/setup-android@v3
       - name: Install Android 36 for Rounder verification
         run: |
           set -euo pipefail
