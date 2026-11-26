@@ -231,6 +231,7 @@ private fun NexusSkin(content:@Composable ()->Unit){
     MaterialTheme(colorScheme=palette,typography=Typography(),content=content)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NexusHome(
     records:List<NexusRegistry.Item>,section:String,query:String,onQuery:(String)->Unit,
