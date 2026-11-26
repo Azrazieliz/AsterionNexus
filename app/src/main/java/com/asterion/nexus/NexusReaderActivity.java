@@ -28,7 +28,7 @@ import java.security.*;
  * Content remains in its source; only chapter/page bytes are requested.
  */
 public final class NexusReaderActivity extends Activity {
-    private static final int PANEL=0xff171a22,ACCENT=0xffcdad76,FG=0xfff0f0f2;
+    private static final int PANEL=0xff1b1e23,ACCENT=0xffd4d9e1,FG=0xfff4f5f7;
     private static final String ASSET_HOST="fg-assets.invalid";
     private final ExecutorService work=Executors.newSingleThreadExecutor();
     private WebView web;
@@ -71,10 +71,10 @@ public final class NexusReaderActivity extends Activity {
         else if(path.endsWith(".cbz")||path.endsWith(".zip")||
             "application/zip".equals(type)||"application/vnd.comicbook+zip".equals(type))mode=2;
         else mode=0;
-        getWindow().setStatusBarColor(0xff0c0e13);
-        getWindow().setNavigationBarColor(0xff0c0e13);
+        getWindow().setStatusBarColor(0xff0e1013);
+        getWindow().setNavigationBarColor(0xff0e1013);
         view=new LinearLayout(this);view.setOrientation(LinearLayout.VERTICAL);
-        view.setBackgroundColor(0xff0c0e13);
+        view.setBackgroundColor(0xff0e1013);
         view.setPadding(dp(12),dp(8),dp(12),dp(8));
         setContentView(view);
         heading=text(getIntent().getStringExtra("title")==null?
@@ -114,7 +114,7 @@ public final class NexusReaderActivity extends Activity {
             }
         });
         image=new ImageView(this);
-        image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff11141a);
+        image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff15181d);
         view.addView(web,new LinearLayout.LayoutParams(-1,0,1));
         view.addView(image,new LinearLayout.LayoutParams(-1,0,1));
         image.setVisibility(View.GONE);

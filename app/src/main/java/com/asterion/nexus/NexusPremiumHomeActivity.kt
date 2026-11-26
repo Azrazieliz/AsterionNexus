@@ -70,8 +70,8 @@ class NexusPremiumHomeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
-        window.statusBarColor=0xff0a0d13.toInt()
-        window.navigationBarColor=0xff0a0d13.toInt()
+        window.statusBarColor=0xff0e1013.toInt()
+        window.navigationBarColor=0xff0e1013.toInt()
         WindowCompat.setDecorFitsSystemWindows(window,false)
         setContent{
             NexusSkin {
@@ -213,18 +213,18 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     }
 }
 
-private val CanvasColor=Color(0xFF0A0D13)
-private val PaneColor=Color(0xFF151B25)
-private val BorderColor=Color(0xFF303946)
-private val GoldColor=Color(0xFFD4B47D)
-private val IvoryColor=Color(0xFFF2F2F4)
-private val MutedColor=Color(0xFF9CA5B4)
+private val CanvasColor=NexusVisual.canvas
+private val PaneColor=NexusVisual.panel
+private val BorderColor=NexusVisual.border
+private val SilverColor=NexusVisual.silver
+private val IvoryColor=NexusVisual.text
+private val MutedColor=NexusVisual.muted
 
 @Composable
 private fun NexusSkin(content:@Composable ()->Unit){
     val palette=darkColorScheme(
-        primary=GoldColor,onPrimary=CanvasColor,
-        secondary=Color(0xFFBDD3E2),surface=CanvasColor,onSurface=IvoryColor,
+        primary=SilverColor,onPrimary=CanvasColor,
+        secondary=Color(0xFFC1C8D2),surface=CanvasColor,onSurface=IvoryColor,
         surfaceVariant=PaneColor,onSurfaceVariant=MutedColor,
         outline=BorderColor,background=CanvasColor,onBackground=IvoryColor
     )
@@ -256,16 +256,16 @@ private fun NexusHome(
         }
         Column(Modifier.fillMaxSize()){
             Column(Modifier.padding(horizontal=20.dp).padding(top=18.dp)){
-                Text("ASTERION",color=GoldColor,fontSize=11.sp,
+                Text("ASTERION",color=SilverColor,fontSize=11.sp,
                     fontWeight=FontWeight.Bold,letterSpacing=3.sp)
                 Row(verticalAlignment=Alignment.CenterVertically,
                     modifier=Modifier.fillMaxWidth().padding(top=3.dp)){
                     Text("Nexus",color=IvoryColor,fontSize=33.sp,
                         fontWeight=FontWeight.SemiBold,letterSpacing=(-0.9f).sp,
                         modifier=Modifier.weight(1f))
-                    TextButton(onClick=onImport){Text("Import",color=GoldColor)}
+                    TextButton(onClick=onImport){Text("Import",color=SilverColor)}
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick=onAcquire,colors=ButtonDefaults.buttonColors(containerColor=GoldColor),
+                    Button(onClick=onAcquire,colors=ButtonDefaults.buttonColors(containerColor=SilverColor),
                         shape=RoundedCornerShape(12.dp),
                         modifier=Modifier.heightIn(min=48.dp)){Text("Acquire",color=CanvasColor)}
                 }
@@ -276,10 +276,10 @@ private fun NexusHome(
                     modifier=Modifier.fillMaxWidth().padding(top=14.dp),
                     shape=RoundedCornerShape(16.dp),
                     colors=OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor=GoldColor,unfocusedBorderColor=BorderColor,
+                        focusedBorderColor=SilverColor,unfocusedBorderColor=BorderColor,
                         focusedTextColor=IvoryColor,unfocusedTextColor=IvoryColor,
-                        focusedLabelColor=GoldColor,unfocusedLabelColor=MutedColor,
-                        cursorColor=GoldColor
+                        focusedLabelColor=SilverColor,unfocusedLabelColor=MutedColor,
+                        cursorColor=SilverColor
                     )
                 )
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
@@ -289,12 +289,12 @@ private fun NexusHome(
                             selected=category==kind,onClick={onCategory(kind)},
                             label={Text(kind,fontSize=12.sp)},
                             colors=FilterChipDefaults.filterChipColors(
-                                selectedContainerColor=GoldColor,
+                                selectedContainerColor=SilverColor,
                                 selectedLabelColor=CanvasColor,
                                 containerColor=PaneColor,labelColor=MutedColor),
                             border=FilterChipDefaults.filterChipBorder(
                                 enabled=true,selected=category==kind,
-                                borderColor=BorderColor,selectedBorderColor=GoldColor)
+                                borderColor=BorderColor,selectedBorderColor=SilverColor)
                         )
                     }
                 }
@@ -313,18 +313,18 @@ private fun NexusHome(
             if(section=="Library"){
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()){
                 val columns=when{
-                    maxWidth>=900.dp->5
-                    maxWidth>=620.dp->4
-                    maxWidth>=440.dp->3
+                    maxWidth>=1180.dp->5
+                    maxWidth>=920.dp->4
+                    maxWidth>=680.dp->3
                     else->2
                 }
                 val visible=records.filter{categoryMatch(it.mime,category)}
                 LazyVerticalGrid(
                     columns=GridCells.Fixed(columns),
                     modifier=Modifier.fillMaxSize(),
-                    contentPadding=PaddingValues(start=20.dp,end=20.dp,top=16.dp,bottom=22.dp),
-                    horizontalArrangement=Arrangement.spacedBy(12.dp),
-                    verticalArrangement=Arrangement.spacedBy(12.dp)
+                    contentPadding=PaddingValues(start=16.dp,end=16.dp,top=12.dp,bottom=20.dp),
+                    horizontalArrangement=Arrangement.spacedBy(13.dp),
+                    verticalArrangement=Arrangement.spacedBy(15.dp)
                 ){
                     items(visible,key={it.locationId}){item->
                         NexusContentCard(item){onOpen(item)}
@@ -365,7 +365,7 @@ private fun NexusHome(
                         icon={Text(navGlyph(name),fontSize=19.sp)},
                         label={Text(name,fontSize=10.sp)},
                         colors=NavigationBarItemDefaults.colors(
-                            selectedIconColor=GoldColor,selectedTextColor=GoldColor,
+                            selectedIconColor=SilverColor,selectedTextColor=SilverColor,
                             unselectedIconColor=MutedColor,unselectedTextColor=MutedColor,
                             indicatorColor=CanvasColor)
                     )
@@ -408,24 +408,24 @@ private fun NexusContentCard(item:NexusRegistry.Item,onClick:()->Unit){
     Card(
         modifier=Modifier.fillMaxWidth().clickable(onClick=onClick)
             .semantics{contentDescription="Open "+item.displayName},
-        shape=RoundedCornerShape(18.dp),
+        shape=RoundedCornerShape(16.dp),
         colors=CardDefaults.cardColors(containerColor=PaneColor),
         border=BorderStroke(1.dp,BorderColor)
     ){
         Column{
             Box(
-                Modifier.fillMaxWidth().aspectRatio(1.22f)
-                    .background(Color(0xFF222A36)),
+                Modifier.fillMaxWidth().aspectRatio(0.82f)
+                    .background(NexusVisual.imageBackdrop),
                 contentAlignment=Alignment.Center
             ){
                 if(thumbnail!=null){
                     Image(bitmap=thumbnail!!.asImageBitmap(),
                         contentDescription="Original thumbnail: "+item.displayName,
                         modifier=Modifier.fillMaxSize(),
-                        contentScale=ContentScale.Crop)
+                        contentScale=ContentScale.Fit)
                 }else{
                     Text(item.mime.substringBefore('/').uppercase(),
-                        color=GoldColor,fontSize=12.sp,
+                        color=SilverColor,fontSize=12.sp,
                         fontWeight=FontWeight.Medium,letterSpacing=1.5.sp)
                 }
             }
@@ -487,7 +487,7 @@ private object NexusContentThumbnail {
             val image=if(item.mime.startsWith("image/")){
                 val opts=BitmapFactory.Options().apply{inJustDecodeBounds=true}
                 BitmapFactory.decodeFile(file.path,opts)
-                val down=max(1,max(opts.outWidth/460,opts.outHeight/310))
+                val down=max(1,max(opts.outWidth/640,opts.outHeight/840))
                 BitmapFactory.decodeFile(file.path,
                     BitmapFactory.Options().apply{inSampleSize=down})
             }else{
@@ -497,8 +497,8 @@ private object NexusContentThumbnail {
                 }
             }
             if(image!=null){
-                val result=if(image.width>480||image.height>360){
-                    val ratio=minOf(480f/image.width,360f/image.height)
+                val result=if(image.width>640||image.height>840){
+                    val ratio=minOf(640f/image.width,840f/image.height)
                     Bitmap.createScaledBitmap(image,
                         max(1,(image.width*ratio).toInt()),
                         max(1,(image.height*ratio).toInt()),true).also{

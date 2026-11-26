@@ -17,15 +17,15 @@ class NexusCoreActivity : Activity() {
     private lateinit var content:LinearLayout
     private var ready=false
     private var page=0
-    private val ink=0xffefeff1.toInt()
-    private val muted=0xffa5a9b5.toInt()
-    private val gold=0xffd0ac72.toInt()
-    private val background=0xff0c0e13.toInt()
-    private val panel=0xff1a1d26.toInt()
+    private val ink=0xfff4f5f7.toInt()
+    private val muted=0xffa8b0bb.toInt()
+    private val gold=0xffd4d9e1.toInt()
+    private val background=0xff0e1013.toInt()
+    private val panel=0xff1b1e23.toInt()
     private val pages=listOf("Library","Scan","Review","Tags","AI models","Health")
     private fun dp(value:Int)=(value*resources.displayMetrics.density+0.5f).toInt()
     private fun shape()=GradientDrawable().apply {
-        setColor(panel);cornerRadius=dp(14).toFloat();setStroke(dp(1),0xff454852.toInt())
+        setColor(panel);cornerRadius=dp(14).toFloat();setStroke(dp(1),0xff454a53.toInt())
     }
     private fun text(value:String,sp:Float=14f,title:Boolean=false)=TextView(this).apply {
         text=value;textSize=sp;setTextColor(if(title)ink else muted)

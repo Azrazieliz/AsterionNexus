@@ -26,13 +26,13 @@ public final class NexusFusionActivity extends Activity {
     private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}
     private TextView text(String content,int size,boolean header){
         TextView t=new TextView(this);t.setText(content);t.setTextSize(size);
-        t.setTextColor(header?0xfff1f0f1:0xffa7abb5);
+        t.setTextColor(header?0xfff4f5f7:0xffa8b0bb);
         if(header)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         return t;
     }
     private GradientDrawable panel(){
-        GradientDrawable d=new GradientDrawable();d.setColor(0xff191d27);
-        d.setCornerRadius(dp(14));d.setStroke(dp(1),0xff3d4149);return d;
+        GradientDrawable d=new GradientDrawable();d.setColor(0xff1b1e23);
+        d.setCornerRadius(dp(14));d.setStroke(dp(1),0xff454a53);return d;
     }
     private LinearLayout.LayoutParams space(int top){
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
@@ -48,10 +48,10 @@ public final class NexusFusionActivity extends Activity {
     private void setState(String value){runOnUiThread(()->state.setText(value));}
     @Override public void onCreate(Bundle saved){
         super.onCreate(saved);
-        getWindow().setStatusBarColor(0xff0c0e13);
-        getWindow().setNavigationBarColor(0xff0c0e13);
+        getWindow().setStatusBarColor(0xff0e1013);
+        getWindow().setNavigationBarColor(0xff0e1013);
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
-        scroll.setBackgroundColor(0xff0c0e13);
+        scroll.setBackgroundColor(0xff0e1013);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(22),dp(35),dp(22),dp(30));scroll.addView(root);
         setContentView(scroll);

@@ -17,8 +17,8 @@ import java.util.concurrent.*;
 
 /** Owner-authorized SAF roots: existing Rounder TeraBox or local/provider folders. */
 public final class NexusSourcesActivity extends Activity {
-    private static final int PICK=7201, BG=0xff0c0e13,PANEL=0xff1a1d27,
-        TEXT=0xfff0f0f2,MUTED=0xffa4a8b2,GOLD=0xffcfb079;
+    private static final int PICK=7201, BG=0xff0e1013,PANEL=0xff1b1e23,
+        TEXT=0xfff4f5f7,MUTED=0xffa8b0bb,GOLD=0xffd4d9e1;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private NexusSourceRegistry sourceRegistry;
     private FgSearchIndex index;
@@ -27,7 +27,7 @@ public final class NexusSourcesActivity extends Activity {
     private int dp(int x){return (int)(getResources().getDisplayMetrics().density*x+.5f);}
     private GradientDrawable surface(){
         GradientDrawable d=new GradientDrawable();d.setColor(PANEL);
-        d.setCornerRadius(dp(14));d.setStroke(dp(1),0xff454652);return d;
+        d.setCornerRadius(dp(14));d.setStroke(dp(1),0xff454a53);return d;
     }
     private TextView text(String value,int sp,boolean strong){
         TextView t=new TextView(this);t.setText(value);t.setTextSize(sp);

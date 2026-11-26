@@ -13,6 +13,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,11 +48,11 @@ import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicInteger
 
 /** One application surface: donors only supply engines, never separate launchers. */
-private val C_CARD=Color(0xFF151B25)
-private val C_BORDER=Color(0xFF303946)
-private val C_GOLD=Color(0xFFD4B47D)
-private val C_TEXT=Color(0xFFF2F2F4)
-private val C_MUTED=Color(0xFF9CA5B4)
+private val C_CARD=NexusVisual.panel
+private val C_BORDER=NexusVisual.border
+private val C_SILVER=NexusVisual.silver
+private val C_TEXT=NexusVisual.text
+private val C_MUTED=NexusVisual.muted
 
 data class NexusUnifiedEntry(
     val title:String,
@@ -75,9 +77,9 @@ data class NexusUnifiedEntry(
             else androidx.compose.ui.text.input.VisualTransformation.None,
         modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp),
         colors=OutlinedTextFieldDefaults.colors(
-            focusedBorderColor=C_GOLD,unfocusedBorderColor=C_BORDER,
+            focusedBorderColor=C_SILVER,unfocusedBorderColor=C_BORDER,
             focusedTextColor=C_TEXT,unfocusedTextColor=C_TEXT,
-            focusedLabelColor=C_GOLD,unfocusedLabelColor=C_MUTED))
+            focusedLabelColor=C_SILVER,unfocusedLabelColor=C_MUTED))
 }
 @Composable private fun UnifiedButton(text:String,enabled:Boolean=true,action:()->Unit){
     OutlinedButton(onClick=action,enabled=enabled,
@@ -94,7 +96,7 @@ data class NexusUnifiedEntry(
                     fontSize=14.sp,maxLines=2,overflow=TextOverflow.Ellipsis,
                     modifier=Modifier.weight(1f))
                 Spacer(Modifier.width(10.dp))
-                Text(entry.source,color=C_GOLD,fontSize=11.sp)
+                Text(entry.source,color=C_SILVER,fontSize=11.sp)
             }
             if(entry.detail.isNotBlank())Text(entry.detail,color=C_MUTED,
                 fontSize=12.sp,maxLines=3,overflow=TextOverflow.Ellipsis,
@@ -260,7 +262,7 @@ private fun NexusUnifiedSearch(
         UnifiedField(term,{term=it},"Search all indexed sources")
         Row(verticalAlignment=Alignment.CenterVertically){
             Checkbox(checked=online,onCheckedChange={online=it},
-                colors=CheckboxDefaults.colors(checkedColor=C_GOLD))
+                colors=CheckboxDefaults.colors(checkedColor=C_SILVER))
             Text("Search public web too",color=C_TEXT,fontSize=12.sp,
                 modifier=Modifier.weight(1f))
             UnifiedButton(if(loading)"Searching…" else "Search",!loading){execute()}
@@ -365,7 +367,7 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
             UnifiedButton(if(refreshing)"Reading…" else "Refresh",!refreshing){refresh()}
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(
-            androidx.compose.foundation.rememberScrollState()).padding(vertical=10.dp),
+            rememberScrollState()).padding(vertical=10.dp),
             horizontalArrangement=Arrangement.spacedBy(6.dp)){
             listOf("Unfinished","Active","Issues","Saved","All").forEach{option->
                 FilterChip(selected=filter==option,onClick={filter=option},
@@ -384,7 +386,7 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
                                 overflow=TextOverflow.Ellipsis,
                                 modifier=Modifier.weight(1f))
                             Spacer(Modifier.width(10.dp))
-                            Text(item.state,color=C_GOLD,fontSize=11.sp)
+                            Text(item.state,color=C_SILVER,fontSize=11.sp)
                         }
                         Text(item.source+" · "+item.detail,
                             color=C_MUTED,fontSize=12.sp,
@@ -397,7 +399,7 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
                             LinearProgressIndicator(
                                 progress={percent/100f},
                                 modifier=Modifier.fillMaxWidth().padding(top=5.dp),
-                                color=C_GOLD,trackColor=C_BORDER)
+                                color=C_SILVER,trackColor=C_BORDER)
                         }
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
                             modifier=Modifier.padding(top=10.dp)){
@@ -569,7 +571,7 @@ private fun NexusUnifiedCloud(
             }
         }else{
             Row(verticalAlignment=Alignment.CenterVertically){
-                Text("Connected · "+folder,color=C_GOLD,fontSize=12.sp,
+                Text("Connected · "+folder,color=C_SILVER,fontSize=12.sp,
                     modifier=Modifier.weight(1f),maxLines=1)
                 UnifiedButton("Up",folder!="/"){
                     folder=folder.substringBeforeLast('/',"/").ifBlank{"/"};page=1

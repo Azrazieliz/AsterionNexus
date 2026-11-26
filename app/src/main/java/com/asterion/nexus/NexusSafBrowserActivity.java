@@ -17,8 +17,8 @@ import java.util.concurrent.*;
 
 /** Paged, read-only DocumentsProvider browser, including existing Rounder accounts. */
 public final class NexusSafBrowserActivity extends Activity {
-    private static final int BACK=0xff0c0e13,PANEL=0xff1a1d27,
-        WHITE=0xfff0f0f2,GRAY=0xffa4a8b2,GOLD=0xffceb07d, PAGE=96;
+    private static final int BACK=0xff0e1013,PANEL=0xff1b1e23,
+        WHITE=0xfff4f5f7,GRAY=0xffa8b0bb,GOLD=0xffd4d9e1, PAGE=96;
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private final ArrayDeque<String> parents=new ArrayDeque<>();
     private Uri tree;
@@ -29,7 +29,7 @@ public final class NexusSafBrowserActivity extends Activity {
     private int dp(int x){return (int)(getResources().getDisplayMetrics().density*x+.5f);}
     private GradientDrawable surface(){
         GradientDrawable d=new GradientDrawable();d.setColor(PANEL);
-        d.setStroke(dp(1),0xff434651);d.setCornerRadius(dp(14));return d;
+        d.setStroke(dp(1),0xff454a53);d.setCornerRadius(dp(14));return d;
     }
     private TextView text(String s,int size,boolean strong){
         TextView t=new TextView(this);t.setText(s);t.setTextSize(size);

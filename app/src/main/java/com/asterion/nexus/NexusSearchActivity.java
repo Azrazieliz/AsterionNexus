@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Never sends search text to an online service without user selection.
  */
 public final class NexusSearchActivity extends Activity {
-    private static final int BACK=0xff0c0e13,PANEL=0xff1a1d27,EDGE=0xff454652,
-        PRIMARY=0xfff0f0f2,SECONDARY=0xffa4a8b2,ACCENT=0xffcbab73;
+    private static final int BACK=0xff0e1013,PANEL=0xff1b1e23,EDGE=0xff454a53,
+        PRIMARY=0xfff4f5f7,SECONDARY=0xffa8b0bb,ACCENT=0xffd4d9e1;
     private static final String[] MODES={"All videos","Adult videos","Hentai videos","Games","EPUB"};
     private final ExecutorService worker=Executors.newFixedThreadPool(3);
     private final AtomicInteger request=new AtomicInteger();
