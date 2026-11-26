@@ -327,6 +327,11 @@ private fun NexusUnifiedCloud(
     var rows by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
     var sourceRoots by remember{mutableStateOf(registry.roots())}
     var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
+    var selectedTree by remember{mutableStateOf<Uri?>(null)}
+    var currentDocument by remember{mutableStateOf<String?>(null)}
+    var sourceOffset by remember{mutableIntStateOf(0)}
+    var sourceRows by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
+    val treeHistory=remember{mutableStateListOf<String>()}
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()){uri->
         if(uri!=null){
             runCatching{
@@ -362,6 +367,52 @@ private fun NexusUnifiedCloud(
             }.onFailure{status="Cloud unavailable: "+it.message.orEmpty().take(120)}
         }
     }
+    fun browseTree(tree:Uri,id:String,offset:Int){
+        selectedTree=tree
+        currentDocument=id
+        sourceOffset=offset
+        scope.launch{
+            status="Browsing authorized folder"
+            runCatching{withContext(Dispatchers.IO){
+                val child=DocumentsContract.buildChildDocumentsUriUsingTree(tree,id)
+                val result=mutableListOf<NexusUnifiedEntry>()
+                val cols=arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE,
+                    DocumentsContract.Document.COLUMN_SIZE)
+                val options=Bundle().apply{
+                    putInt(ContentResolver.QUERY_ARG_OFFSET,offset)
+                    putInt(ContentResolver.QUERY_ARG_LIMIT,80)
+                }
+                val cursor=ctx.contentResolver.query(child,cols,options,null)
+                    ?:throw java.io.IOException("No provider response")
+                cursor.use{
+                    val ci=it.getColumnIndexOrThrow(cols[0])
+                    val cn=it.getColumnIndexOrThrow(cols[1])
+                    val cm=it.getColumnIndexOrThrow(cols[2])
+                    val cs=it.getColumnIndex(cols[3])
+                    while(it.moveToNext()&&result.size<80){
+                        val childId=it.getString(ci)
+                        val title=it.getString(cn)?:"File"
+                        val mime=it.getString(cm)?:"application/octet-stream"
+                        val length=if(cs<0||it.isNull(cs))-1 else it.getLong(cs)
+                        result.add(NexusUnifiedEntry(
+                            title,if(length>=0)(length/1024).toString()+" KiB" else "Folder / file",
+                            "SAF",DocumentsContract.buildDocumentUriUsingTree(tree,childId),
+                            mime,size=length,
+                            folder=mime==DocumentsContract.Document.MIME_TYPE_DIR))
+                    }
+                }
+                result
+            }}.onSuccess{
+                if(selectedTree==tree&&currentDocument==id&&sourceOffset==offset){
+                    sourceRows=it
+                    status=it.size.toString()+" folder entries"
+                }
+            }.onFailure{status="Folder read failed: "+it.message.orEmpty().take(120)}
+        }
+    }
     LaunchedEffect(connected,folder,page){if(connected)refresh()}
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
         UnifiedHeading("Cloud & sources",
@@ -392,56 +443,72 @@ private fun NexusUnifiedCloud(
         }
         Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.padding(vertical=10.dp))
         LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
-            items(sourceRoots){tree->
-                UnifiedEntryCard(NexusUnifiedEntry(
-                    tree.lastPathSegment?:"Connected source",
-                    tree.authority.orEmpty(),"Folder")){
-                    val path=runCatching{DocumentsContract.getTreeDocumentId(tree)}.getOrNull()
-                    if(path==null){status="Source is unavailable"}
-                    else{
-                        scope.launch{
-                            runCatching{withContext(Dispatchers.IO){
-                                val child=DocumentsContract.buildChildDocumentsUriUsingTree(tree,path)
-                                val result=mutableListOf<NexusUnifiedEntry>()
-                                val cols=arrayOf(
-                                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                                    DocumentsContract.Document.COLUMN_MIME_TYPE)
-                                ctx.contentResolver.query(child,cols,null,null,null)?.use{cursor->
-                                    val id=cursor.getColumnIndexOrThrow(cols[0])
-                                    val name=cursor.getColumnIndexOrThrow(cols[1])
-                                    val mime=cursor.getColumnIndexOrThrow(cols[2])
-                                    while(cursor.moveToNext()&&result.size<100){
-                                        val mt=cursor.getString(mime)?:"application/octet-stream"
-                                        result.add(NexusUnifiedEntry(
-                                            cursor.getString(name)?:"File","Authorized folder",
-                                            "SAF",
-                                            DocumentsContract.buildDocumentUriUsingTree(tree,
-                                                cursor.getString(id)),
-                                            mt,folder=mt==DocumentsContract.Document.MIME_TYPE_DIR))
-                                    }
-                                }
-                                result
-                            }}.onSuccess{rows=it;status="Browsing granted folder"}
-                                .onFailure{status="Source unavailable: "+it.message.orEmpty().take(100)}
+            if(selectedTree!=null&&currentDocument!=null){
+                item{
+                    Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){
+                        UnifiedButton("Back"){
+                            val tree=selectedTree
+                            if(treeHistory.isNotEmpty()&&tree!=null){
+                                val parent=treeHistory.removeAt(treeHistory.lastIndex)
+                                browseTree(tree,parent,0)
+                            }else{
+                                selectedTree=null;currentDocument=null
+                                sourceRows=emptyList()
+                            }
+                        }
+                        UnifiedButton("Reload"){
+                            val tree=selectedTree;val doc=currentDocument
+                            if(tree!=null&&doc!=null)browseTree(tree,doc,sourceOffset)
                         }
                     }
                 }
-            }
-            item{Text("Streamed files",color=C_TEXT,fontSize=16.sp,
-                modifier=Modifier.padding(top=15.dp))}
-            items(rows){entry->
-                UnifiedEntryCard(entry){
-                    when{
-                        entry.path!=null&&entry.folder->{folder=entry.path;page=1}
-                        entry.path!=null->selected=entry
-                        entry.uri!=null&&!entry.folder->onOpen(entry.uri,entry.mime,entry.title,-1)
-                        else->status="Open this folder through the authorized source picker"
+                items(sourceRows){entry->
+                    UnifiedEntryCard(entry){
+                        val tree=selectedTree;val uri=entry.uri
+                        if(uri!=null&&tree!=null){
+                            if(entry.folder){
+                                val doc=runCatching{
+                                    DocumentsContract.getDocumentId(uri)}.getOrNull()
+                                if(doc!=null){
+                                    currentDocument?.let{treeHistory.add(it)}
+                                    browseTree(tree,doc,0)
+                                }
+                            }else onOpen(uri,entry.mime,entry.title,-1)
+                        }
                     }
                 }
-            }
-            if(connected&&rows.size>=FgTeraboxClient.pageSize())item{
-                UnifiedButton("Next page"){page++}
+                if(sourceRows.size>=80)item{
+                    UnifiedButton("More folder items"){
+                        val tree=selectedTree;val doc=currentDocument
+                        if(tree!=null&&doc!=null)browseTree(tree,doc,sourceOffset+80)
+                    }
+                }
+            }else{
+                items(sourceRoots){tree->
+                    UnifiedEntryCard(NexusUnifiedEntry(
+                        tree.lastPathSegment?:"Connected source",
+                        tree.authority.orEmpty(),"Folder")){
+                        val doc=runCatching{
+                            DocumentsContract.getTreeDocumentId(tree)}.getOrNull()
+                        if(doc!=null){treeHistory.clear();browseTree(tree,doc,0)}
+                        else status="Source grant is unavailable"
+                    }
+                }
+                item{Text("Streamed files",color=C_TEXT,fontSize=16.sp,
+                    modifier=Modifier.padding(top=15.dp))}
+                items(rows){entry->
+                    UnifiedEntryCard(entry){
+                        when{
+                            entry.path!=null&&entry.folder->{folder=entry.path;page=1}
+                            entry.path!=null->selected=entry
+                            entry.uri!=null&&!entry.folder->onOpen(entry.uri,entry.mime,entry.title,-1)
+                            else->status="Select the folder in the authorized source list"
+                        }
+                    }
+                }
+                if(connected&&rows.size>=FgTeraboxClient.pageSize())item{
+                    UnifiedButton("Next cloud page"){page++}
+                }
             }
         }
     }
