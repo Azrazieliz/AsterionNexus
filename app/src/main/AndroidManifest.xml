@@ -128,6 +128,7 @@
         <!-- One distinct authority; never claim or disturb the installed Rounder provider. -->
         <provider android:name="com.openlocal.office.core.FgTeraboxDocumentsProvider"
             android:authorities="com.asterion.nexus.terabox.documents"
+            android:process=":terabox"
             android:permission="android.permission.MANAGE_DOCUMENTS"
             android:exported="true" android:grantUriPermissions="true">
             <intent-filter>
