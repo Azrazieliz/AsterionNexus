@@ -210,7 +210,7 @@ private fun NexusUnifiedSearch(
                             if(uri.startsWith("content://"))
                                 all.add(NexusUnifiedEntry(
                                     (item["filename"]?:item["name"])?.toString()?:"Indexed artwork",
-                                    "Core indexed image","Gallery",Uri.parse(uri),"image/*"))
+                                    "Indexed image","Gallery",Uri.parse(uri),"image/*"))
                         }
                     }
                     all
@@ -384,6 +384,10 @@ private fun NexusUnifiedCloud(
                 val options=Bundle().apply{
                     putInt(ContentResolver.QUERY_ARG_OFFSET,offset)
                     putInt(ContentResolver.QUERY_ARG_LIMIT,80)
+                    // The pinned cloud DocumentsProvider consumes these native page hints.
+                    // Keep standard SAF hints as well for third-party providers.
+                    putInt(FgTeraboxDocumentsProvider.PAGE_OFFSET,offset)
+                    putInt(FgTeraboxDocumentsProvider.PAGE_LIMIT,80)
                 }
                 val cursor=ctx.contentResolver.query(child,cols,options,null)
                     ?:throw java.io.IOException("No provider response")
@@ -631,7 +635,7 @@ private fun NexusUnifiedOrganize(){
         }
     }
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
-        UnifiedHeading("Organize","Shared Fusion knowledge, tags and Core review queue")
+        UnifiedHeading("Organize","Knowledge, tags, reviews and indexing in one workspace")
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
             listOf("Fusion","Tags","Reviews","Scanning").forEach{label->
                 FilterChip(selected=page==label,onClick={page=label},
@@ -735,7 +739,7 @@ private fun NexusUnifiedIntelligence(){
     }
     LaunchedEffect(page){run()}
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
-        UnifiedHeading("Intelligence","AI model management, queued jobs, hardware and runtime health")
+        UnifiedHeading("Intelligence","Models, tasks, hardware and runtime health")
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){
             listOf("Models","Queue","Hardware","Health").forEach{choice->
                 FilterChip(selected=page==choice,onClick={page=choice},

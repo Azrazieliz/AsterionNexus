@@ -10,6 +10,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.LruCache
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -47,6 +49,8 @@ import kotlin.math.max
 /** Primary Nexus shell. All media cards are backed by real indexed originals. */
 class NexusPremiumHomeActivity : ComponentActivity() {
     private val worker=Executors.newSingleThreadExecutor()
+    private val queryHandler=Handler(Looper.getMainLooper())
+    private var queryTask:Runnable?=null
     private val records=mutableStateListOf<NexusRegistry.Item>()
     private val generation=AtomicInteger()
     private var query by mutableStateOf("")
@@ -75,7 +79,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
                     records=records,
                     section=activeSection,
                     query=query,
-                    onQuery={ value-> query=value;loadPage(reset=true) },
+                    onQuery={ value-> onQueryChanged(value) },
                     category=category,
                     onCategory={category=it},
                     loading=loading,
@@ -117,6 +121,17 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     override fun onResume(){
         super.onResume()
         if(records.isNotEmpty())loadPage(reset=true)
+    }
+
+    /** Debounce library index queries: one SQLite lookup after typing, not every keypress. */
+    private fun onQueryChanged(value:String){
+        query=value
+        queryTask?.let(queryHandler::removeCallbacks)
+        generation.incrementAndGet() // stale async search cannot overwrite newer text
+        loading=true
+        val task=Runnable{loadPage(reset=true)}
+        queryTask=task
+        queryHandler.postDelayed(task,220L)
     }
 
     private fun loadPage(reset:Boolean){
@@ -192,7 +207,10 @@ class NexusPremiumHomeActivity : ComponentActivity() {
             }
         }
     }
-    override fun onDestroy(){worker.shutdownNow();super.onDestroy()}
+    override fun onDestroy(){
+        queryTask?.let(queryHandler::removeCallbacks)
+        worker.shutdownNow();super.onDestroy()
+    }
 }
 
 private val CanvasColor=Color(0xFF0A0D13)
