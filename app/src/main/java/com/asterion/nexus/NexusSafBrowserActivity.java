@@ -11,6 +11,7 @@ import android.provider.DocumentsContract;
 import android.view.Gravity;
 import android.widget.*;
 import com.openlocal.office.core.FgTeraboxDocumentsProvider;
+import com.openlocal.office.core.FgSearchIndex;
 import java.util.*;
 import java.util.concurrent.*;
 
