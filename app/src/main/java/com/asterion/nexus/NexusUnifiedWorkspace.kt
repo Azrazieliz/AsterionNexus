@@ -67,8 +67,10 @@ data class NexusUnifiedEntry(
     Text(subtitle,color=C_MUTED,fontSize=12.sp,
         modifier=Modifier.padding(top=6.dp,bottom=15.dp))
 }
-@Composable private fun UnifiedField(value:String,change:(String)->Unit,hint:String){
+@Composable private fun UnifiedField(value:String,change:(String)->Unit,hint:String,secret:Boolean=false){
     OutlinedTextField(value=value,onValueChange=change,label={Text(hint)},singleLine=true,
+        visualTransformation=if(secret)androidx.compose.ui.text.input.PasswordVisualTransformation()
+            else androidx.compose.ui.text.input.VisualTransformation.None,
         modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(14.dp),
         colors=OutlinedTextFieldDefaults.colors(
             focusedBorderColor=C_GOLD,unfocusedBorderColor=C_BORDER,
@@ -365,7 +367,7 @@ private fun NexusUnifiedCloud(
         UnifiedHeading("Cloud & sources",
             "Browse TeraBox and authorized Android folders without duplicating libraries")
         if(!connected){
-            UnifiedField(cookie,{cookie=it},"TeraBox session (ndus)")
+            UnifiedField(cookie,{cookie=it},"TeraBox session (ndus)",true)
             UnifiedButton("Connect",cookie.trim().length>=12){
                 val token=cookie.trim();cookie=""
                 if(cloud.setCookie(token)){connected=true;status="TeraBox session encrypted"}
