@@ -37,6 +37,8 @@ jobs:
           sudo chmod g+rw /dev/kvm
           test -r /dev/kvm
           test -w /dev/kvm
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "emulator"
+          test -x "$ANDROID_HOME/emulator/emulator"
           "$ANDROID_HOME/emulator/emulator" -accel-check
       - name: Install accepted Android compilation API
         shell: bash
