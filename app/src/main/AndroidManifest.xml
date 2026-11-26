@@ -102,11 +102,19 @@
             android:authorities="${applicationId}.torrent-files"
             android:exported="false"
             android:grantUriPermissions="true" />
-        <activity android:name=".AsterionHomeActivity" android:exported="true">
+        <activity android:name="com.asterion.nexus.NexusLibraryActivity"
+            android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+        </activity>
+        <activity android:name="com.asterion.nexus.NexusPlaybackActivity"
+            android:exported="false"/>
+        <provider android:name="com.asterion.nexus.NexusLibraryProvider"
+            android:authorities="${applicationId}.library"
+            android:exported="false" android:grantUriPermissions="true"/>
+        <activity android:name=".AsterionHomeActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
