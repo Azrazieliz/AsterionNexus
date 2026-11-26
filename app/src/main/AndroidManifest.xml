@@ -113,6 +113,8 @@
             android:exported="false"/>
         <activity android:name="com.asterion.nexus.NexusCloudActivity"
             android:exported="false" android:windowSoftInputMode="adjustResize"/>
+        <activity android:name="com.asterion.nexus.NexusSearchActivity"
+            android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name="com.asterion.nexus.NexusFusionActivity"
             android:exported="false"/>
         <activity android:name="com.asterion.nexus.NexusReaderActivity"

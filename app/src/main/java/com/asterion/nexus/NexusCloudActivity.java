@@ -133,6 +133,9 @@ public final class NexusCloudActivity extends Activity {
         results=new LinearLayout(this);results.setOrientation(LinearLayout.VERTICAL);
         content.addView(results,spacing(15));
         configure();
+        String selected=getIntent().getStringExtra("folder");
+        if(selected!=null&&selected.startsWith("/")&&!selected.contains("/../")&&
+            !selected.contains("\\"))currentPath=selected;
         if(cloud[0].configured()){index.ensure(false);browse();}
         else search("");
     }
