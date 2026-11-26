@@ -38,8 +38,8 @@ android {
         applicationId = "com.asterion.nexus"
         minSdk = 30
         targetSdk = 35
-        versionCode = 119
-        versionName = "1.3.90"
+        versionCode = 10000
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "com.azrael.pixivdumpsync.DeviceTransferSimulation"
     }
@@ -136,9 +136,8 @@ android {
         }
         release {
             isMinifyEnabled = false
-            if (hasOriginalSigningKey) {
-                signingConfig = signingConfigs.getByName("originalUpgradeKey")
-            }
+            // Nexus must never ship with the original Downloader signing certificate.
+            // A stable, private Nexus signer is supplied only by the owner's release pipeline.
         }
     }
 
