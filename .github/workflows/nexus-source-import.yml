@@ -1,0 +1,68 @@
+name: Nexus pinned three-way native source import
+on:
+  push:
+    branches: [work/merge-core-downloader-rounder]
+    paths:
+      - scripts/import_native_sources.py
+      - .github/workflows/nexus-source-import.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nexus-source-import
+  cancel-in-progress: false
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout isolated Nexus branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned YAML parser
+        run: python -m pip install --disable-pip-version-check "PyYAML==6.0.2"
+      - name: Install Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Android 36 for Rounder verification
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Materialize actual donor sources and assembled Rounder engines
+        run: python scripts/import_native_sources.py
+      - name: Source-only security, isolation and provenance preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s app/src/main/AndroidManifest.xml
+          test -s app/src/main/java/com/asterion/videoflow/TransferService.kt
+          test -s fusion/src/main/java/com/ailm/android/runtime/FusionDatabaseRepository.kt
+          test -s rounder/src/main/java/com/openlocal/office/core/FgTeraboxClient.java
+          test -s rounder/src/main/java/com/openlocal/office/core/FgSearchIndex.java
+          grep -Fq 'applicationId = "com.asterion.nexus"' app/build.gradle.kts
+          test ! -e app/src/main/assets/yt_dlp-2026.10.26-py3-none-any.whl
+          ! find app fusion rounder -type f \( -name '*.so' -o -name '*.onnx' -o -name '*.keystore' -o -name '*.jks' -o -name '*.apk' \) | grep -q .
+          python -m json.tool spec/source-import-manifest.v1.json >/dev/null
+          git add app fusion rounder build.gradle.kts settings.gradle.kts gradle.properties spec/source-import-manifest.v1.json
+          git diff --cached --check
+      - name: Commit imported source to work branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git diff --cached --quiet && { echo "No source changes"; exit 0; }
+          git commit -m 'feat(nexus): integrate pinned Downloader, Core Fusion and assembled Rounder engines'
+          git push origin "HEAD:$GITHUB_REF_NAME"
