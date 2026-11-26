@@ -205,7 +205,13 @@ public final class NexusLibraryActivity extends Activity {
     private void open(NexusRegistry.Item item){
         try{
             Uri uri=NexusLibraryProvider.uriFor(this,item.sha256);
-            if(item.mime.startsWith("video/")){
+            if(item.mime.equals("application/pdf")||item.mime.equals("application/epub+zip")||
+                item.mime.equals("application/vnd.comicbook+zip")||item.mime.equals("application/zip")||
+                item.mime.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")){
+                Intent reader=new Intent(this,NexusReaderActivity.class);
+                reader.setDataAndType(uri,item.mime);reader.putExtra("title",item.displayName);
+                startActivity(reader);
+            } else             if(item.mime.startsWith("video/")){
                 Intent own=new Intent(this,NexusPlaybackActivity.class);
                 own.setDataAndType(uri,item.mime);startActivity(own);
             } else {

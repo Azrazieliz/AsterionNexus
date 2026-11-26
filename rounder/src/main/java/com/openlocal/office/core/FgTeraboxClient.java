@@ -138,6 +138,9 @@ public final class FgTeraboxClient {
         if(low.endsWith(".pdf"))return "application/pdf";
         if(low.endsWith(".mp4"))return "video/mp4";
         if(low.endsWith(".webm"))return "video/webm";
+        if(low.endsWith(".epub"))return "application/epub+zip";
+        if(low.endsWith(".cbz"))return "application/vnd.comicbook+zip";
+        if(low.endsWith(".docx"))return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         if(low.endsWith(".zip"))return "application/zip";
         return "application/octet-stream";
     }

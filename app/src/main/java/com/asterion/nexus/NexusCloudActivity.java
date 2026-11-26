@@ -294,7 +294,12 @@ public final class NexusCloudActivity extends Activity {
     }
     private void openUri(Uri uri,String mime,String title){
         try{
-            if(mime.startsWith("video/")){
+            if(mime.equals("application/pdf")||mime.equals("application/epub+zip")||
+                mime.equals("application/vnd.comicbook+zip")||mime.equals("application/zip")||
+                mime.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")){
+                Intent reader=new Intent(this,NexusReaderActivity.class);
+                reader.setDataAndType(uri,mime);reader.putExtra("title",title);startActivity(reader);
+            } else             if(mime.startsWith("video/")){
                 Intent video=new Intent(this,NexusRounderPlaybackActivity.class);
                 video.setDataAndType(uri,mime);video.putExtra("title",title);startActivity(video);
             } else {

@@ -115,6 +115,8 @@
             android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name="com.asterion.nexus.NexusFusionActivity"
             android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusReaderActivity"
+            android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name="com.asterion.nexus.NexusRounderPlaybackActivity"
             android:exported="false" android:configChanges="orientation|screenSize"/>
         <!-- One distinct authority; never claim or disturb the installed Rounder provider. -->
