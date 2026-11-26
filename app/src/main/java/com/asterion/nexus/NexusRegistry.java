@@ -105,14 +105,39 @@ public final class NexusRegistry {
     }
     /** Bounded, stable, non-destructive paging over 300k+ metadata rows. */
     public List<Item> searchPage(String query,int offset,int limit){
+        return searchPage(query,offset,limit,"All");
+    }
+
+    /**
+     * Filter before pagination, never after returning the first batch. This
+     * ensures media tabs work correctly for large multi-format libraries.
+     * The owner-facing category maps to fixed SQL predicates only.
+     */
+    public List<Item> searchPage(String query,int offset,int limit,String category){
         if(limit<1||limit>200||offset<0||offset>1000000)
             throw new IllegalArgumentException("Invalid library page");
         String needle=query==null?"":query.toLowerCase(Locale.ROOT);
         needle=needle.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
+        String book="(o.mime LIKE '%pdf%' OR o.mime LIKE '%epub%' OR "+
+                "o.mime LIKE '%comic%' OR o.mime LIKE '%wordprocessingml%')";
+        String restriction;
+        switch(category==null?"All":category){
+            case "Images":restriction=" AND o.mime LIKE 'image/%'";break;
+            case "Videos":restriction=" AND o.mime LIKE 'video/%'";break;
+            case "Audio":restriction=" AND o.mime LIKE 'audio/%'";break;
+            case "Books":restriction=" AND "+book;break;
+            case "Other":restriction=" AND NOT (o.mime LIKE 'image/%' OR "+
+                    "o.mime LIKE 'video/%' OR o.mime LIKE 'audio/%' OR "+
+                    book+")";break;
+            default:restriction="";
+        }
         ArrayList<Item> found=new ArrayList<>();
         Database helper=new Database(app);
         try(Cursor c=helper.getReadableDatabase().rawQuery(
-            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE LOWER(l.display_name) LIKE ? ESCAPE '\\' ORDER BY l.created_at DESC,l.id DESC LIMIT ? OFFSET ?",
+            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length "+
+            "FROM locations l JOIN originals o ON l.sha256=o.sha256 "+
+            "WHERE LOWER(l.display_name) LIKE ? ESCAPE '\\' "+restriction+
+            " ORDER BY l.created_at DESC,l.id DESC LIMIT ? OFFSET ?",
             new String[]{"%"+needle+"%",Integer.toString(limit),Integer.toString(offset)})){
             while(c.moveToNext())found.add(item(c));
         }finally{helper.close();}

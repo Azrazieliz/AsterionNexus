@@ -56,6 +56,12 @@ def check():
     assert 'listOf("Library","Search","Transfers","More")' in shell, "Compact four-item navigation missing"
     assert 'ModalBottomSheet(' in shell and 'onRoute(name)' in shell, "Source workflows must remain reachable"
     assert 'val ratio=thumbnail?.let{' in shell, "Media tiles must preserve original aspect ratio"
+    registry=(APP/"java/com/asterion/nexus/NexusRegistry.java").read_text()
+    assert 'searchPage(String query,int offset,int limit,String category)' in registry
+    assert 'val chosenCategory=category' in shell and 'loadPage(reset=true)' in shell
+    assert '"Audio"->m.startsWith("audio/")' in shell
+    assert 'listOf("All","Images","Videos","Books","Audio","Other")' in shell
+    assert 'case "Books":' in registry and 'case "Other":' in registry
     print("PASS: one Nexus launcher; one native Compose workspace; actual transfers; charcoal/silver style; image-first original-aspect library")
 if __name__=="__main__":
     check()

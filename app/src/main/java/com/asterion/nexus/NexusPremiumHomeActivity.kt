@@ -81,7 +81,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
                     query=query,
                     onQuery={ value-> onQueryChanged(value) },
                     category=category,
-                    onCategory={category=it},
+                    onCategory={ selected -> category=selected;loadPage(reset=true) },
                     loading=loading,
                     hasMore=hasMore,
                     status=error,
@@ -137,11 +137,12 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     private fun loadPage(reset:Boolean){
         val version=generation.incrementAndGet()
         val needle=query
+        val chosenCategory=category
         val offset=if(reset)0 else records.size
         loading=true
         worker.execute{
             try{
-                val found=NexusRegistry(applicationContext).searchPage(needle,offset,batch)
+                val found=NexusRegistry(applicationContext).searchPage(needle,offset,batch,chosenCategory)
                 runOnUiThread{
                     if(version!=generation.get()||isFinishing||isDestroyed)return@runOnUiThread
                     if(reset)records.clear()
@@ -294,7 +295,7 @@ private fun NexusHome(
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                         .padding(vertical=7.dp),
                         horizontalArrangement=Arrangement.spacedBy(7.dp)){
-                        listOf("All","Images","Videos","Books","Other").forEach{kind->
+                        listOf("All","Images","Videos","Books","Audio","Other").forEach{kind->
                             FilterChip(selected=category==kind,onClick={onCategory(kind)},
                                 label={Text(kind,fontSize=12.sp)},
                                 colors=FilterChipDefaults.filterChipColors(
@@ -439,12 +440,14 @@ private fun navGlyph(name:String)=when(name){
 private fun categoryMatch(mime:String,category:String):Boolean{
     val m=mime.lowercase()
     val book=m.contains("pdf")||m.contains("epub")||m.contains("comic")||
-        m.contains("wordprocessingml")||m.endsWith("/zip")
+        m.contains("wordprocessingml")
     return when(category){
         "Images"->m.startsWith("image/")
         "Videos"->m.startsWith("video/")
         "Books"->book
-        "Other"->!m.startsWith("image/")&&!m.startsWith("video/")&&!book
+        "Audio"->m.startsWith("audio/")
+        "Other"->!m.startsWith("image/")&&!m.startsWith("video/")&&
+            !m.startsWith("audio/")&&!book
         else->true
     }
 }
