@@ -42,6 +42,16 @@ def check():
     assert 'implementation(project(":rounder"))' in gradle
     assert 'onQueryChanged(value)' in shell
     assert "FgTeraboxDocumentsProvider.PAGE_OFFSET" in workspace
-    print("PASS: one Nexus launcher; shared Compose routing; internal Core/Rounder modules; debounced library and paged cloud")
+    visual=(APP/"java/com/asterion/nexus/NexusVisual.kt").read_text()
+    icon=(APP/"res/drawable/ic_asterion_nexus.xml").read_text()
+    assert "0xFFD4D9E1" in visual, "Owner silver color is not installed"
+    assert "0xFF0E1013" in visual, "Charcoal canvas is not installed"
+    assert '#D4D9E1' in icon and '#D4B47D' not in icon, "Launcher icon conflicts with approved silver palette"
+    assert 'aspectRatio(0.82f)' in shell and 'contentScale=ContentScale.Fit' in shell, "Library must use large aspect-correct images"
+    assert 'maxWidth>=680.dp->3' in shell and 'else->2' in shell, "Image-first mobile gallery width not preserved"
+    assert "GoldColor" not in shell and "C_GOLD" not in workspace
+    assert "NexusVisual.silver" in workspace and "NexusVisual.silver" in shell
+    assert 'NexusUnifiedTransfers(' in workspace, "Native transfer queue must remain in the single workspace"
+    print("PASS: one Nexus launcher; one native Compose workspace; actual transfers; charcoal/silver style; image-first original-aspect library")
 if __name__=="__main__":
     check()
