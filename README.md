@@ -20,10 +20,12 @@ Asterion Nexus is the **three-way native Android merger** of **Asterion Core + A
 12. [Additional library intelligence, files and media operations](docs/11-INTELLIGENT-LIBRARY-OPERATIONS.md)
 13. [Security, privacy, resource and resilience rules](docs/12-SECURITY-PRIVACY-PERFORMANCE.md)
 14. [File-level source adaptation map](docs/13-SOURCE-ADAPTATION-MAP.md)
-15. [Capability and data contract schemas](contracts/README.md)
-16. [Machine-readable approved decisions](spec/owner-decisions.v1.json)
-17. [Acceptance matrix (specified, not tested)](spec/acceptance-cases.v1.json)
-18. [Import provenance template](spec/source-import-manifest.template.json)
+15. [Fast implementation roadmap and critical path](docs/14-DELIVERY-ROADMAP.md)
+16. [New-conversation execution handoff](docs/15-NEW-CONVERSATION-HANDOFF.md)
+17. [Capability and data contract schemas](contracts/README.md)
+18. [Machine-readable approved decisions](spec/owner-decisions.v1.json)
+19. [Acceptance matrix (specified, not tested)](spec/acceptance-cases.v1.json)
+20. [Import provenance template](spec/source-import-manifest.template.json)
 
 ## Product rules
 
