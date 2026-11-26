@@ -47,7 +47,7 @@ def check():
     assert "0xFFD4D9E1" in visual, "Owner silver color is not installed"
     assert "0xFF0E1013" in visual, "Charcoal canvas is not installed"
     assert '#D4D9E1' in icon and '#D4B47D' not in icon, "Launcher icon conflicts with approved silver palette"
-    assert 'aspectRatio(0.82f)' in shell and 'contentScale=ContentScale.Fit' in shell, "Library must use large aspect-correct images"
+    assert 'aspectRatio(ratio)' in shell and 'contentScale=ContentScale.Fit' in shell, "Library must use native-ratio preview images"
     assert 'maxWidth>=680.dp->3' in shell and 'else->2' in shell, "Image-first mobile gallery width not preserved"
     assert "GoldColor" not in shell and "C_GOLD" not in workspace
     assert "NexusVisual.silver" in workspace and "NexusVisual.silver" in shell

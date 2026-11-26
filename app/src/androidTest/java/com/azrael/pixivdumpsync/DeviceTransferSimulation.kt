@@ -8,6 +8,10 @@ import com.asterion.videoflow.EmbeddedYtDlpMetadata
 import com.asterion.videoflow.EmbeddedYtDlpTransfer
 import com.asterion.videoflow.LegacyYtDlpTransfer
 import com.asterion.videoflow.VideoExtractorVersion
+import com.asterion.nexus.NexusRegistry
+import com.asterion.nexus.NexusOriginalStore
+import com.asterion.nexus.NexusLibraryProvider
+import java.security.MessageDigest
 import com.chaquo.python.Python
 import java.io.File
 import java.net.InetAddress
@@ -131,6 +135,51 @@ class DeviceTransferSimulation:Instrumentation() {
                     "Contiguous 206 chunks failed to reconstruct complete original"
                 }
                 status("NATIVE_206_OK "+rangeResult.length()+" bytes / exact SHA-equivalent")
+
+                // Real Android vertical slice: a complete HTTP original is
+                // streamed into immutable Nexus originals, the durable
+                // registry is reopened and its content:// URI serves exact bytes.
+                // This is a controlled loopback provider, not an external
+                // website/provider or an owner's file. It cannot certify
+                // any public site as working.
+                val originalSha=MessageDigest.getInstance("SHA-256")
+                    .digest(payload).joinToString(""){ "%02x".format(it.toInt() and 255) }
+                val registry=NexusRegistry(context)
+                val entry=completed.inputStream().use{input->
+                    registry.ingest(input,"Nexus emulator original.mp4",
+                        "video/mp4","android-fixture","emulator",url,
+                        payload.size.toLong(),originalSha)
+                }
+                check(entry.sha256==originalSha&&entry.length==payload.size.toLong()){
+                    "Nexus registry did not attest complete original"
+                }
+                val persisted=NexusRegistry(context).search("Nexus emulator original",10)
+                    .singleOrNull{it.sha256==originalSha}
+                    ?:error("Nexus original not discoverable after registry reopening")
+                check(NexusOriginalStore.matches(
+                    NexusRegistry(context).original(persisted),
+                    payload.size.toLong(),originalSha
+                )){"Nexus immutable original readback failed"}
+                val publishedUri=NexusLibraryProvider.uriFor(context,originalSha)
+                val received=context.contentResolver.openInputStream(publishedUri)
+                    ?.use{it.readBytes()}?:error("Nexus provider refused indexed original")
+                check(received.contentEquals(payload)){
+                    "Nexus content provider returned incomplete original bytes"
+                }
+                check(context.contentResolver.getType(publishedUri)=="video/mp4"){
+                    "Nexus persisted original MIME is incorrect"
+                }
+                val repeated=completed.inputStream().use{input->
+                    NexusRegistry(context).ingest(input,"Nexus emulator original.mp4",
+                        "video/mp4","android-fixture","emulator",url,
+                        payload.size.toLong(),originalSha)
+                }
+                check(repeated.sha256==entry.sha256){
+                    "Repeated acquisition produced a different content identity"
+                }
+                status("NEXUS_ACQ_LIB_OK "+entry.length+" exact source bytes / SHA256="+
+                    entry.sha256+" / indexed / uri readback / persisted / deduplicated")
+
 
                 val startTogether=CountDownLatch(1)
                 val transferProblems=ConcurrentLinkedQueue<String>()
