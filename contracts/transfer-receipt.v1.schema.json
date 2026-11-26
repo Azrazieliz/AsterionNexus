@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nexus verified transfer receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "receipt_id",
+    "source_item_id",
+    "job_id",
+    "state",
+    "observed_bytes"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "asterion.transfer-receipt.v1"
+    },
+    "receipt_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "source_item_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "origin_source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "selected_original_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "state": {
+      "enum": [
+        "SOURCE_RESOLVING",
+        "AUTH_REQUIRED",
+        "ORIGINAL_IDENTIFIED",
+        "TRANSFER_QUEUED",
+        "TRANSFERRING",
+        "BYTES_COMPLETE",
+        "CONTENT_VERIFIED",
+        "LOCAL_PUBLISHED",
+        "REMOTE_VERIFIED",
+        "INDEXED",
+        "AVAILABLE",
+        "FAILED",
+        "OUTCOME_UNKNOWN"
+      ]
+    },
+    "observed_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expected_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "observed_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "expected_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "content_mime": {
+      "type": "string"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "verified_original_identity": {
+      "type": "boolean"
+    },
+    "complete_original": {
+      "type": "boolean"
+    },
+    "destination": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Destination",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "SAF",
+            "MEDIASTORE",
+            "TERABOX",
+            "OTHER_CLOUD"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "account_namespace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "remote_readback_verified": {
+          "type": "boolean"
+        },
+        "remote_size_verified": {
+          "type": "boolean"
+        },
+        "remote_checksum_available": {
+          "type": "boolean"
+        }
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Postcondition",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "observed",
+          "passed"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "observed": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "user_action_required": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "REMOTE_VERIFIED"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "required": [
+          "destination",
+          "verification"
+        ],
+        "properties": {
+          "destination": {
+            "required": [
+              "remote_readback_verified"
+            ],
+            "properties": {
+              "remote_readback_verified": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "AVAILABLE"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "complete_original": {
+            "const": true
+          },
+          "verified_original_identity": {
+            "const": true
+          }
+        },
+        "required": [
+          "complete_original",
+          "verified_original_identity",
+          "verification"
+        ]
+      }
+    }
+  ]
+}

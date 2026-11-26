@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nexus content item v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "nexus_id",
+    "media_kind",
+    "locations",
+    "integrity_state"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "asterion.registry-item.v1"
+    },
+    "nexus_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "media_kind": {
+      "type": "string",
+      "enum": [
+        "IMAGE",
+        "VIDEO",
+        "AUDIO",
+        "BOOK",
+        "COMIC",
+        "DOCUMENT",
+        "ARCHIVE",
+        "GAME_ASSET",
+        "MODEL_3D",
+        "OTHER"
+      ]
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "verified_size": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "integrity_state": {
+      "enum": [
+        "UNVERIFIED",
+        "PARTIAL",
+        "LOCAL_VERIFIED",
+        "REMOTE_VERIFIED",
+        "CORRUPT",
+        "MISSING",
+        "OUTCOME_UNKNOWN"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "source_adapter": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source_item_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "original_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "owner_created": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "locations": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Location",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "location_id",
+          "kind",
+          "state"
+        ],
+        "properties": {
+          "location_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "kind": {
+            "enum": [
+              "LOCAL_SAF",
+              "MEDIASTORE",
+              "TERABOX",
+              "OTHER_CLOUD",
+              "TEMPORARY_CACHE"
+            ]
+          },
+          "state": {
+            "enum": [
+              "DISCOVERED",
+              "READABLE",
+              "LOCALLY_VERIFIED",
+              "REMOTELY_VERIFIED",
+              "UNAVAILABLE",
+              "REVOKED",
+              "CORRUPT"
+            ]
+          },
+          "account_namespace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "uri_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "bytes_verified": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_check_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "minItems": 0
+    },
+    "optional_relations": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Optional relation",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "relation_id",
+          "other_nexus_id",
+          "kind"
+        ],
+        "properties": {
+          "relation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "other_nexus_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "kind": {
+            "enum": [
+              "SAME_BYTES",
+              "DERIVED_FROM",
+              "TRANSLATED_FROM",
+              "EPISODE_OF",
+              "PROJECT_ASSET",
+              "SAME_CREATOR",
+              "ALTERNATE_EDITION",
+              "RELATED_CHARACTER",
+              "OTHER"
+            ]
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "reversible": {
+            "type": "boolean"
+          }
+        }
+      },
+      "default": []
+    },
+    "legacy_aliases": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Legacy alias",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "donor",
+          "legacy_id"
+        ],
+        "properties": {
+          "donor": {
+            "enum": [
+              "Core",
+              "Downloader",
+              "Rounder"
+            ]
+          },
+          "legacy_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      }
+    }
+  }
+}

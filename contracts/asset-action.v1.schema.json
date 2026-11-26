@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Asterion signed asset action v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "caller",
+    "target_capability",
+    "owner_approval_scope",
+    "expires_at",
+    "idempotency_key",
+    "asset_refs"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "asterion.asset-action.v1"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "caller": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "target_capability": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "owner_approval_scope": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "asset_refs": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Nexus asset reference v1",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nexus_id"
+        ],
+        "properties": {
+          "nexus_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_kind": {
+            "type": "string",
+            "enum": [
+              "NEXUS",
+              "SAF",
+              "MEDIASTORE",
+              "TERABOX",
+              "OTHER_CLOUD",
+              "EXTERNAL_PARTNER"
+            ]
+          },
+          "account_namespace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "location_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "media_kind": {
+            "type": "string"
+          },
+          "version_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    }
+  }
+}

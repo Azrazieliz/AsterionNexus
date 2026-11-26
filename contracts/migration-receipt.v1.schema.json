@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nexus legacy migration receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "migration_id",
+    "donor",
+    "source_version",
+    "state",
+    "before",
+    "after",
+    "originals_changed",
+    "rollback_available"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "asterion.migration-receipt.v1"
+    },
+    "migration_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "donor": {
+      "enum": [
+        "Core",
+        "Downloader",
+        "Rounder"
+      ]
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "source_commit_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "SPECIFIED",
+        "QUEUED",
+        "RUNNING",
+        "WAITING_FOR_USER",
+        "PAUSED",
+        "PARTIAL",
+        "VERIFIED",
+        "FAILED",
+        "CANCELLED",
+        "UNSUPPORTED",
+        "PERMISSION_DENIED",
+        "OUTCOME_UNKNOWN"
+      ]
+    },
+    "before": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "after": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "legacy_aliases_imported": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "originals_changed": {
+      "const": false
+    },
+    "rollback_available": {
+      "type": "boolean"
+    },
+    "backup_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "diff_report_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "verified_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "denied_or_unavailable_fields": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "owner_approved": {
+      "type": "boolean"
+    }
+  }
+}

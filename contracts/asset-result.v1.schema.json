@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Asterion signed asset result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "request_id",
+    "state",
+    "trace_id"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "asterion.asset-result.v1"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "trace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "state": {
+      "enum": [
+        "RECEIVED",
+        "RUNNING",
+        "VERIFIED",
+        "FAILED",
+        "PARTIAL",
+        "UNSUPPORTED",
+        "PERMISSION_DENIED",
+        "OUTCOME_UNKNOWN"
+      ]
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_application": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "output_asset_refs": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Nexus asset reference v1",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nexus_id"
+        ],
+        "properties": {
+          "nexus_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_kind": {
+            "type": "string",
+            "enum": [
+              "NEXUS",
+              "SAF",
+              "MEDIASTORE",
+              "TERABOX",
+              "OTHER_CLOUD",
+              "EXTERNAL_PARTNER"
+            ]
+          },
+          "account_namespace": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "location_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "media_kind": {
+            "type": "string"
+          },
+          "version_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        }
+      }
+    },
+    "output_receipt_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "detail": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

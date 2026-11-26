@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Automatic Episode Assembly project v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "project_id",
+    "input_episodes",
+    "segments",
+    "state",
+    "preserve_first_opening",
+    "preserve_last_ending",
+    "preserve_uncertain_content"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "asterion.episode-assembly.v1"
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "collection_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "input_episodes": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Ordered episode",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "episode_id",
+          "order",
+          "source_asset_ref"
+        ],
+        "properties": {
+          "episode_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source_asset_ref": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Nexus asset reference v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "nexus_id"
+            ],
+            "properties": {
+              "nexus_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "content_sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source_kind": {
+                "type": "string",
+                "enum": [
+                  "NEXUS",
+                  "SAF",
+                  "MEDIASTORE",
+                  "TERABOX",
+                  "OTHER_CLOUD",
+                  "EXTERNAL_PARTNER"
+                ]
+              },
+              "account_namespace": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "location_ref": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "media_kind": {
+                "type": "string"
+              },
+              "version_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          },
+          "series_identity": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "episode_number": {
+            "type": "number",
+            "minimum": 0
+          },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Episode source segment v1",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "segment_id",
+          "source_id",
+          "start_ms",
+          "end_ms",
+          "semantic_class",
+          "decision",
+          "evidence"
+        ],
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "start_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "semantic_class": {
+            "enum": [
+              "OPENING",
+              "ENDING",
+              "STORY",
+              "RECAP",
+              "NEXT_EPISODE_PREVIEW",
+              "CREDITS",
+              "POST_CREDITS_STORY",
+              "UNKNOWN"
+            ]
+          },
+          "decision": {
+            "enum": [
+              "KEEP",
+              "CUT",
+              "REVIEW"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "Cut evidence",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "method",
+                "reference"
+              ],
+              "properties": {
+                "method": {
+                  "enum": [
+                    "ACOUSTIC_MATCH",
+                    "VISUAL_FINGERPRINT",
+                    "SCENE_BOUNDARY",
+                    "CHAPTER_MARKER",
+                    "SUBTITLE_CORRELATION",
+                    "MANUAL_REVIEW",
+                    "OTHER"
+                  ]
+                },
+                "reference": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          },
+          "reviewed_by_owner": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "SPECIFIED",
+        "QUEUED",
+        "RUNNING",
+        "WAITING_FOR_USER",
+        "PAUSED",
+        "PARTIAL",
+        "VERIFIED",
+        "FAILED",
+        "CANCELLED",
+        "UNSUPPORTED",
+        "PERMISSION_DENIED",
+        "OUTCOME_UNKNOWN"
+      ]
+    },
+    "source_assets_preserved": {
+      "type": "boolean",
+      "const": true
+    },
+    "preserve_first_opening": {
+      "const": true
+    },
+    "preserve_last_ending": {
+      "const": true
+    },
+    "preserve_uncertain_content": {
+      "const": true
+    },
+    "edits_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "output": {
+      "type": "object",
+      "required": [
+        "independent_nexus_id",
+        "verification_state"
+      ],
+      "properties": {
+        "independent_nexus_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "verification_state": {
+          "enum": [
+            "PENDING",
+            "VERIFIED",
+            "FAILED"
+          ]
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reader_open_verified": {
+          "type": "boolean"
+        },
+        "audio_sync_verified": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
