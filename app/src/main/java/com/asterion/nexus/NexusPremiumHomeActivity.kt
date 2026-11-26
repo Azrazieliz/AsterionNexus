@@ -55,6 +55,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     private var hasMore by mutableStateOf(false)
     private var directDialog by mutableStateOf(false)
     private var category by mutableStateOf("All")
+    private var activeSection by mutableStateOf("Library")
     private val batch=80
 
     private val openDocument=registerForActivityResult(
@@ -72,6 +73,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
             NexusSkin {
                 NexusHome(
                     records=records,
+                    section=activeSection,
                     query=query,
                     onQuery={ value-> query=value;loadPage(reset=true) },
                     category=category,
@@ -88,7 +90,17 @@ class NexusPremiumHomeActivity : ComponentActivity() {
                             NexusFileOpen.open(this,uri,item.mime,item.displayName)
                         }.onFailure{error="Cannot open file: "+it.javaClass.simpleName}
                     },
-                    onRoute={route->openRoute(route)}
+                    onRoute={activeSection=it},
+                    onLibraryRefresh={loadPage(reset=true)},
+                    onWorkspaceOpen={uri,mime,title,chapter->
+                        runCatching{
+                            if(chapter>=0){
+                                startActivity(Intent(this,NexusReaderActivity::class.java)
+                                    .setDataAndType(uri,mime)
+                                    .putExtra("title",title).putExtra("chapter",chapter))
+                            }else NexusFileOpen.open(this,uri,mime,title)
+                        }.onFailure{error="Cannot open selection: "+it.javaClass.simpleName}
+                    }
                 )
                 if(directDialog)NexusAcquireDialog(
                     onCancel={directDialog=false},
@@ -105,18 +117,6 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     override fun onResume(){
         super.onResume()
         if(records.isNotEmpty())loadPage(reset=true)
-    }
-
-    private fun openRoute(route:String){
-        val destination=when(route){
-            "Search"->NexusSearchActivity::class.java
-            "Cloud"->NexusCloudActivity::class.java
-            "Sources"->NexusSourcesActivity::class.java
-            "Core"->NexusCoreActivity::class.java
-            "Fusion"->NexusFusionActivity::class.java
-            else->null
-        }
-        if(destination!=null)startActivity(Intent(this,destination))
     }
 
     private fun loadPage(reset:Boolean){
@@ -215,20 +215,22 @@ private fun NexusSkin(content:@Composable ()->Unit){
 
 @Composable
 private fun NexusHome(
-    records:List<NexusRegistry.Item>,query:String,onQuery:(String)->Unit,
+    records:List<NexusRegistry.Item>,section:String,query:String,onQuery:(String)->Unit,
     category:String,onCategory:(String)->Unit,loading:Boolean,hasMore:Boolean,status:String,
     onMore:()->Unit,onImport:()->Unit,onAcquire:()->Unit,
-    onOpen:(NexusRegistry.Item)->Unit,onRoute:(String)->Unit
+    onOpen:(NexusRegistry.Item)->Unit,onRoute:(String)->Unit,
+    onLibraryRefresh:()->Unit,
+    onWorkspaceOpen:(Uri,String,String,Int)->Unit
 ){
     val configuration=androidx.compose.ui.platform.LocalConfiguration.current
     val landscape=configuration.screenWidthDp>=720
-    val sections=listOf("Library","Search","Cloud","Sources","Core")
+    val sections=listOf("Library","Search","Cloud","Organize","Intelligence")
     Row(Modifier.fillMaxSize().background(CanvasColor).systemBarsPadding()){
         if(landscape)NavigationRail(containerColor=CanvasColor){
             Spacer(Modifier.height(20.dp))
             sections.forEachIndexed{index,name->
                 NavigationRailItem(
-                    selected=index==0,onClick={if(index>0)onRoute(name)},
+                    selected=section==name,onClick={onRoute(name)},
                     icon={Text(navGlyph(name),fontSize=22.sp)},
                     label={Text(name,fontSize=11.sp)}
                 )
@@ -249,6 +251,7 @@ private fun NexusHome(
                         shape=RoundedCornerShape(12.dp),
                         modifier=Modifier.heightIn(min=48.dp)){Text("Acquire",color=CanvasColor)}
                 }
+                if(section=="Library"){
                 OutlinedTextField(
                     value=query,onValueChange=onQuery,singleLine=true,
                     label={Text("Search indexed files")},
@@ -329,10 +332,14 @@ private fun NexusHome(
                     }
                 }
             }
+            } else {
+                NexusWorkspace(section=section,onOpen=onWorkspaceOpen,
+                    onLibraryRefresh=onLibraryRefresh)
+            }
             if(!landscape)NavigationBar(containerColor=PaneColor){
                 sections.forEachIndexed{index,name->
                     NavigationBarItem(
-                        selected=index==0,onClick={if(index>0)onRoute(name)},
+                        selected=section==name,onClick={onRoute(name)},
                         icon={Text(navGlyph(name),fontSize=19.sp)},
                         label={Text(name,fontSize=10.sp)},
                         colors=NavigationBarItemDefaults.colors(
@@ -350,7 +357,7 @@ private fun navGlyph(name:String)=when(name){
     "Library"->"▦"
     "Search"->"⌕"
     "Cloud"->"◫"
-    "Sources"->"▤"
+    "Organize"->"▤"
     else->"◇"
 }
 
