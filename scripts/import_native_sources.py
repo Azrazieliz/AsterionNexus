@@ -78,7 +78,7 @@ def main():
   s=s.replace('    implementation("org.jsoup:', '    implementation(project(":fusion"))\n    implementation(project(":rounder"))\n    implementation("org.jsoup:',1)
   s=s.replace('    compileSdk = 35', '    compileSdk = 35\n    ndkVersion = "26.3.11579264"\n    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }',1)
   gradle.write_text(s)
-  write("app/src/main/cpp/CMakeLists.txt",'cmake_minimum_required(VERSION 3.22)\\nproject(asterioncwd C)\\nadd_library(asterioncwd SHARED asterion_cwd.c)\\n')
+  write("app/src/main/cpp/CMakeLists.txt",'cmake_minimum_required(VERSION 3.22)\nproject(asterioncwd C)\nadd_library(asterioncwd SHARED asterion_cwd.c)\n')
   manifest=ROOT/"app/src/main/AndroidManifest.xml"
   x=manifest.read_text()
   x=x.replace('android:name="com.azrael.pixivdumpsync.permission.REQUEST_ASTERION_DOWNLOAD"','android:name="com.asterion.nexus.permission.REQUEST_ASTERION_DOWNLOAD"')
