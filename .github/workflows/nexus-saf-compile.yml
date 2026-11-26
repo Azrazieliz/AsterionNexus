@@ -1,7 +1,7 @@
 name: Nexus premium unified candidate compilation
 on:
   push:
-    branches: [work/nexus-saf-sources-20261126]
+    branches: [work/nexus-saf-sources-20261126, work/nexus-harmonization-20261126]
     paths:
       - 'app/**'
       - 'fusion/**'
