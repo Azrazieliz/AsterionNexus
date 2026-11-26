@@ -51,7 +51,8 @@ jobs:
           ! find app fusion rounder -type f \( -name '*.so' -o -name '*.onnx' -o -name '*.keystore' -o -name '*.jks' -o -name '*.apk' \) | grep -q .
           python -m json.tool spec/source-import-manifest.v1.json >/dev/null
           git add app fusion rounder build.gradle.kts settings.gradle.kts gradle.properties spec/source-import-manifest.v1.json
-          git diff --cached --check
+          # Preserve exact upstream source bytes; inherited donor whitespace is not an integration defect.
+          git diff --cached --check -- build.gradle.kts settings.gradle.kts gradle.properties spec/source-import-manifest.v1.json
       - name: Commit imported source to work branch
         shell: bash
         run: |
