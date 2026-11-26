@@ -60,7 +60,7 @@ internal object SecondaryLightNativeOriginal {
                     ?.let{header("Cookie",it)}
             }.execute()
         if(connection.statusCode() !in 200..299 ||
-            !connection.contentType().contains("html",true))return null
+            connection.contentType()?.contains("html",ignoreCase=true)!=true)return null
         val doc=Jsoup.parse(connection.body(),selected)
         val source=when(
             URI(selected).host.orEmpty().lowercase(Locale.ROOT)

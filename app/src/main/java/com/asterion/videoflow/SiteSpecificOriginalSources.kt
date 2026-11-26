@@ -235,7 +235,7 @@ internal object SiteSpecificOriginalSources {
                 }.execute()
         }.onFailure{initialFailure=it}.getOrNull()
         if(response!=null && response.statusCode() in 200..299 &&
-            response.contentType().contains("html",ignoreCase=true)) {
+            response.contentType()?.contains("html",ignoreCase=true)==true) {
             val page=Jsoup.parse(response.body(),link)
             if(!SiteSpecificPlayerPolicy.accessGate(page))
                 return page
@@ -952,7 +952,7 @@ internal object SiteSpecificOriginalSources {
                 .execute()
         }.onFailure{hostFailure=it}.getOrNull()
         if(raw!=null && raw.statusCode() in 200..299 &&
-            raw.contentType().contains("html",ignoreCase=true)) {
+            raw.contentType()?.contains("html",ignoreCase=true)==true) {
             val player=Jsoup.parse(raw.body(),frame.url)
             val direct=mediaElements(player,frame.url,
                 "#player video[src],#player video source[src],"+
