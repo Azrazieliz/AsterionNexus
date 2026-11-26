@@ -113,6 +113,8 @@ public final class NexusLibraryActivity extends Activity {
             new Intent(this,NexusSearchActivity.class))),space(10));
         column.addView(action("Connected folders",()->startActivity(
             new Intent(this,NexusSourcesActivity.class))),space(10));
+        column.addView(action("Core runtime",()->startActivity(
+            new Intent(this,NexusCoreActivity.class))),space(10));
         searchField=entry("Search indexed originals");column.addView(searchField,space(24));
         searchField.addTextChangedListener(new TextWatcher(){
             @Override public void beforeTextChanged(CharSequence s,int start,int count,int after){}

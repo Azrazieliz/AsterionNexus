@@ -121,6 +121,8 @@
             android:exported="false"/>
         <activity android:name="com.asterion.nexus.NexusFusionActivity"
             android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusCoreActivity"
+            android:exported="false"/>
         <activity android:name="com.asterion.nexus.NexusReaderActivity"
             android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name="com.asterion.nexus.NexusRounderPlaybackActivity"

@@ -11,6 +11,7 @@ import android.text.TextUtils;
 import android.view.*;
 import android.widget.*;
 import com.azrael.pixivdumpsync.AsterionSearchHub;
+import com.ailm.android.runtime.StandaloneRuntime;
 import com.asterion.videoflow.NexusWebAcquisition;
 import com.openlocal.office.core.FgTeraboxClient;
 import com.openlocal.office.core.FgTeraboxDocumentsProvider;
@@ -155,6 +156,23 @@ public final class NexusSearchActivity extends Activity {
             }catch(Exception e){runOnUiThread(()->accept(requestId,"Local",
                 Collections.emptyList(),e.getClass().getSimpleName()));}
         });
+        worker.submit(()->{
+            try{
+                StandaloneRuntime.INSTANCE.initialize(getApplicationContext());
+                List<Map<String,Object>> records=StandaloneRuntime.INSTANCE.searchByFilename(query,1,100);
+                ArrayList<Result> found=new ArrayList<>();
+                for(Map<String,Object> item:records){
+                    String original=String.valueOf(item.getOrDefault("uri",
+                        item.getOrDefault("image_uri","")));
+                    if(!original.startsWith("content://"))continue;
+                    String title=String.valueOf(item.getOrDefault("filename","Indexed image"));
+                    found.add(new Result("core",title,"Core indexed artwork",
+                        "Core",original,"image/*",-1L));
+                }
+                runOnUiThread(()->accept(requestId,"Core",found,null));
+            }catch(Exception e){runOnUiThread(()->accept(requestId,"Core",
+                Collections.emptyList(),e.getClass().getSimpleName()));}
+        });
         if(cloud.configured()){
             index.ensure(false);
             index.search(query,"all",0,requestId);
@@ -239,13 +257,15 @@ public final class NexusSearchActivity extends Activity {
         groups.put(source,items);
         render();
         String state="Local "+groups.getOrDefault("Local",Collections.emptyList()).size()+
+            " · Core "+groups.getOrDefault("Core",Collections.emptyList()).size()+
+            " · Folders "+groups.getOrDefault("Folders",Collections.emptyList()).size()+
             " · Cloud "+groups.getOrDefault("Cloud",Collections.emptyList()).size()+
             (online.isChecked()?" · Online "+groups.getOrDefault("Online",Collections.emptyList()).size():"");
         status.setText(error==null?state:state+" · "+source+" partial failure");
     }
     private void render(){
         results.removeAllViews();
-        for(String source:new String[]{"Local","Folders","Cloud","Online"}){
+        for(String source:new String[]{"Local","Core","Folders","Cloud","Online"}){
             if(!groups.containsKey(source))continue;
             List<Result> items=groups.get(source);
             results.addView(text(source+" · "+items.size(),18,true),spaced(18));
@@ -263,6 +283,10 @@ public final class NexusSearchActivity extends Activity {
     }
     private void open(Result r){
         try{
+            if("core".equals(r.type)){
+                NexusFileOpen.open(this,Uri.parse(r.id),"image/*",r.title);
+                return;
+            }
             if("saf".equals(r.type)){
                 NexusFileOpen.open(this,Uri.parse(r.id),r.mime,r.title);
                 return;
