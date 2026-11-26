@@ -18,7 +18,11 @@ import time
 
 REPO="https://github.com/Azrazieliz/AsterionNexus.git"
 DONOR="https://github.com/Azrazieliz/AsterionDownloader.git"
-BRANCH="work/merge-core-downloader-rounder"
+BRANCH=os.environ.get("ASTERION_NEXUS_BRANCH","work/merge-core-downloader-rounder")
+if BRANCH not in {"work/merge-core-downloader-rounder",
+                  "work/nexus-saf-sources-20261126",
+                  "work/nexus-harmonization-20261126"}:
+    raise RuntimeError("Unapproved Nexus build branch")
 DONOR_BRANCH="repair/downloader-global-search-20261121"
 DONOR_COMMIT="71f38b91af637bbb0aed74906eea2a92fbb17d03"
 WHEEL="yt_dlp-2026.10.26-py3-none-any.whl"
