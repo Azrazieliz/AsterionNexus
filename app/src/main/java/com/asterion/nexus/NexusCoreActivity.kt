@@ -60,7 +60,7 @@ class NexusCoreActivity : Activity() {
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
         window.statusBarColor=background;window.navigationBarColor=background
-        val scroll=ScrollView(this).apply{isFillViewport=true;setBackgroundColor(background)}
+        val scroll=ScrollView(this).apply{isFillViewport=true;setBackgroundColor(this@NexusCoreActivity.background)}
         val parent=LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL
             setPadding(dp(20),dp(27),dp(20),dp(28))
@@ -138,7 +138,7 @@ class NexusCoreActivity : Activity() {
         }),line(9))
         content.addView(button("Pause scan",{execute("Pausing"){StandaloneRuntime.pauseScan().toString()}}),line(9))
         content.addView(button("Resume scan",{execute("Resuming"){StandaloneRuntime.resumeScan().toString()}}),line(9))
-        content.addView(button("Cancel scan",{new AlertDialog.Builder(this)
+        content.addView(button("Cancel scan",{AlertDialog.Builder(this@NexusCoreActivity)
             .setTitle("Cancel active scan?")
             .setMessage("Stop indexing without deleting originals.")
             .setNegativeButton("Keep scanning",null)
