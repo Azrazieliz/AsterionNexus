@@ -43,6 +43,8 @@ jobs:
           test -s fusion/src/main/java/com/ailm/android/runtime/FusionDatabaseRepository.kt
           test -s rounder/src/main/java/com/openlocal/office/core/FgTeraboxClient.java
           test -s app/src/main/java/com/asterion/videoflow/NativeMediaDownloader.kt
+      - name: Restore original SHA-pinned Downloader yt-dlp wheel
+        run: bash scripts/restore_downloader_wheel.sh
       - name: Compile native three-way Android source
         run: gradle --no-daemon --max-workers=2 :fusion:compileDebugKotlin :rounder:compileDebugJavaWithJavac :app:compileDebugKotlin --stacktrace
       - name: Run inherited Downloader regression suite

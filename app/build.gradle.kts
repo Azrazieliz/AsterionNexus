@@ -199,6 +199,10 @@ val verifyBundledYtDlp by tasks.registering {
     }
 }
 
+// Every Nexus installable build must include the exact original extractor wheel.
+tasks.matching { it.name.startsWith("package") && (it.name.endsWith("Debug") || it.name.endsWith("Preview") || it.name.endsWith("Release")) }
+    .configureEach { dependsOn(verifyBundledYtDlp) }
+
 // Do not affect ordinary source-only tests; protect actual APK packaging.
 tasks.matching {
     it.name == "packageAcceptance" || it.name == "mergeAcceptanceAssets"
