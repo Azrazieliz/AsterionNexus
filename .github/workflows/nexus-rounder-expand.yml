@@ -50,4 +50,6 @@ jobs:
           git add rounder/src/main/java/com/openlocal/office/core rounder/src/main/assets spec/rounder-engine-extension.v1.json
           git diff --cached --quiet && { echo "No new source"; exit 0; }
           git commit -m 'feat(nexus): import assembled Rounder reader, seekable player and cloud SAF provider'
+          git fetch origin "$GITHUB_REF_NAME"
+          git rebase "origin/$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
