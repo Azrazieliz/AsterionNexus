@@ -36,7 +36,7 @@ def cp(src,dst):
  if not src.exists(): raise FileNotFoundError(src)
  dst.parent.mkdir(parents=True,exist_ok=True)
  if src.is_dir():
-  shutil.copytree(src,dst,ignore=shutil.ignore_patterns("build",".gradle","*.keystore","*.jks","*.apk","*.aab","*.onnx","*.safetensors","__pycache__"))
+  shutil.copytree(src,dst,ignore=shutil.ignore_patterns("build",".gradle","*.keystore","*.jks","*.apk","*.aab","*.so","*.onnx","*.safetensors","__pycache__"))
  else: shutil.copy2(src,dst)
 
 def write(path,content):
@@ -76,7 +76,9 @@ def main():
   s=gradle.read_text().replace('applicationId = "com.azrael.pixivdumpsync"','applicationId = "com.asterion.nexus"')
   if s.count('applicationId = "com.asterion.nexus"')!=1: raise RuntimeError("Package identity was not isolated")
   s=s.replace('    implementation("org.jsoup:', '    implementation(project(":fusion"))\n    implementation(project(":rounder"))\n    implementation("org.jsoup:',1)
+  s=s.replace('    compileSdk = 35', '    compileSdk = 35\n    ndkVersion = "26.3.11579264"\n    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }',1)
   gradle.write_text(s)
+  write("app/src/main/cpp/CMakeLists.txt",'cmake_minimum_required(VERSION 3.22)\\nproject(asterioncwd C)\\nadd_library(asterioncwd SHARED asterion_cwd.c)\\n')
   manifest=ROOT/"app/src/main/AndroidManifest.xml"
   x=manifest.read_text()
   x=x.replace('android:name="com.azrael.pixivdumpsync.permission.REQUEST_ASTERION_DOWNLOAD"','android:name="com.asterion.nexus.permission.REQUEST_ASTERION_DOWNLOAD"')
@@ -95,6 +97,7 @@ def main():
   cp(core/"android_app/app/src/main/assets",ROOT/"fusion/src/main/assets")
   for origin,target in (("AsterionCore-Logo.png","drawable-nodpi/asterioncore_logo.png"),("AsterionCore-Splash.png","drawable-nodpi/asterioncore_splash.png"),("AsterionCore-Icon-512.png","drawable-nodpi/asterioncore_icon.png"),("AsterionCore-Icon-512.png","mipmap-nodpi/ic_launcher.png"),("AsterionCore-Icon-512.png","mipmap-nodpi/ic_launcher_round.png")):
    cp(core/"branding"/origin,ROOT/"fusion/src/main/res"/target)
+  cp(core/"branding"/"AsterionCore-Logo.png",ROOT/"fusion/src/main/res/drawable-nodpi/asterioncore_logo_splash.png")
   write("fusion/src/main/AndroidManifest.xml",'<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" />\n')
   write("fusion/build.gradle.kts",'''plugins { id("com.android.library"); id("org.jetbrains.kotlin.android"); id("org.jetbrains.kotlin.plugin.compose") }
 android {
