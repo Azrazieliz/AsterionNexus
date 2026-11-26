@@ -1,0 +1,964 @@
+package com.azrael.pixivdumpsync
+
+import android.app.Activity
+import android.app.AlertDialog
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.provider.MediaStore
+import android.widget.Toast
+import org.libtorrent4j.Priority
+import org.libtorrent4j.SessionManager
+import org.libtorrent4j.TorrentInfo
+import org.libtorrent4j.swig.torrent_flags_t
+import java.io.File
+import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.thread
+
+/** Native peer transfers using libtorrent4j. Only verified, selected files are published
+ * to public Downloads; in-progress pieces remain in app-private external storage.
+ * Supports both magnet metadata retrieval and .torrent descriptors. */
+object TorrentTransfers {
+    // Never instantiate the native engine in the main Android process.
+    // Metadata and download calls are routed to :torrent via a service.
+    // A stopped JNI session is disposable. Retaining the same native-backed
+    // manager through every torrent operation can re-enter a partially closed
+    // alerts loop after a previous transfer or metadata timeout.
+    @Volatile private var engine:SessionManager?=null
+    @Synchronized internal fun session():SessionManager {
+        engine?.let{return it}
+        val fresh=SessionManager()
+        fresh.start()
+        engine=fresh
+        return fresh
+    }
+    /** libtorrent owns native threads, sockets and piece buffers. Android
+     * does not reclaim them just because the foreground service stops.
+     * Release the session only after the FINAL metadata/transfer worker has
+     * returned from JNI, and never from the Activity main thread.
+     */
+    @Synchronized internal fun stopSessionWhenIdle() {
+        val closing=engine?:return
+        engine=null
+        closing.stop()
+    }
+    private fun statusDir(context:Context)=
+        File(context.filesDir,"torrent-jobs").apply{mkdirs()}
+    private fun validJob(id:String)=id.matches(Regex("[a-f0-9]{24}"))
+    private fun cancellationFile(c:Context,id:String):File {
+        require(validJob(id)){"Invalid torrent job id"}
+        return File(statusDir(c),"$id.cancelled")
+    }
+    /** A durable, cross-process cancellation marker. SharedPreferences is
+     * cached separately in the UI and :torrent process and cannot by itself
+     * stop a worker when Android refuses to deliver a service command.
+     * This marker is never a request to start native/JNI torrent work.
+     */
+    internal fun isMarkedCancelled(c:Context,id:String):Boolean =
+        validJob(id) && (cancellationFile(c,id).isFile ||
+            c.getSharedPreferences("torrent_transfers",Context.MODE_PRIVATE)
+                .getBoolean("job_cancelled_$id",false))
+
+    internal fun markCancelled(c:Context,id:String):Boolean {
+        if(!validJob(id))return false
+        val marker=android.util.AtomicFile(cancellationFile(c,id))
+        val output=marker.startWrite()
+        try {
+            output.write("cancelled".toByteArray(Charsets.UTF_8))
+            marker.finishWrite(output)
+        }catch(t:Throwable){
+            marker.failWrite(output)
+            return false
+        }
+        val persisted=c.getSharedPreferences("torrent_transfers",
+            Context.MODE_PRIVATE).edit()
+            .putBoolean("job_cancelled_$id",true)
+            .putBoolean("job_paused_$id",true)
+            .remove("job_deferred_$id")
+            .commit()
+        record(c,"job_$id",
+            "Cancelled · selected torrent removed from queue; "+
+            "unverified private pieces retained for security review")
+        return persisted
+    }
+    internal fun clearCancellationForExplicitSelection(c:Context,id:String):Boolean {
+        if(!validJob(id))return false
+        val marker=cancellationFile(c,id)
+        if(marker.exists() && !marker.delete())return false
+        return c.getSharedPreferences("torrent_transfers",Context.MODE_PRIVATE)
+            .edit().remove("job_cancelled_$id").commit()
+    }
+    private fun statusFile(context:Context,id:String):File {
+        require(validJob(id)){"Invalid torrent job id"}
+        return File(statusDir(context),"$id.status")
+    }
+    private fun metricsFile(context:Context,id:String):File {
+        require(validJob(id)){"Invalid torrent job id"}
+        return File(statusDir(context),"$id.metrics")
+    }
+    data class Snapshot(val id:String,val text:String,val stage:String,
+        val verifiedBytes:Long=0L,val wantedBytes:Long=0L,
+        val speedBytesPerSec:Long=0L,val peers:Int=0,val updated:Long=0L)
+    /** An explicit cancellation always wins over incidental text such as
+     * "security review" in the cancellation receipt.
+     */
+    private fun stateText(text:String):String =
+        text.trim().replaceFirst(Regex("^[a-fA-F0-9]{8,24}\\s+·\\s+"),"")
+            .lowercase(java.util.Locale.ROOT)
+
+    internal fun classifyStatus(text:String,updated:Long,
+                                speedBytesPerSec:Long,now:Long):String {
+        val raw=stateText(text)
+        val age=now-updated
+        return when {
+            raw.startsWith("cancelled")->"CANCELLED"
+            raw.startsWith("failed:") || raw.startsWith("stalled:")->"FAILED"
+            raw.startsWith("paused")->"PAUSED"
+            raw.startsWith("exported")->"EXPORTED"
+            raw.startsWith("exporting") ||
+                raw.startsWith("quarantined · exporting")->"EXPORTING"
+            raw.startsWith("quarantined")->"QUARANTINED"
+            raw.startsWith("verifying") ||
+                raw.startsWith("private quarantine · reviewed")->"VERIFYING"
+            raw.startsWith("queued") || raw.startsWith("resuming")->"QUEUED"
+            updated>0L && age in 0..15_000L && speedBytesPerSec>0L->"TRANSFERRING"
+            updated>0L && age in 0..15_000L->"WAITING_PEERS"
+            else->"QUEUED"
+        }
+    }
+    /** Cross-process authoritative original bytes from the native torrent
+     * engine. Never treat torrent metadata or unchecked partial pieces as
+     * verified saved media; this file is an observation only.
+     */
+    internal fun recordMetrics(c:Context,id:String,verified:Long,
+        wanted:Long,rate:Long,peers:Int) {
+        val file=metricsFile(c,id)
+        val atomic=android.util.AtomicFile(file)
+        val out=atomic.startWrite()
+        try{
+            out.write(listOf(System.currentTimeMillis(),
+                verified.coerceAtLeast(0L),wanted.coerceAtLeast(0L),
+                rate.coerceAtLeast(0L),peers.coerceAtLeast(0)
+            ).joinToString("|").toByteArray(Charsets.UTF_8))
+            atomic.finishWrite(out)
+            DownloadStateSignals.changed(c)
+        }catch(t:Throwable){atomic.failWrite(out);throw t}
+    }
+    /** Read ONLY existing isolated torrent ledger; do not create/launch
+     * another native torrent engine from the main Android process.
+     */
+    fun snapshots(c:Context,limit:Int=100):List<Snapshot> {
+        val prefs=c.getSharedPreferences("torrent_transfers",Context.MODE_PRIVATE)
+        val ids=(prefs.all.keys.asSequence()
+            .filter{it.startsWith("job_")}.map{it.removePrefix("job_")}
+            .filter(::validJob).toList()+
+            statusDir(c).listFiles().orEmpty().asSequence()
+                .filter{it.isFile && it.name.endsWith(".status")}
+                .map{it.name.removeSuffix(".status")}.filter(::validJob)
+                .toList()).distinct().take(limit.coerceIn(1,200))
+        return ids.map{id->
+            val value=status(c,id,prefs)
+            val values=runCatching{
+                val file=metricsFile(c,id)
+                if(!file.isFile)return@runCatching emptyList<Long>()
+                String(android.util.AtomicFile(file).readFully(),
+                    Charsets.UTF_8).split('|').mapNotNull{it.toLongOrNull()}
+            }.getOrDefault(emptyList())
+            val updated=values.getOrNull(0)?:0L
+            val stage=classifyStatus(value,updated,values.getOrNull(3)?:0L,
+                System.currentTimeMillis())
+            Snapshot(id,value,stage,values.getOrNull(1)?:0L,
+                values.getOrNull(2)?:0L,values.getOrNull(3)?:0L,
+                values.getOrNull(4)?.toInt()?:0,updated)
+        }
+    }
+    /** SharedPreferences is cached per Android process and is NOT a reliable
+     * interprocess progress ledger. A small atomic status file is shared
+     * across the main UI and isolated libtorrent engine processes.
+     */
+    internal fun record(c: Context, id: String, value: String) {
+        val hash=id.removePrefix("job_")
+        if(id.startsWith("job_") && validJob(hash) &&
+            isMarkedCancelled(c,hash) && !value.contains("Cancelled",true))
+            return // A stale isolated worker must not revive a discarded job.
+        c.getSharedPreferences("torrent_transfers", Context.MODE_PRIVATE)
+            .edit().putString(id, value).apply()
+        if(!id.startsWith("job_") || !validJob(hash))return
+        runCatching{
+            val file=statusFile(c,hash)
+            val tmp=File(file.parentFile,hash+".status.tmp")
+            tmp.writeText(value.take(350))
+            check(tmp.renameTo(file) || run{
+                file.delete()
+                tmp.renameTo(file)
+            }){"Cannot update torrent status"}
+            DownloadStateSignals.changed(c)
+        }
+    }
+    private fun status(c:Context,id:String,prefs:android.content.SharedPreferences):String {
+        val stored=runCatching{
+            val file=statusFile(c,id)
+            if(!file.isFile)return@runCatching null
+            val value=file.readText().take(350)
+            val interrupted=System.currentTimeMillis()-file.lastModified()>15L*60_000L &&
+                value.contains('%') &&
+                classifyStatus(value,0L,0L,System.currentTimeMillis())=="QUEUED"
+            if(interrupted)"$id · Last transfer progress is stale; resume to check peers"
+            else value
+        }.getOrNull()
+        return stored ?: prefs.getString("job_$id","").orEmpty()
+    }
+    /** Only relevant controls for the job's durable state. Never present
+     * Pause and Resume together, and always allow safe queue dismissal.
+     * Discard is a tombstone, NOT deletion of saved originals or private
+     * unverified pieces. Only TorrentTransferService may stop active JNI work.
+     */
+    internal fun queueActionLabels(value:String):List<String> {
+        val state=classifyStatus(value,0L,0L,System.currentTimeMillis())
+        val exported=state=="EXPORTED"
+        val quarantined=state=="QUARANTINED"
+        val cancelled=state=="CANCELLED"
+        val normalized=stateText(value)
+        val paused=state in setOf("PAUSED","FAILED") ||
+            normalized.startsWith("queued") || normalized.contains("progress is stale")
+        return buildList {
+            if(!exported && !quarantined && !cancelled &&
+                state !in setOf("VERIFYING","EXPORTING"))
+                add(if(paused)"Resume transfer" else "Pause transfer")
+            add("Show current status")
+            add("Quarantine security report")
+            if(quarantined)add("Review & export selected files")
+            if(exported)add("Open exported originals")
+            if(!cancelled)add("Discard from queue")
+        }
+    }
+
+    fun showQueue(a: Activity) {
+        val prefs = a.getSharedPreferences("torrent_transfers", Context.MODE_PRIVATE)
+        val existing=prefs.all.keys.filter{
+            it.startsWith("job_") && validJob(it.removePrefix("job_"))
+        }.map{it.removePrefix("job_")}
+        val fileIds=statusDir(a).listFiles().orEmpty()
+            .filter{it.isFile && it.name.endsWith(".status")}
+            .map{it.name.removeSuffix(".status")}
+            .filter(::validJob)
+        val keys=(existing+fileIds).distinct().sortedDescending()
+            .filterNot{status(a,it,prefs).contains("Cancelled",true)}
+        if(keys.isEmpty()){
+            Toast.makeText(a,"No torrent transfers yet",Toast.LENGTH_LONG).show()
+            return
+        }
+        val labels=keys.map{status(a,it,prefs)}.toTypedArray()
+        AlertDialog.Builder(a).setTitle("BitTorrent transfers")
+            .setItems(labels){_,index->
+                val id=keys[index]
+                val controls=queueActionLabels(labels[index]).toTypedArray()
+                AlertDialog.Builder(a).setTitle(labels[index])
+                    .setItems(controls){_,which->
+                        when(val control=controls[which]){
+                            "Review & export selected files"->
+                                TorrentVerifiedExport.request(a,id)
+                            "Open exported originals"->
+                                TorrentVerifiedExport.open(a,id)
+                            "Show current status","Quarantine security report"->{
+                                val details=if(control=="Quarantine security report")
+                                    runCatching{
+                                        val report=File(statusDir(a),
+                                            "$id.security-review.txt")
+                                        if(report.isFile)report.readText().take(3500)
+                                        else "No completed security review. All unverified "+
+                                            "torrent pieces remain in private storage."
+                                    }.getOrDefault("Security review unavailable. Keep quarantined.")
+                                else status(a,id,prefs)
+                                AlertDialog.Builder(a).setTitle(
+                                    if(control=="Quarantine security report")
+                                        "Quarantine: "+id.take(8)
+                                    else "Torrent "+id.take(8))
+                                    .setMessage(details)
+                                    .setPositiveButton("Close",null).show()
+                            }
+                            "Discard from queue"->{
+                                AlertDialog.Builder(a)
+                                    .setTitle("Discard this torrent from the queue?")
+                                    .setMessage("Stop this job and hide its queue entry. "+
+                                        "Already exported original files are preserved. "+
+                                        "Unverified private pieces are retained for security review.")
+                                    .setNegativeButton("Keep job",null)
+                                    .setPositiveButton("Discard"){_,_->
+                                        if(!markCancelled(a,id)){
+                                            Toast.makeText(a,
+                                                "Could not save torrent cancellation",
+                                                Toast.LENGTH_LONG).show()
+                                        }else{
+                                            // Persist the cancellation even if Android
+                                            // rejects a new foreground service. Active
+                                            // workers inspect the marker directly.
+                                            runCatching{
+                                                a.startForegroundService(
+                                                    Intent(a,TorrentTransferService::class.java).apply{
+                                                        action=TorrentTransferService.CANCEL
+                                                        putExtra("job",id)
+                                                    })
+                                            }.onFailure{
+                                                android.util.Log.w("AsterionTorrent",
+                                                    "Cancellation marker saved; service signal unavailable",it)
+                                            }
+                                            Toast.makeText(a,
+                                                "Torrent discarded; originals and private pieces preserved",
+                                                Toast.LENGTH_LONG).show()
+                                        }
+                                    }.show()
+                            }
+                            "Pause transfer","Resume transfer"->{
+                                val resuming=control=="Resume transfer"
+                                fun dispatch(reviewed:Boolean){
+                                    runCatching{
+                                        a.startForegroundService(
+                                            Intent(a,TorrentTransferService::class.java).apply{
+                                                action=if(resuming)
+                                                    TorrentTransferService.RESUME
+                                                    else TorrentTransferService.PAUSE
+                                                putExtra("job",id)
+                                                putExtra(
+                                                    TorrentTransferService.OWNER_REVIEWED_RETRY,
+                                                    reviewed)
+                                            })
+                                    }.onFailure{
+                                        Toast.makeText(a,
+                                            "Torrent service unavailable: "+
+                                                it.message.orEmpty().take(90),
+                                            Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                                if(resuming && TorrentSafetyGate.incidentHold(a)){
+                                    AlertDialog.Builder(a)
+                                        .setTitle("Resume isolated torrent?")
+                                        .setMessage("A previous native request "+
+                                            "may have interrupted the phone. "+
+                                            "Only this torrent's isolated worker "+
+                                            "will retry; existing pieces are kept.")
+                                        .setNegativeButton("Keep paused",null)
+                                        .setPositiveButton("Retry"){_,_->
+                                            val admitted=runCatching{
+                                                TorrentSafetyGate.ownerReviewedRetry(a)
+                                            }.getOrElse{TorrentSafetyGate.Admission(
+                                                false,it.message?:"Recovery failed")}
+                                            if(admitted.allowed)dispatch(true)
+                                            else Toast.makeText(a,
+                                                admitted.reason,Toast.LENGTH_LONG).show()
+                                        }.show()
+                                }else dispatch(false)
+                            }
+                        }
+                    }.setNegativeButton("Close",null).show()
+            }.setPositiveButton("Refresh"){_,_->showQueue(a)}
+            .setNegativeButton("Close",null).show()
+    }
+    fun prepareMagnet(a: Activity, magnet: String, folder: String) {
+        TorrentMetadataBridge.prepareMagnet(a,magnet,folder)
+    }
+    fun prepareDescriptor(a: Activity, bytes: ByteArray, folder: String) {
+        TorrentMetadataBridge.prepareDescriptor(a,bytes,folder)
+    }
+}
+
+/** Foreground torrent transfer, progress reporting, file integrity and public export. */
+class TorrentTransferService : Service() {
+    companion object {
+        const val ADD = "asterion.torrent.ADD"
+        const val PAUSE = "asterion.torrent.PAUSE"
+        const val RESUME = "asterion.torrent.RESUME"
+        const val CANCEL = "asterion.torrent.CANCEL"
+        const val PREPARE_MAGNET = "asterion.torrent.PREPARE_MAGNET"
+        const val PREPARE_DESCRIPTOR = "asterion.torrent.PREPARE_DESCRIPTOR"
+        const val EXPORT = "asterion.torrent.EXPORT"
+        // Accepted only after the user explicitly acknowledges an incident
+        // dialog; the isolated service rechecks admission in its own process.
+        const val OWNER_REVIEWED_RETRY="asterion.torrent.owner_reviewed_retry"
+        private const val CHANNEL = "asterion_peer_transfers"
+        private const val NOTIFICATION = 56823
+        private val inFlight = ConcurrentHashMap.newKeySet<String>()
+        private val paused = ConcurrentHashMap.newKeySet<String>()
+        // A foreground-service expiry must interrupt the running native
+        // worker; otherwise the process can continue after Android revokes
+        // its dataSync foreground allowance.
+        private val stopRequests = ConcurrentHashMap.newKeySet<String>()
+        private val workers = ConcurrentHashMap<String,Thread>()
+        private val exportWorkers = ConcurrentHashMap.newKeySet<Thread>()
+        // Process-wide, like the native SessionManager and transfer workers.
+        // Android can recreate the Service object before old JNI calls exit.
+        private val metadataWorkers=ConcurrentHashMap.newKeySet<Thread>()
+        // Worker sets become empty BEFORE SessionManager.stop() returns.
+        // Maintain this nonblocking guard across Service recreations.
+        private val nativeCleanup=java.util.concurrent.atomic.AtomicInteger(0)
+    }
+    // An ADD may reach the isolated service while the metadata callback is
+    // still unwinding its native worker. Preserve the selected job instead
+    // of falsely pausing it and leaving VIEW TRANSFERS without an engine.
+    private val deferredJobs=java.util.concurrent.ConcurrentLinkedQueue<String>()
+    private val mainHandler=android.os.Handler(android.os.Looper.getMainLooper())
+    private var latestStartId=0
+    private var destroyed=false
+    // All stop/admission decisions run on the Service main thread. A worker
+    // finishing concurrently with a new onStartCommand must never call the
+    // unqualified stopSelf() and kill that newer command.
+    private fun settleAfterWorker(){
+        mainHandler.post {
+            if(!destroyed)stopIfIdle(latestStartId)
+        }
+    }
+    /** A second UI command must never stop the :torrent service while the
+     * first command still owns a native JNI metadata/transfer operation.
+     * stopSelfResult(latest startId) otherwise tears down ALL earlier starts.
+     */
+    @Synchronized private fun stopIfIdle(startId:Int) {
+        if(!TorrentServiceLifetimePolicy.mayStop(
+                inFlight.size,metadataWorkers.size,exportWorkers.size,
+                nativeCleanup.get()))return
+        // Preserve owner-selected jobs that arrived while JNI was unwinding.
+        if(startDeferredIfIdle())return
+        if(!TorrentServiceLifetimePolicy.mayStop(
+                inFlight.size,metadataWorkers.size,exportWorkers.size,
+                nativeCleanup.get()))return
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelfResult(startId)
+    }
+    override fun onBind(intent: Intent?): IBinder? = null
+    private fun notification(message: String, percent: Int = 0): Notification {
+        if (Build.VERSION.SDK_INT >= 26) {
+            getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(CHANNEL, "Torrent transfers", NotificationManager.IMPORTANCE_LOW))
+        }
+        val open = PendingIntent.getActivity(this, 0,
+            Intent(this, AsterionHomeActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        return Notification.Builder(this, CHANNEL).setContentTitle("Asterion BitTorrent")
+            .setContentText(message.take(100)).setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentIntent(open).setOnlyAlertOnce(true)
+            .setProgress(100, percent.coerceIn(0, 100), false).build()
+    }
+    @Synchronized private fun startJob(id:String,folder:String,indices:String):Boolean {
+        if(TorrentTransfers.isMarkedCancelled(this,id)){
+            update(id,"Cancelled · user removed torrent from queue")
+            return false
+        }
+        if(indices.isBlank()) {
+            update(id,"FAILED: Previously selected files are unavailable")
+            return false
+        }
+        // One native torrent operation at a time on the device after an
+        // owner-observed full-device crash; no competing metadata session.
+        if(inFlight.contains(id))return true
+        if(!TorrentServiceLifetimePolicy.mayStartNative(
+                inFlight.size,metadataWorkers.size,exportWorkers.size,nativeCleanup.get())){
+            if(id !in deferredJobs)deferredJobs.add(id)
+            // Android may terminate the :torrent process during metadata
+            // unwinding. Preserve THIS exact previously user-selected job.
+            getSharedPreferences("torrent_transfers",MODE_PRIVATE)
+                .edit().putBoolean("job_deferred_$id",true).commit()
+            update(id,"QUEUED · waiting for native metadata or current transfer to finish")
+            return false
+        }
+        if(!inFlight.add(id))return false
+        getSharedPreferences("torrent_transfers",MODE_PRIVATE)
+            .edit().remove("job_deferred_$id").commit()
+        stopRequests.remove(id)
+        val worker=thread(start=false,name="asterion-torrent-$id"){
+            try {
+                val admitted=TorrentSafetyGate.begin(applicationContext)
+                if(!admitted.allowed)throw java.io.IOException(admitted.reason)
+                transfer(id,folder,indices)
+                // A completed transfer is QUARANTINED until an actual scanner
+                // clears it. Keep its selected file indices and target
+                // category for the later authorized scan/release workflow.
+                getSharedPreferences("torrent_transfers",MODE_PRIVATE).edit()
+                    .remove("job_paused_$id").apply()
+            }catch(e:Throwable){
+                if(e is VirtualMachineError || e is ThreadDeath)throw e
+                if(TorrentTransfers.isMarkedCancelled(this,id)){
+                    update(id,"Cancelled · selected torrent removed from queue; "+
+                        "private pieces retained for explicit security review")
+                }else if(e is InterruptedException || stopRequests.contains(id))
+                    update(id,"Paused · original pieces preserved; resume to continue")
+                else if(e is java.io.IOException &&
+                    e.message.orEmpty().contains("torrent stalled"))
+                    update(id,"STALLED: "+e.message+" · Resume keeps verified pieces")
+                else
+                    update(id,"FAILED: "+(e.message?:e.javaClass.simpleName))
+            }finally {
+                nativeCleanup.incrementAndGet()
+                try{
+                    TorrentSafetyGate.finished(applicationContext)
+                    workers.remove(id)
+                    inFlight.remove(id)
+                    if(inFlight.isEmpty() && metadataWorkers.isEmpty() &&
+                        exportWorkers.isEmpty()){
+                        // JNI shutdown may block. Keep the cleanup lease so
+                        // another command cannot mistake the process for idle.
+                        runCatching{TorrentTransfers.stopSessionWhenIdle()}
+                            .onFailure{android.util.Log.e("AsterionTorrent",
+                                "Native session shutdown failed",it)}
+                    }
+                }finally{nativeCleanup.decrementAndGet()}
+                // Start only a previously selected deferred job, after the
+                // last native operation has actually released its session.
+                settleAfterWorker()
+            }
+        }
+        workers[id]=worker
+        worker.start()
+        return true
+    }
+    /** Reopen only jobs explicitly selected earlier and durably deferred by
+     * this very service. This is not unsolicited auto-download discovery.
+     */
+    @Synchronized private fun restoreDeferredSelections(){
+        val prefs=getSharedPreferences("torrent_transfers",MODE_PRIVATE)
+        TorrentDeferredSelection.recover(prefs.all).forEach{id->
+            if(id !in deferredJobs)deferredJobs.add(id)
+        }
+    }
+    /** Begin the next owner-selected torrent only after the previous JNI
+     * session has fully returned. One native torrent worker at a time remains
+     * mandatory. Saved file indices/targets are not reconstructed or guessed.
+     */
+    @Synchronized private fun startDeferredIfIdle():Boolean {
+        if(!TorrentServiceLifetimePolicy.mayStartNative(
+                inFlight.size,metadataWorkers.size,exportWorkers.size,nativeCleanup.get()))
+            return false
+        val prefs=getSharedPreferences("torrent_transfers",MODE_PRIVATE)
+        restoreDeferredSelections()
+        while(true){
+            val id=deferredJobs.poll()?:return false
+            if(TorrentTransfers.isMarkedCancelled(this,id) ||
+               prefs.getBoolean("job_paused_$id",false)){
+                prefs.edit().remove("job_deferred_$id").commit()
+                continue
+            }
+            val indices=prefs.getString("job_indices_$id","").orEmpty()
+            if(indices.isBlank()){
+                prefs.edit().remove("job_deferred_$id").commit()
+                update(id,"FAILED: Previously selected files are unavailable")
+                continue
+            }
+            val folder=prefs.getString("job_folder_$id","Videos")?:"Videos"
+            if(startJob(id,folder,indices))return true
+            // A concurrent explicit selection may have taken the native
+            // engine first. startJob re-enqueues our exact selection.
+            if(inFlight.isNotEmpty() || metadataWorkers.isNotEmpty())return true
+        }
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        latestStartId=startId
+        try { startForeground(NOTIFICATION, notification("Preparing torrent…")) }
+        catch(t:Exception){
+            android.util.Log.w("AsterionTorrent",
+                "Foreground promotion denied; preserving active native workers",t)
+            // A denied fresh foreground start must not launch deferred JNI.
+            // Conversely, a denied second command must not kill the first.
+            if(TorrentServiceLifetimePolicy.mayStop(
+                    inFlight.size,metadataWorkers.size,exportWorkers.size,
+                nativeCleanup.get()))
+                stopSelfResult(startId)
+            return START_NOT_STICKY
+        }
+        // A process restart must not drop owner-selected jobs which were
+        // deferred while a metadata/transfer JNI session was unwinding.
+        restoreDeferredSelections()
+        if(intent?.action==EXPORT){
+            val target=intent.getStringExtra("job").orEmpty()
+            if(!target.matches(Regex("[a-f0-9]{24}"))){
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
+            // Export never initializes libtorrent, but simultaneous disk
+            // copies and native peer traffic could again overload this phone.
+            if(!TorrentServiceLifetimePolicy.mayStartNative(
+                    inFlight.size,metadataWorkers.size,exportWorkers.size,nativeCleanup.get())){
+                update(target,"QUARANTINED · Export deferred until torrent engine idle")
+                return START_NOT_STICKY
+            }
+            val worker=thread(start=false,name="asterion-torrent-export"){
+                try{
+                    val total=TorrentVerifiedExport.publish(
+                        applicationContext,target){done,count->
+                        update(target,
+                            "QUARANTINED · Exporting verified file $done/$count")
+                    }
+                    update(target,
+                        "EXPORTED · $total selected originals saved to Downloads")
+                }catch(t:Throwable){
+                    if(t is VirtualMachineError || t is ThreadDeath)throw t
+                    update(target,"QUARANTINED · Export failed: "+
+                        (t.message?:t.javaClass.simpleName).take(130))
+                }finally{
+                    exportWorkers.remove(Thread.currentThread())
+                    settleAfterWorker()
+                }
+            }
+            exportWorkers.add(worker)
+            worker.start()
+            return START_NOT_STICKY
+        }
+        // Cancellation is never a fresh native libtorrent request. It MUST
+        // remain available even after an Android OOM/quarantine incident.
+        if(intent?.action!=PAUSE && intent?.action!=CANCEL){
+            val admitted=runCatching {
+                if(intent?.getBooleanExtra(OWNER_REVIEWED_RETRY,false)==true)
+                    TorrentSafetyGate.ownerReviewedRetry(applicationContext)
+                else TorrentSafetyGate.assess(applicationContext)
+            }.getOrElse {
+                TorrentSafetyGate.Admission(false,
+                    "Torrent recovery unavailable: "+
+                    (it.message?:it.javaClass.simpleName))
+            }
+            if(!admitted.allowed){
+                @Suppress("DEPRECATION")
+                val receiver=if(Build.VERSION.SDK_INT>=33)
+                    intent?.getParcelableExtra(
+                        TorrentMetadataBridge.RECEIVER,
+                        android.os.ResultReceiver::class.java)
+                else intent?.getParcelableExtra<android.os.ResultReceiver>(
+                    TorrentMetadataBridge.RECEIVER)
+                receiver?.send(0,android.os.Bundle().apply{
+                    putString("error",admitted.reason)
+                })
+                intent?.getStringExtra("job")
+                    ?.takeIf{it.matches(Regex("[a-f0-9]{24}"))}
+                    ?.let{update(it,"Paused · "+admitted.reason)}
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
+        }
+        if(intent?.action==PREPARE_MAGNET || intent?.action==PREPARE_DESCRIPTOR){
+            val action=intent.action.orEmpty()
+            val chosen=intent.getStringExtra("folder").orEmpty()
+            @Suppress("DEPRECATION")
+            val receiver=if(Build.VERSION.SDK_INT>=33)
+                intent.getParcelableExtra(TorrentMetadataBridge.RECEIVER,
+                    android.os.ResultReceiver::class.java)
+                else intent.getParcelableExtra<android.os.ResultReceiver>(
+                    TorrentMetadataBridge.RECEIVER)
+            if(!TorrentServiceLifetimePolicy.mayStartNative(
+                    inFlight.size,metadataWorkers.size,exportWorkers.size,nativeCleanup.get())){
+                receiver?.send(0,android.os.Bundle().apply{
+                    putString("error","Native torrent worker already busy; "+
+                        "no parallel metadata JNI will be started")
+                })
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
+            val worker=thread(start=false,name="asterion-torrent-metadata"){
+                try{
+                    val admitted=TorrentSafetyGate.begin(applicationContext)
+                    if(!admitted.allowed)
+                        throw java.io.IOException(admitted.reason)
+                    val hash=TorrentMetadataBridge.prepareInTorrentProcess(
+                        applicationContext,action,intent,chosen)
+                    receiver?.send(1,android.os.Bundle().apply{putString("job",hash)})
+                }catch(t:Throwable){
+                    if(t is VirtualMachineError || t is ThreadDeath)throw t
+                    receiver?.send(0,android.os.Bundle().apply{
+                        putString("error",t.message?:t.javaClass.simpleName)})
+                }finally{
+                    nativeCleanup.incrementAndGet()
+                    try{
+                        TorrentSafetyGate.finished(applicationContext)
+                        metadataWorkers.remove(Thread.currentThread())
+                        if(metadataWorkers.isEmpty() && inFlight.isEmpty() &&
+                            exportWorkers.isEmpty()){
+                            runCatching{TorrentTransfers.stopSessionWhenIdle()}
+                                .onFailure{android.util.Log.e("AsterionTorrent",
+                                    "Native session shutdown failed",it)}
+                        }
+                    }finally{nativeCleanup.decrementAndGet()}
+                    // The selected transfer may have arrived during metadata
+                    // cleanup. Re-arm only AFTER the old JNI session stopped.
+                    settleAfterWorker()
+                }
+            }
+            metadataWorkers.add(worker)
+            worker.start()
+            return START_NOT_STICKY
+        }
+        val id=intent?.getStringExtra("job")
+        if(id.isNullOrBlank()){
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
+        val prefs=getSharedPreferences("torrent_transfers",MODE_PRIVATE)
+        if(!id.matches(Regex("[a-f0-9]{24}"))){
+            stopIfIdle(startId)
+            return START_NOT_STICKY
+        }
+        when(intent.action){
+            CANCEL->{
+                deferredJobs.remove(id)
+                prefs.edit().remove("job_deferred_$id").commit()
+                // Do not unload the native engine on the UI process or erase
+                // resumable quarantine pieces while its writer is active.
+                // This durable tombstone blocks later automatic RESUME/ADD.
+                TorrentTransfers.markCancelled(this,id)
+                stopRequests.add(id)
+                paused.add(id)
+                workers[id]?.interrupt()
+                update(id,"Cancelled · selected torrent removed from queue; "+
+                    "private pieces retained for explicit security review")
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
+            PAUSE->{
+                deferredJobs.remove(id)
+                prefs.edit().remove("job_deferred_$id").commit()
+                paused.add(id)
+                prefs.edit().putBoolean("job_paused_$id",true).apply()
+                update(id,"Paused")
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
+            RESUME->{
+                if(TorrentTransfers.isMarkedCancelled(this,id)){
+                    update(id,"Cancelled · select torrent again to restart")
+                    stopIfIdle(startId)
+                    return START_NOT_STICKY
+                }
+                paused.remove(id)
+                prefs.edit().putBoolean("job_paused_$id",false).apply()
+                val folder=prefs.getString("job_folder_$id","Videos")?:"Videos"
+                val indices=prefs.getString("job_indices_$id","").orEmpty()
+                if(!inFlight.contains(id))startJob(id,folder,indices)
+                else update(id,"Resuming")
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
+            ADD->{
+                // An already-running job owns its immutable file selection.
+                // Repeated ADD cannot replace its manifest indices mid-write.
+                if(inFlight.contains(id))return START_NOT_STICKY
+                // Explicit user selection is the sole way to re-arm a
+                // previously cancelled infohash, never background polling.
+                if(!TorrentTransfers.clearCancellationForExplicitSelection(this,id)){
+                    update(id,"FAILED: Could not clear prior cancellation")
+                    stopIfIdle(startId)
+                    return START_NOT_STICKY
+                }
+                stopRequests.remove(id)
+                val folder=intent.getStringExtra("folder")
+                    ?.takeIf{it in setOf("Games","Books","Videos","Assets")}
+                    ?:prefs.getString("job_folder_$id","Videos")?:"Videos"
+                val indices=intent.getStringExtra("indices")
+                    ?:prefs.getString("job_indices_$id","").orEmpty()
+                prefs.edit().putString("job_folder_$id",folder)
+                    .putString("job_indices_$id",indices).apply()
+                if(prefs.getBoolean("job_paused_$id",false))paused.add(id)
+                else paused.remove(id)
+                startJob(id,folder,indices)
+                stopIfIdle(startId)
+                return START_NOT_STICKY
+            }
+        }
+        stopIfIdle(startId)
+        return START_NOT_STICKY
+    }
+    /** Android 15+ expires dataSync foreground time. Unlike a redelivered
+     * service intent, this leaves a durable resumable job without crashing
+     * the main app or immediately restarting the same native operation.
+     */
+    override fun onTimeout(startId:Int,fgsType:Int) {
+        val prefs=getSharedPreferences("torrent_transfers",MODE_PRIVATE)
+        metadataWorkers.toList().forEach{it.interrupt()}
+        exportWorkers.toList().forEach{it.interrupt()}
+        for(id in inFlight){
+            stopRequests.add(id)
+            paused.add(id)
+            prefs.edit().putBoolean("job_paused_$id",true).apply()
+            workers[id]?.interrupt()
+            update(id,"Paused by Android · resume torrent to continue")
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+    override fun onDestroy() {
+        destroyed=true
+        metadataWorkers.toList().forEach{it.interrupt()}
+        exportWorkers.toList().forEach{it.interrupt()}
+        for(id in inFlight){
+            stopRequests.add(id)
+            workers[id]?.interrupt()
+        }
+        super.onDestroy()
+    }
+
+    private fun update(id: String, state: String, progress: Int = 0) {
+        TorrentTransfers.record(this, "job_$id", "${id.take(8)} · $state")
+        getSystemService(NotificationManager::class.java)
+            .notify(NOTIFICATION, notification(state, progress))
+    }
+    private fun transfer(id: String, folder: String, encoded: String) {
+        if(TorrentTransfers.isMarkedCancelled(this,id))
+            throw InterruptedException("Torrent was discarded before native transfer")
+        val descriptor = File(File(filesDir, "torrent-jobs"), "$id.torrent")
+        require(descriptor.isFile) { "Torrent metadata missing" }
+        require(descriptor.length() in 33L..8_388_608L){"Invalid torrent descriptor size"}
+        val descriptorBytes=descriptor.readBytes()
+        val descriptorId=MessageDigest.getInstance("SHA-256")
+            .digest(descriptorBytes).take(12).joinToString(""){"%02x".format(it)}
+        require(descriptorId==id){"Torrent descriptor identity mismatch"}
+        val manifest=BencodedTorrentManifest.parse(descriptorBytes)
+        val info = TorrentInfo(descriptorBytes)
+        require(info.isValid() && info.numFiles()==manifest.files.size) { "Torrent is invalid" }
+        val nativeFiles=info.files()
+        require(manifest.files.indices.all{i->
+            manifest.files[i].path==nativeFiles.filePath(i) &&
+                manifest.files[i].size==nativeFiles.fileSize(i)
+        }){"Native file selection differs from the authenticated descriptor"}
+        val selected=encoded.split(',').map{
+            it.toIntOrNull()?:error("Invalid selected file index")
+        }.toSet()
+        require(selected.isNotEmpty() && selected.all { it in 0 until info.numFiles() }) {
+            "Invalid selected file indices"
+        }
+        val priorities = Array(info.numFiles()) {
+            if (it in selected) Priority.DEFAULT else Priority.IGNORE
+        }
+        // ALL untrusted torrent payloads remain in private durable storage.
+        // BitTorrent piece hashes only verify integrity, never malware safety.
+        // No file is published to public Downloads without an independent
+        // trusted malware verdict. Existing partials remain resumable here.
+        val storage = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: filesDir
+        val destination = File(storage, "torrent-data/$id").apply { mkdirs() }
+        val files = info.files()
+        selected.forEach { index ->
+            val candidate = File(destination, files.filePath(index)).canonicalFile
+            require(candidate.path.startsWith(destination.canonicalPath + File.separator)) {
+                "Unsafe torrent path"
+            }
+        }
+        val session = TorrentTransfers.session()
+        session.download(info, destination, null, priorities, null, torrent_flags_t())
+        var handle = session.find(info.infoHash())
+        var attempt = 0
+        while (handle == null && attempt++ < 100) {
+            Thread.sleep(300)
+            handle = session.find(info.infoHash())
+        }
+        require(handle != null && handle.isValid()) { "Torrent engine did not accept descriptor" }
+        // libtorrent4j SessionManager.download() returns early for an existing
+        // info hash and changes priorities but DOES NOT resume a paused handle.
+        // Previously our RESUME/ADD path could reconnect peers indefinitely
+        // without requesting another piece. Explicitly reactivate the real
+        // handle after restoring the user's file selection.
+        if(session.isPaused)session.resume()
+        handle.resume()
+        var progressClock=TorrentPeerDiagnostics.ProgressClock(
+            0L,android.os.SystemClock.elapsedRealtime())
+        while (true) {
+            if(stopRequests.contains(id) || Thread.currentThread().isInterrupted ||
+                TorrentTransfers.isMarkedCancelled(this,id))
+                throw InterruptedException("Torrent transfer stopped; pieces retained")
+            if (paused.contains(id)) {
+                handle.pause()
+                update(id, "Paused")
+                while (paused.contains(id)) {
+                    if(stopRequests.contains(id) || Thread.currentThread().isInterrupted ||
+                        TorrentTransfers.isMarkedCancelled(this,id))
+                        throw InterruptedException("Torrent paused or discarded")
+                    Thread.sleep(500)
+                }
+                handle.resume()
+                progressClock=progressClock.resume(android.os.SystemClock.elapsedRealtime())
+            }
+            val status = handle.status()
+            val currentProgress=status.progress()
+            val checkedBytes=status.totalWantedDone().coerceAtLeast(0L)
+            val wantedBytes=status.totalWanted().coerceAtLeast(0L)
+            val checking=status.state().toString().contains("checking",ignoreCase=true)
+            val now=android.os.SystemClock.elapsedRealtime()
+            progressClock=progressClock.observe(now,checkedBytes,checking)
+            val connected=status.numPeers().coerceAtLeast(0)
+            val seeds=status.numSeeds().coerceIn(0,connected)
+            val leechers=(connected-seeds).coerceAtLeast(0)
+            val idle=progressClock.idle(now)
+            if(!checking && !status.isFinished() &&
+                TorrentPeerDiagnostics.shouldReannounce(
+                    idle,seeds,progressClock.reannounced)){
+                // Reannounce only once per 2-minute stall, respecting the
+                // tracker's own min_interval. Discover new seeders without
+                // discarding verified pieces or restarting the torrent.
+                handle.forceReannounce(0,-1)
+                progressClock=progressClock.copy(reannounced=true)
+            }
+            // Connected peers are not necessarily seeders; a swarm can have
+            // many leechers and still lack the pieces we need. Expose both.
+            // Preserve all previously verified pieces on a stalled transfer.
+            if(!checking && !status.isFinished() && connected==0 && idle>=5L*60_000L)
+                throw java.io.IOException(
+                    "No connected peers for five minutes; torrent stalled; partials quarantined")
+            if(!checking && !status.isFinished() && connected>0 && idle>=7L*60_000L)
+                throw java.io.IOException(
+                    "Connected to $connected peers ($seeds seeders, $leechers leechers) "+
+                    "but no verified piece advanced for seven minutes; "+
+                    "torrent stalled; partials quarantined")
+            TorrentTransfers.recordMetrics(this,id,checkedBytes,wantedBytes,
+                status.downloadPayloadRate().toLong().coerceAtLeast(0L),
+                connected)
+            val percent = (currentProgress * 100).toInt().coerceIn(0, 100)
+            val speed=status.downloadPayloadRate().coerceAtLeast(0)/1024
+            val detail=TorrentPeerDiagnostics.describe(
+                percent,speed.toLong(),connected,seeds,if(checking)0L else idle,
+                checkedBytes,wantedBytes,speed.toLong())
+            update(id, "${info.name().take(32)} · $detail",percent)
+            if (status.isFinished()) break // libtorrent has verified selected pieces
+            Thread.sleep(2000)
+        }
+        // Finish BitTorrent integrity verification, then enforce private
+        // quarantine. An untrusted payload must NEVER become a publicly
+        // accessible Downloads/ file merely because its pieces match hashes.
+        update(id,"Verifying selected files in private quarantine…",100)
+        var checked=0
+        val findings=ArrayList<String>()
+        for(index in selected.sorted()){
+            if(stopRequests.contains(id)||Thread.currentThread().isInterrupted ||
+                TorrentTransfers.isMarkedCancelled(this,id))
+                throw InterruptedException("Torrent review interrupted; pieces quarantined")
+            val path=files.filePath(index)
+            val source=File(destination,path).canonicalFile
+            require(source.path.startsWith(destination.canonicalPath+File.separator) &&
+                source.isFile){"Quarantine file missing or unsafe: $path"}
+            require(source.length()==files.fileSize(index)){
+                "Quarantine file length mismatch: $path"
+            }
+            val review=TorrentQuarantineGate.preliminaryReview(source,path)
+            findings+=path+" | "+review
+            checked++
+            update(id,"Private quarantine · reviewed $checked/${selected.size}",100)
+        }
+        val report=File(File(filesDir,"torrent-jobs"),"$id.security-review.txt")
+        val temp=File(report.parentFile,"$id.security-review.tmp")
+        temp.writeText("UNTRUSTED - NOT CLEARED FOR RELEASE\\n"+
+            "BitTorrent verification only; no certified malware scan completed.\\n"+
+            findings.joinToString("\\n"))
+        check(temp.renameTo(report) || run{
+            report.delete();temp.renameTo(report)
+        }){"Cannot persist quarantine review"}
+        // Descriptor and original payloads are deliberately preserved. A
+        // future scanner must explicitly approve each selected file and
+        // record a verified result before any export is implemented.
+        update(id,"QUARANTINED · $checked files retained privately; malware scan required",100)
+
+    }
+}

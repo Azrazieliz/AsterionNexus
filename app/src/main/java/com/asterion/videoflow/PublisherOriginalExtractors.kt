@@ -1,0 +1,694 @@
+package com.asterion.videoflow
+
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
+import java.net.URI
+import java.util.Locale
+
+/**
+ * Site-owned selected-player extractors inside the ONE Asterion Downloader APK.
+ * Each approved video publisher has an explicit extraction contract. A card,
+ * preview, advertisement or successful HTTP page is never a media receipt.
+ * Full downloads are still validated by NativeMediaDownloader / MediaStore.
+ */
+internal object PublisherOriginalExtractors {
+    internal data class Candidate(val url:String,val referer:String,val host:String)
+    internal data class Site(val host:String,val selectors:String,val requireDuration:Boolean=false,
+                             val allowPlayerIframe:Boolean=false)
+    private val sites=listOf(
+        Site("pornhub.com","#player video[src],#player source[src],.video-player video[src],meta[itemprop=contentUrl]"),
+        Site("eporner.com","#player video[src],#player source[src],meta[itemprop=contentUrl]"),
+        Site("hqpornerxxx.com","#player video[src],.video-player source[src],meta[itemprop=contentUrl]"),
+        Site("jav.guru",".player iframe[src],#player iframe[src],main video[src],meta[itemprop=contentUrl]",allowPlayerIframe=true),
+        Site("javideo.net","#player iframe[src],.video-player iframe[src],article video source[src],meta[itemprop=contentUrl]",allowPlayerIframe=true),
+        Site("roshy.tv","#player video[src],.player source[src],article video[src],meta[itemprop=contentUrl]"),
+        Site("cums.net","#player video[src],.video-player source[src],meta[itemprop=contentUrl]"),
+        Site("watchporn.to","meta[itemprop=contentUrl],#player source[src],#player video[src]"),
+        Site("archivebate.com","#player iframe[src],.player iframe[src],iframe[src^='https://mixdrop.ag/e/']",allowPlayerIframe=true),
+        // LiveCamRips' exact /video/<id> publisher page embeds the recording
+        // in one iframe#iframe-video. Other iframes/ads are not originals.
+        Site("livecamrips.to","iframe#iframe-video[src]",allowPlayerIframe=true),
+        Site("dsysav.com","main .video-container video[src]",allowPlayerIframe=false),
+        Site("xxxi.porn","#player video[src],.video-player source[src],meta[itemprop=contentUrl]"),
+        Site("notfans.com","main #player video[src],main #player source[src],"+
+            "article .video-player video[src],article .video-player source[src],"+
+            "main .video-player video[src],main .video-player source[src]"),
+        Site("fullporner.com","#player iframe[src],.player iframe[src],iframe[src*='/player/'],meta[itemprop=contentUrl]",allowPlayerIframe=true),
+
+        Site("freepornvideos.xxx","#player video[src],#player source[src],.video-player source[src],meta[itemprop=contentUrl]"),
+        // Only the selected article's own main player is eligible. No sidebar,
+        // thumbnail MP4s, related posts, or guessed off-site player domains.
+        Site("pornbuz.com","a[href^='https://streamtape.com/v/'],a[href^='https://streamtape.to/v/']"),
+        Site("porneec.com","main .video-player video[src],main .video-player source[src],"+
+            "article .video-player video[src],article .video-player source[src],"+
+            "video[src][data-duration],video source[src][data-duration]",
+            requireDuration=true),
+        // Owner-requested first-party selected-player providers. Reuse
+        // existing original-duration / same-article checks and native
+        // media byte validation. No alternate guessed hosters or preview
+        // endpoints, and NO changes to Jav Guru or Pornhub extractors.
+        Site("pimpbunny.com",
+            "main .video-player video[src],main .video-player source[src],"+
+            "main #player video[src],main #player source[src],"+
+            "article video[src],meta[itemprop=contentUrl]"),
+        Site("xchina.co",
+            "main .video-player video[src],main .video-player source[src],"+
+            "article video[src],meta[itemprop=contentUrl]"),
+        Site("bubblecum.lol",
+            "main .video-player video[src],main .video-player source[src],"+
+            "main #player video[src],main #player source[src],"+
+            "article video[src],meta[itemprop=contentUrl]"),
+        Site("avple.tv",
+            // Selected publisher players can lazy-load the actual media in
+            // data-src before promoting it to src. The parser already knows
+            // how to read data-src, but the old CSS never selected those nodes.
+            "main .video-player video[src],main .video-player source[src],"+
+            "main .video-player video[data-src],main .video-player source[data-src],"+
+            "main #player video[src],main #player source[src],"+
+            "main #player video[data-src],main #player source[data-src],"+
+            "article .video-player video[data-src],"+
+            "article .video-player source[data-src],"+
+            "article video[src],meta[itemprop=contentUrl]"),
+        Site("taiav.com","main .video-player video[src],main .video-player source[src],"+
+            "article .video-player video[src],article .video-player source[src],"+
+            "video[src][data-duration],video source[src][data-duration]",
+            requireDuration=true),
+        Site("omg.porn","#player video[src],.video-player source[src],meta[itemprop=contentUrl]"),
+        Site("hentaibros.net","main .video-player video[src][data-duration],main .video-player source[src][data-duration]",requireDuration=true),
+        Site("onlyhentaistuff.com","#player iframe[src],.video-player iframe[src],article video[src],meta[itemprop=contentUrl]",allowPlayerIframe=true),
+        Site("uncensoredhentai.xxx","iframe[src*='nhplayer.com/v/']",allowPlayerIframe=true),
+        Site("3dhentaix.com","main .video-player video[src][data-duration],main .video-player source[src][data-duration]",requireDuration=true),
+        Site("rule34video.com","#player video[src],.video-player source[src],meta[itemprop=contentUrl]"),
+        // Existing CosplayTele publisher; VIDEO fallback is selected-post only.
+        Site("cosplaytele.com",
+            "article video[src],article video source[src],"+
+            ".entry-content video[src],.entry-content video source[src],"+
+            // BrowserPageFetch intentionally serializes only the selected
+            // real HTML5 player into <main><div class=video-player>.
+            // Previously this exact fallback could never match its own DOM.
+            "main .video-player video[src],"+
+            "main .video-player video source[src],"+
+            "main #player video[src],main #player source[src],"+
+            // Some selected articles provide a first-party embed rather than
+            // inline HTML5 media. Keep only the actual selected-player
+            // wrapper; iframeAllowed also requires the SAME publisher and a
+            // recognized embed/player route, rejecting arbitrary offsite ads.
+            "article .video-player iframe[src],"+
+            ".entry-content .video-player iframe[src],"+
+            "main .video-player iframe[src],"+
+            // Real first-party embedded players can be siblings of the
+            // WordPress photo gallery without a .video-player wrapper.
+            // iframeAllowed still requires the same publisher and exact
+            // /embed|player|video/ route; related/ad frames are excluded.
+            "article .entry-content iframe[src],"+
+            "article .post-content iframe[src]",allowPlayerIframe=true)
+
+    ).associateBy { it.host }
+
+    // These six newly added publishers have no independently verified
+    // page-wide JSON-LD media attribution contract. Only their selected
+    // article/HTML5 player can attest an original; recommendation VideoObject
+    // data and global contentUrl meta fields are not selected-player evidence.
+    private val selectedPlayerOnlyHosts=setOf(
+        "avple.tv","pimpbunny.com","xchina.co",
+        "bubblecum.lol","cosplaytele.com","notfans.com")
+
+    val coveredHosts:Set<String> get()=sites.keys
+
+    private fun domain(raw:String):String? {
+        val u=runCatching{URI(raw)}.getOrNull()?:return null
+        if(u.scheme!="https" || u.userInfo!=null || u.host.isNullOrBlank())return null
+        val h=u.host.lowercase(Locale.ROOT)
+        return sites.keys.firstOrNull { h==it || h=="www.$it" || h=="m.$it" ||
+            h=="fr.$it" || h=="en.$it" }
+    }
+    fun owns(url:String)=domain(url)!=null
+
+    private fun direct(raw:String):Boolean {
+        val u=runCatching{URI(raw)}.getOrNull()?:return false
+        val selectedManifest=Regex("""(?i)\.(?:m3u8|mpd)$""")
+            .containsMatchIn(u.path.orEmpty())
+        return u.scheme=="https" && u.host!=null && u.userInfo==null &&
+            u.host!="localhost" &&
+            (NativeMediaDownloader.isDirectMediaUrl(raw) || selectedManifest)
+    }
+
+    private fun url(base:String,raw:String):String? {
+        if(raw.isBlank() || raw.startsWith("data:") || raw.startsWith("blob:") ||
+            raw.startsWith("javascript:"))return null
+        return runCatching{URI(base).resolve(raw.replace("&amp;","&")).toString()}
+            .getOrNull()?.takeIf{WebDiscovery.isUrl(it) && it.startsWith("https://")}
+    }
+
+    /** Provenance must point to the *selected* player. External iframe players
+     * are restricted by site: never pass advertising frames to yt-dlp.
+     */
+    private fun iframeAllowed(host:String,link:String):Boolean {
+        val u=runCatching{URI(link)}.getOrNull()?:return false
+        val h=u.host.orEmpty().lowercase(Locale.ROOT).removePrefix("www.")
+        val path=u.path.orEmpty()
+        return when(host) {
+            "archivebate.com" -> h=="mixdrop.ag" &&
+                Regex("""^/e/[A-Za-z0-9_-]{5,64}/?$""").matches(path)
+            "livecamrips.to" -> (
+                // Live public selected #iframe-video currently embeds
+                // vidara.to/<opaque-id>; older selected Mixdrop hosters
+                // remain valid. Unrelated adverts/frames cannot qualify.
+                (h=="vidara.to" &&
+                    Regex("""^/[A-Za-z0-9_-]{8,50}/?$""").matches(path) &&
+                    u.rawQuery.isNullOrBlank() && u.rawFragment==null) ||
+                (h in setOf("mdzsmutpcvykb.net",
+                    "mixdrop.ag","mixdrop.co","mixdrop.to") &&
+                    Regex("""^/e/[A-Za-z0-9_-]{5,64}/?$""").matches(path)))
+            "uncensoredhentai.xxx" -> h=="nhplayer.com" &&
+                Regex("""^/v/[A-Za-z0-9]{8,40}/?$""").matches(path)
+            "fullporner.com" -> h=="fullporner.com" &&
+                Regex("""^/player/[0-9]{1,12}/[0-9]{1,4}/?$""").matches(path)
+            else -> VideoSiteProfiles.sameProvider("https://$host/",link) &&
+                Regex("""(?i)^/(?:embed|player|video|watch)/[^/?#]+""").containsMatchIn(path)
+        }
+    }
+
+    private fun structured(doc:Document):List<String> {
+        val found=ArrayList<String>()
+        // Only the VideoObject belonging to the selected item. A page's
+        // unrelated recommendation JSON must not become the selected file.
+        for(script in doc.select("script[type=application/ld+json]").take(12)){
+            val content=script.data().ifBlank{script.html()}
+            val matches=Regex("""(?is)"@type"\s*:\s*"VideoObject"[^}]{0,10000}""")
+                .findAll(content)
+            for(match in matches){
+                val src=Regex("""(?i)"contentUrl"\s*:\s*"([^"]+)"""")
+                    .find(match.value)?.groupValues?.get(1)?:continue
+                found+=src.replace("\\/","/").replace("\\u0026","&")
+            }
+        }
+        return found
+    }
+
+    /** Pure parser: real HTML fixtures are regression-tested per hostname.
+     * No guessed media links, cross-site image previews, or DRM bypass.
+     */
+    fun fromHtml(selected:String,html:String):List<Candidate> {
+        val host=domain(selected)?:return emptyList()
+        val site=sites[host]?:return emptyList()
+        if(!VideoSiteProfiles.isVideoPage(selected))return emptyList()
+        val doc=Jsoup.parse(html,selected)
+        val found=LinkedHashMap<String,Candidate>()
+        if(host=="notfans.com"){
+            // Live publisher evidence: the selected /videos/<id>/ article
+            // advertises an exact /get_file/....mp4 Download action. Its
+            // player may not expose HTML5 currentSrc; do not lose this
+            // publisher-owned original to generic unsupported extraction.
+            val files=NotFansSelectedOriginalSource.published(selected,html)
+            if(files.isNotEmpty())return files.map{
+                Candidate(it,selected,host)
+            }
+        }
+        if(host=="pimpbunny.com"){
+            // The live selected #kt_player publishes signed first-party
+            // KVS video_url and video_alt_url. Page preview_*.mp4 files
+            // cannot stand in for the requested original.
+            if(doc.select("#kt_player").isNotEmpty()){
+                return PimpBunnySelectedOriginalSource.published(selected,html)
+                    .map{Candidate(it,selected,host)}
+            }
+        }
+        if(host=="bubblecum.lol"){
+            // Prefer the actual selected KVS flashvars.video_url when the
+            // publisher renders #kt_player. On a genuine older HTML5 article
+            // without KVS, preserve the original approved main-player CSS
+            // extractor instead of introducing an unnecessary regression.
+            if(doc.select("#kt_player").isNotEmpty()){
+                return BubblecumSelectedOriginalSource.published(selected,html)
+                    .map{Candidate(it,selected,host)}
+            }
+        }
+        if(host=="xchina.co" &&
+            doc.select("#video-player[data-src]").isNotEmpty()){
+            // Current selected xChina articles identify their real HLS
+            // original in #video-player[data-src], NOT a <video> element.
+            // Publisher observed /video/<hex> -> /hls/<same-hex>/master.m3u8.
+            // The identical ID and first-party host are essential: never
+            // accept a recommendation, ad iframe or someone else's playlist.
+            val pageId=Regex("""(?i)^/video/(?:id-)?([a-f0-9]{10,32})(?:\.html)?/?$""")
+                .matchEntire(URI(selected).path.orEmpty())?.groupValues?.get(1)
+            val players=doc.select("#video-player[data-src]").filter{
+                it.closest("aside,.related,.recommended,.recommendations,"+
+                    ".ads,.advertisement,.sidebar,[data-ad]")==null
+            }
+            val main=players.singleOrNull()
+            val source=main?.attr("data-src").orEmpty()
+            val link=pageId?.let{
+                url(selected,source)?.takeIf{published->
+                    val uri=URI(published)
+                    uri.host.orEmpty().lowercase(Locale.ROOT) in
+                        setOf("xchina.co","www.xchina.co",
+                            "en.xchina.co") &&
+                    uri.rawFragment==null && uri.port==-1 &&
+                    uri.path.orEmpty().equals(
+                        "/hls/$it/master.m3u8",ignoreCase=true)
+                }
+            }
+            if(link!=null)return listOf(Candidate(link,selected,host))
+            // No broad JavaScript media/related-card fallback may replace
+            // this selected original when the exact player lacks a source.
+            return emptyList()
+        }
+        if(host=="pornbuz.com"){
+            // PornBuz's second server is a publisher-labelled selected
+            // Streamtape watch URL. Never infer the original from generic
+            // MP4s embedded in sidebar/recommendation blocks.
+            return PornBuzOriginalSource.published(selected,html).map{
+                Candidate(it,selected,host)
+            }
+        }
+        // Rule34Video publishes quality-labelled download=true links in the
+        // selected page, not <video> sources. Its own first-party resolver
+        // checks the selected ID and anchor label before admission.
+        if(host=="rule34video.com") {
+            for(original in Rule34VideoOriginalSource.parse(html,selected)){
+                found.putIfAbsent(original.url,
+                    Candidate(original.url,selected,host))
+            }
+        }
+        fun add(raw:String,isFrame:Boolean=false,duration:Long?=null) {
+            val link=url(selected,raw)?:return
+            if(FullLengthVideoPolicy.isExplicitPreview("",link))return
+            if(isFrame){
+                if(!site.allowPlayerIframe || !iframeAllowed(host,link))return
+            }else{
+                if(!direct(link))return
+                // Selected-player teaser-only publishers require an observed
+                // full runtime, not arbitrary MP4 dimensions or byte count.
+                if(site.requireDuration && (duration==null || duration<90L))return
+            }
+            found.putIfAbsent(link,Candidate(link,selected,host))
+        }
+        if(!site.requireDuration && host !in selectedPlayerOnlyHosts){
+            for(raw in structured(doc))add(raw)
+        }
+        for(element in doc.select(site.selectors).take(25)){
+            // A related panel can contain a perfectly playable full-length
+            // MP4. Proven duration alone never makes it the selected item.
+            if(element.closest("aside,.related,.recommended,.recommendations,"+
+                    ".ads,.advertisement,.sidebar,.more-videos,[data-ad]")!=null)
+                continue
+            val tag=element.tagName()
+            // A global metadata element can describe a recommendation, not
+            // the selected scene. Only actual selected-player markup qualifies.
+            if(host in selectedPlayerOnlyHosts && tag=="meta")continue
+            val isFrame=tag=="iframe"
+            val duration=element.attr("data-duration").toLongOrNull()
+                ?:element.closest("[data-duration]")?.attr("data-duration")?.toLongOrNull()
+            // Real HTML5 player may promote a MediaSource blob: URL to
+            // src while retaining its publisher-authored signed media in
+            // data-src. The old ifBlank() read only blob: and dropped the
+            // actual selected original before source attribution. Never
+            // accept blob/data URLs themselves as downloadable originals.
+            val source=if(tag=="meta")element.attr("content") else {
+                val primary=element.attr("src")
+                if(primary.isBlank() || primary.startsWith("blob:",true) ||
+                    primary.startsWith("data:",true))
+                    element.attr("data-src")
+                else primary
+            }
+            add(source,isFrame,duration)
+        }
+        return found.values.toList()
+    }
+
+    /** The selected CosplayTele article can publish a first-party HTML
+     * iframe rather than a video URL. Sending the iframe page to yt-dlp
+     * caused the owner's Python UNSUPPORTED failure at zero bytes. Only the
+     * one attested SAME-SITE embedded player may supply its actual HTML5
+     * original; never promote iframe HTML, a sidebar, or a short teaser.
+     */
+    internal fun cosplayTeleEmbeddedOriginal(
+        selected:String,iframe:String,html:String
+    ):Candidate? {
+        if(domain(selected)!="cosplaytele.com" ||
+            !VideoSiteProfiles.isVideoPage(selected) ||
+            !iframeAllowed("cosplaytele.com",iframe))return null
+        val doc=Jsoup.parse(html,iframe)
+        val found=LinkedHashMap<String,Candidate>()
+        val nodes=doc.select(
+            "main .video-player video[src],main .video-player video source[src],"+
+            "main #player video[src],main #player video source[src],"+
+            "main video[src][data-duration],main video source[src][data-duration]"
+        )
+        for(node in nodes.take(30)){
+            if(node.closest("aside,.related,.recommended,.recommendations,"+
+                    ".ads,.advertisement,.sidebar,[data-ad]")!=null)continue
+            val owner=node.closest("video")
+            val raw=if(node.tagName()=="source")node.attr("src")
+                else node.attr("src").ifBlank {
+                    node.selectFirst("source[src]")?.attr("src").orEmpty()
+                }
+            val media=url(iframe,raw)?:continue
+            if(!direct(media) ||
+                FullLengthVideoPolicy.isExplicitPreview("",media))continue
+            val duration=(owner?:node).attr("data-duration").toLongOrNull()
+            if(duration!=null && duration in 1L..89L)continue
+            found.putIfAbsent(media,Candidate(media,iframe,"cosplaytele.com"))
+        }
+        return found.values.singleOrNull()
+    }
+
+    private fun cosplayTeleOriginal(
+        context:android.content.Context,selected:String,page:Document
+    ):List<Candidate> {
+        val static=fromHtml(selected,page.outerHtml())
+        val immediate=static.filter{direct(it.url)}
+        if(immediate.size==1)return immediate
+        // An actual embedded player may appear only after the selected
+        // article renders. Do not do a whole-site or recommendation scan.
+        val rendered=runCatching{
+            com.azrael.pixivdumpsync.BrowserPageFetch.html(context,selected)
+        }.getOrNull()
+        val visual=rendered?.let{fromHtml(selected,it)}.orEmpty()
+        val directMedia=(immediate+visual.filter{direct(it.url)})
+            .distinctBy{it.url}
+        if(directMedia.size==1)return directMedia
+        if(directMedia.isNotEmpty())return emptyList()
+        val frames=(static+visual).filter{
+            !direct(it.url) &&
+                iframeAllowed("cosplaytele.com",it.url)
+        }.distinctBy{it.url}
+        val frame=frames.singleOrNull()?:return emptyList()
+        val html=runCatching{
+            com.azrael.pixivdumpsync.BrowserPageFetch.html(
+                context,frame.url,selected)
+        }.getOrNull()?:return emptyList()
+        val original=cosplayTeleEmbeddedOriginal(selected,frame.url,html)
+        return original?.let{listOf(it)}.orEmpty()
+    }
+
+    /** Uses existing same-site source/session handling, without a new APK,
+     * embedded browser, login, or parallel queue implementation.
+     */
+    fun resolve(context:android.content.Context,selected:String):List<Candidate> {
+        if(!owns(selected) || !VideoSiteProfiles.isVideoPage(selected))return emptyList()
+        val host=domain(selected)
+        if(host=="dsysav.com"){
+            // Resolve the exact owner's English watch ID through DSYSAV's
+            // public first-party API, not the site's unrelated trending
+            // cards or the independent dsav123.wiki publisher.
+            val source=DsysavSelectedOriginal.resolve(context,selected)
+            return source?.let {
+                listOf(Candidate(it.mpd,selected,"dsysav.com"))
+            }.orEmpty()
+        }
+        if(host=="eporner.com"){
+            // Existing official /embed/<same-id>/ is an independently
+            // publisher-owned, publicly served selected player. The owner
+            // verified this route before the watch-page age/region shell
+            // regression. Do not first fetch the 3.5 KiB watch gateway and
+            // fail the entire original-resolution task; inspect the exact
+            // first-party embed without cookies from another publisher.
+            val embed=EpornerOriginalSource.officialEmbed(selected)
+            val found=embed?.let{address->
+                runCatching{WebDiscovery.selectedDocument(address,context)}
+                    .getOrNull()?.takeUnless(WebDiscovery::epornerAccessGate)
+                    ?.let{player->
+                        val official=EpornerOriginalSource.publishedSources(
+                            selected,player,context).map {
+                                Candidate(it,address,"eporner.com")
+                            }
+                        val html=fromHtml(selected,player.outerHtml())
+                            .map{it.copy(referer=address)}
+                        (official+html).distinctBy{it.url}
+                    }
+            }.orEmpty()
+            if(found.isNotEmpty())return found
+            // Do not weaken the old connected-account and watch-page
+            // behavior when the publisher embed is genuinely unavailable.
+        }
+        val page=WebDiscovery.selectedDocument(selected,context)
+        if(host=="cosplaytele.com")
+            return cosplayTeleOriginal(context,selected,page)
+        if(host=="livecamrips.to"){
+            // The selected article's iframe is a PLAYER PAGE, not a video.
+            // The generic Python path does not support the current player.
+            // Resolve only its unique first-party embedded media first.
+            fun published(html:String)=fromHtml(selected,html)
+            val initial=published(page.outerHtml())
+            val originals=initial.filter{direct(it.url)}
+            if(originals.size==1)return originals
+            if(originals.size>1)return emptyList()
+            if(host=="livecamrips.to"){
+                // A publisher-attested #iframe-video already present in the
+                // first article response is sufficient to call the *exact*
+                // selected Vidara/Mixdrop resolver. Do not start a second
+                // WebView read (another potential 45-second timeout) just to
+                // rediscover the same player. Never use related/ad frames.
+                val selectedFrames=initial.filter{
+                    SiteSpecificOriginalSources.selectedExtractorFrame(
+                        selected,it.url)
+                }
+                if(selectedFrames.size==1){
+                    val frame=selectedFrames.single()
+                    val resolved=SiteSpecificOriginalSources
+                        .selectedRecordingFrameOriginals(context,selected,frame.url)
+                        .map{Candidate(it.url,it.referer,host)}
+                    if(resolved.isNotEmpty())return resolved
+                }
+            }
+            // Do not erase the Android WebView failure for these already
+            // failing exact selections. The stage and HTTP status now identify
+            // which browser step differs from the PC-approved source path.
+            val rendered=com.azrael.pixivdumpsync.BrowserPageFetch
+                .html(context,selected)
+            val discovered=(initial+published(rendered))
+                .distinctBy{it.url}
+            val directMedia=discovered.filter{direct(it.url)}
+            if(directMedia.size==1)return directMedia
+            if(directMedia.isNotEmpty())return emptyList()
+            val frames=discovered.filter{
+                SiteSpecificOriginalSources.selectedExtractorFrame(
+                    selected,it.url)
+            }
+            val only=frames.singleOrNull()?:return emptyList()
+            return SiteSpecificOriginalSources.selectedRecordingFrameOriginals(
+                context,selected,only.url)
+                .map{Candidate(it.url,it.referer,host.orEmpty())}
+        }
+        if(host=="pornbuz.com"){
+            // The owner-selected article publishes its REAL primary
+            // watchstreamus JWPlayer (a signed full-duration HLS). A
+            // separate Server 2/Streamtape link remains the old fallback.
+            // Never return a sidebar 20-second trailer as the original.
+            val frame=PornBuzOriginalSource.selectedMainPlayer(
+                selected,page.outerHtml()) ?: runCatching {
+                    // JS-selected primary iframe may not exist in Jsoup's
+                    // initial article HTML. Resolve the SAME article in the
+                    // authorized browser; never borrow a sidebar or Server 2.
+                    com.azrael.pixivdumpsync.BrowserPageFetch
+                        .html(context,selected)
+                }.getOrNull()?.let { rendered ->
+                    PornBuzOriginalSource.selectedMainPlayer(selected,rendered)
+                }
+            val primary=frame?.let{exact->
+                val static=runCatching{
+                    val response=org.jsoup.Jsoup.connect(exact)
+                        .userAgent(NativeMediaDownloader.USER_AGENT)
+                        .header("Referer",selected)
+                        .ignoreHttpErrors(true).followRedirects(false)
+                        .timeout(13_000).maxBodySize(150_000)
+                        .apply{
+                            NetworkRoute.javaProxyForSelected(
+                                context,selected,exact)?.let{proxy(it)}
+                            com.azrael.galleryflow.SiteSession.cookie(context,exact)
+                                ?.takeIf{it.isNotBlank()}?.let{header("Cookie",it)}
+                        }.execute()
+                    if(response.statusCode()!=200)null else
+                        PornBuzOriginalSource.selectedHls(
+                            exact,response.body())?.let{master->
+                                PornBuzOriginalSource.verifiedFullHlsUrl(
+                                    context,selected,exact,master)
+                            }?.let{verifiedRendition->
+                                Candidate(verifiedRendition,exact,host)
+                            }
+                }.getOrNull()
+                static ?: runCatching{
+                    // A public HTTP client can see a placeholder while the
+                    // selected JWPlayer initializes its HLS in WebView.
+                    // Reuse only the already published exact primary frame.
+                    com.azrael.pixivdumpsync.BrowserPageFetch.html(
+                        context,exact,selected)
+                }.getOrNull()?.let{rendered->
+                    val playlist=PornBuzOriginalSource.selectedHls(
+                        exact,rendered) ?: PornBuzOriginalSource
+                        .selectedRenderedHls(exact,rendered)
+                    playlist?.let{master->
+                        PornBuzOriginalSource.verifiedFullHlsUrl(
+                            context,selected,exact,master)
+                    }?.let{Candidate(it,exact,host)}
+                }
+            }
+            if(primary!=null)return listOf(primary)
+            return fromHtml(selected,page.outerHtml())
+        }
+        // Real Pornhub selected watch pages publish their signed original
+        // HLS quality variants in one first-party flashvars_<id> JSON object.
+        // Initial HTML5 video/src is absent; generic CSS only finds previews.
+        if(host=="pornhub.com"){
+            val exact=PornhubOriginalSource.published(selected,page.outerHtml())
+            if(exact.isNotEmpty())return exact.map{
+                Candidate(it.url,selected,host)
+            }
+            // A browser session can legitimately render a selected player
+            // unavailable in bare HTTP. Keep the SAME watch/viewkey and do
+            // not promote any recommendation, preview or advertising source.
+            val rendered=runCatching {
+                if(com.azrael.pixivdumpsync.BrowserPageFetch.publicEligible(selected))
+                    com.azrael.pixivdumpsync.BrowserPageFetch
+                        .html(context,selected)
+                else null
+            }.getOrNull()
+            val fallback=rendered?.let {
+                PornhubOriginalSource.published(selected,it)
+            }.orEmpty()
+            return fallback.map {Candidate(it.url,selected,host)}
+        }
+        // The selected FreePornVideos video publishes actual full-quality
+        // MP4 <source> links under its own /get_file/ endpoint. Dispatch the
+        // selected-ID-bound publisher source directly; Python page metadata
+        // extraction is not a prerequisite for a real first-party MP4.
+        if(host=="freepornvideos.xxx"){
+            val exact=FreePornVideosOriginalSource.selectedOriginal(page,selected)
+            if(exact!=null)return listOf(Candidate(exact,selected,host))
+        }
+        // Archivebate's watch page frequently returns its cover cards
+        // BEFORE the exact Mixdrop player is inserted by JavaScript. If
+        // static selected HTML is empty, inspect ONLY publisher-selected
+        // rendered iframe candidates. Generic watch-page Python extraction
+        // then cannot mask a missing selected player with "Unsupported URL".
+        if(host=="archivebate.com" &&
+            ArchivebateSelectedMedia.isSelectedArticle(selected)){
+            val static=fromHtml(selected,page.outerHtml())
+            if(static.isNotEmpty())return static
+            val rendered=WebDiscovery.embeddedCandidates(
+                selected,context,explicitlySelected=true)
+                .filter{ArchivebateSelectedMedia.isSelectedEmbed(selected,it)}
+                .distinct()
+            return rendered.singleOrNull()?.let{
+                listOf(Candidate(it,selected,host))
+            }.orEmpty()
+        }
+        // The real Rule34Video download-quality links can be created only
+        // after the selected page's Download control opens. Static HTML alone
+        // must not be interpreted as "no original" before inspecting the
+        // authorized rendered selected page.
+        if(host=="rule34video.com"){
+            fun published(html:String)=Rule34VideoOriginalSource.parse(html,selected)
+                .map{Candidate(it.url,selected,host)}
+            val static=published(page.outerHtml())
+            if(static.isNotEmpty())return static
+            // Keep the actual browser exception (e.g. HTTP 503 / access
+            // challenge); do not silently replace it with a generic player.
+            check(com.azrael.pixivdumpsync.BrowserPageFetch.publicEligible(selected) ||
+                com.azrael.galleryflow.SiteSession.bound(context,selected)){
+                "Rule34Video selected original requires accessible browser session"
+            }
+            val rendered=com.azrael.pixivdumpsync.BrowserPageFetch
+                .html(context,selected)
+            return published(rendered)
+        }
+        // Do not short-circuit HentaiBros or 3DHentai ahead of their
+        // publisher-specific resolver: the old early return silently skipped
+        // the real player and only inspected static teaser tags.
+        // The broken providers do not share one CSS media contract. Their
+        // own selected-player resolver handles site-owned iframe, WordPress
+        // post, authorized rendered player or file hoster metadata.
+        if(SiteSpecificOriginalSources.owns(selected)){
+            val resolved=SiteSpecificOriginalSources.resolve(context,selected,page)
+            if(host=="jav.guru" && resolved.isEmpty() &&
+                com.azrael.pixivdumpsync.BrowserPageFetch.publicEligible(selected)){
+                // On Android a publisher can serve HTTP 200 with a thin
+                // JavaScript shell. The static HTML lacks shortcode keys;
+                // retry the SAME selected article through WebView's rendered
+                // shortcode snapshot rather than treating the shell as video.
+                val rendered=com.azrael.pixivdumpsync.BrowserPageFetch
+                    .html(context,selected)
+                val browser=Jsoup.parse(rendered,selected)
+                val browserOriginals=SiteSpecificOriginalSources.resolve(
+                    context,selected,browser)
+                if(browserOriginals.isNotEmpty())
+                    return browserOriginals.distinctBy{it.url}
+            }
+            // Retain publisher-attested fallbacks only; never substitute
+            // generic page thumbnails, ads, or another selected item.
+            // 3DHentaiX can expose unrelated playable recommendations.
+            // Only its unique, selected main player may supply media; do not
+            // reintroduce broad CSS or metadata candidates on this provider.
+            // All providers with exact selected-player adapters must not
+            // append unrelated article/metadata media when the exact player
+            // transfer fails. Such fallbacks caused wrong-scene downloads.
+            if(host in setOf("3dhentaix.com","javideo.net","helloporn.com",
+                    "jav.guru","hentaibros.net","fullporner.com",
+                    "hqpornerxxx.com","uncensoredhentai.xxx","mp4hentai.com",
+                    "roshy.tv","hentaihaven.xxx"))
+                return resolved.distinctBy{it.url}
+            return (resolved+fromHtml(selected,page.outerHtml()))
+                .distinctBy{it.url}
+        }
+        if(host=="eporner.com") {
+            // The first-party Eporner xhr/video JSON is authoritative for
+            // selected quality variants; og:video and page thumbnails are not.
+            val formats=EpornerOriginalSource.publishedSources(
+                selected,page,context).map {Candidate(it,selected,host)}
+            return (formats+fromHtml(selected,page.outerHtml()))
+                .distinctBy{it.url}
+        }
+        if(host=="taiav.com"){
+            // 2026-11-20 PC verification: actual first-party selected player
+            // GET /api/getmovie?type=<published quality>&id=<selected movie>
+            // supplies JSON.m3u8. The separate /previewvideo endpoint is only
+            // a short thumbnail clip and MUST NEVER become a saved original.
+            // Do not fall through to unrelated rendered article teaser MP4s.
+            return TaiAvOriginalSource.resolve(context,selected,page.outerHtml())
+                ?.let{listOf(Candidate(it,selected,host))}.orEmpty()
+        }
+        if(host in setOf("avple.tv","pimpbunny.com","xchina.co",
+                "bubblecum.lol","cosplaytele.com","notfans.com",
+                "livecamrips.to")){
+            // Public listings are not media evidence. Their exact selected
+            // pages often initialize the genuine player only after JS:
+            // inspect the SAME approved watch through the existing browser
+            // owner, then accept precisely one directly attributable
+            // video/HLS source. Multiple competing videos (including ads)
+            // must never be silently selected by order or poster title.
+            val static=fromHtml(selected,page.outerHtml())
+            if(static.size==1)return static
+            val rendered=runCatching {
+                if(com.azrael.pixivdumpsync.BrowserPageFetch.publicEligible(
+                        selected) ||
+                    com.azrael.galleryflow.SiteSession.bound(context,selected))
+                    com.azrael.pixivdumpsync.BrowserPageFetch
+                        .html(context,selected)
+                else null
+            }.getOrElse{cause->
+                // The existing working gallery/video providers keep their
+                // original best-effort fallback. Failing Android publishers
+                // surface the actual stage, not a generic zero-byte result.
+                if(host in setOf("avple.tv","pimpbunny.com","xchina.co"))
+                    throw cause
+                null
+            }?:return emptyList()
+            val published=fromHtml(selected,rendered)
+            return published.singleOrNull()?.let{listOf(it)}.orEmpty()
+        }
+        if(host=="porneec.com"){
+            // Preserve working Porneec selected HTML5 player unchanged.
+            // Static ad/preview media cannot stand in for the original.
+            val static=fromHtml(selected,page.outerHtml())
+            if(static.isNotEmpty())return static
+            val snapshot=com.azrael.pixivdumpsync.BrowserPageFetch
+                .html(context,selected)
+            return fromHtml(selected,snapshot).distinctBy{it.url}
+        }
+        return fromHtml(selected,page.outerHtml())
+    }
+}

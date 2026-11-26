@@ -1,0 +1,34 @@
+package com.asterion.videoflow
+
+/** Hard upper bounds for embedded yt-dlp operations. Actual transfers may run
+ * longer than preflights while making measurable progress.
+ */
+internal object VideoTransferLimits {
+    const val POLL_MS = 2_000L
+    const val PREFLIGHT_MS = 50_000L
+    const val TRANSFER_IDLE_MS = 110_000L
+    // This only bounds zero-original-byte resolving. Once an original
+    // starts transferring, regular progress/idle rules apply without any
+    // artificial file-size or length restriction.
+    const val NO_BYTES_RESOLVE_MS = 80_000L
+    // Multiple selected hosters/players may each have an independent public
+    // resolution step. Stop the entire attempt eventually, but do not deduct
+    // prior failed candidate time from a genuine new media transfer.
+    const val TOTAL_FIRST_BYTE_BUDGET_MS = 4L * 60_000L
+    fun preparationBudgetExceeded(totalElapsedMs:Long,hasMediaBytes:Boolean):Boolean =
+        !hasMediaBytes && totalElapsedMs>=TOTAL_FIRST_BYTE_BUDGET_MS
+    fun resolvingStalled(elapsedMs:Long,bytes:Long):Boolean =
+        bytes<=0L && elapsedMs>=NO_BYTES_RESOLVE_MS
+    const val TRANSFER_MAX_MS = 48L * 60L * 60_000L
+
+    fun expired(stage:String,elapsedMs:Long,idleMs:Long):String?=when {
+        stage=="metadata" && elapsedMs>=PREFLIGHT_MS ->
+            "Metadata inspection timed out after " + (PREFLIGHT_MS/1000) + "s"
+        stage=="transfer" && elapsedMs>=TRANSFER_MAX_MS ->
+            "Original transfer reached its safety time limit"
+        stage=="transfer" && idleMs>=TRANSFER_IDLE_MS ->
+            "Original transfer made no measurable progress for " +
+                (TRANSFER_IDLE_MS/1000) + "s"
+        else->null
+    }
+}

@@ -1,0 +1,134 @@
+package com.azrael.galleryflow
+
+// Retired wire values stay to read old databases without deleting user data.
+// Only KIUTAKU and GENERIC have active download adapters.
+enum class SourceId(val wireName: String) {
+    KIUTAKU("kiutaku"),
+    FOUR_K_HD("4khd"),
+    BUONDUA("buondua"),
+    COSPLAYTELE("cosplaytele"),
+    FOUR_K_GIRL("4kgirl"),
+    EVERIA("everia"),
+    GENERIC("generic"),
+    RULE34("rule34"),
+    GELBOORU("gelbooru"),
+    DANBOORU("danbooru"),
+    E621("e621");
+
+    companion object {
+        fun fromWire(value: String): SourceId = entries.first { it.wireName == value }
+    }
+}
+
+enum class TransferState(val dbValue: String) {
+    UNSEEN("unseen"),
+    PENDING("pending"),
+    DOWNLOADING("downloading"),
+    PARTIAL("partial"),
+    COMPLETE("complete"),
+    SKIPPED("skipped"),
+    CANCELLED("cancelled"),
+    INACCESSIBLE("inaccessible"),
+    RETRYING("retrying"),
+    PERMANENT_ERROR("permanent_error")
+}
+
+enum class SyncMode { LIVE, BACKFILL }
+enum class MediaKind { IMAGE, VIDEO, ARCHIVE }
+
+data class SourceEntity(
+    val source: SourceId,
+    val stableId: String,
+    val displayName: String,
+    val canonicalUrl: String,
+    val kind: String = "tag"
+)
+
+data class GalleryRef(
+    val source: SourceId,
+    val stableId: String,
+    val entityStableId: String,
+    val canonicalUrl: String,
+    val title: String,
+    val publishedAt: String? = null
+)
+
+data class GalleryMeta(
+    val source: SourceId,
+    val stableId: String,
+    val entityStableId: String,
+    val canonicalUrl: String,
+    val title: String,
+    val tags: List<String>,
+    val publishedAt: String?,
+    val pageUrls: List<String>,
+    // Optional original publisher metadata. Existing persisted gallery
+    // records retain their schema; no unverified artist/date is fabricated.
+    val creator: String? = null,
+    /** A publisher's explicit video count; zero/unknown does not invent media. */
+    val expectedVideoCount: Int? = null
+)
+
+data class MediaRef(
+    val source: SourceId,
+    val stableId: String,
+    val galleryStableId: String,
+    val index: Int,
+    val url: String,
+    val normalizedUrl: String,
+    val referer: String,
+    val mimeHint: String? = null,
+    val kind: MediaKind = MediaKind.IMAGE,
+    val provider: String? = null,
+    val archivePassword: String? = null,
+    val archiveVideosOnly: Boolean = false,
+    val tags: List<String> = emptyList(),
+    val expectedArchivePhotos: Int? = null
+)
+
+data class EntityRecord(
+    val source: SourceId,
+    val entityId: String,
+    val displayName: String,
+    val canonicalUrl: String,
+    val kind: String,
+    val selected: Boolean,
+    val liveEnabled: Boolean,
+    val liveCursor: String?,
+    val lastSyncAt: Long?,
+    val lastError: String?
+)
+
+data class MediaRecord(
+    val source: SourceId,
+    val mediaId: String,
+    val galleryId: String,
+    val entityId: String,
+    val index: Int,
+    val url: String,
+    val contentUri: String?,
+    val filename: String?,
+    val state: TransferState,
+    val sha256: String?,
+    val aHash64: String?,
+    val duplicateOf: String?
+)
+
+data class DownloadResult(
+    val contentUri: String,
+    val filename: String,
+    val mimeType: String,
+    val bytes: Long,
+    val sha256: String,
+    val aHash64: String?
+)
+
+data class ExtractedDownload(val media: MediaRef, val result: DownloadResult)
+data class DownloadOutcome(val primary: DownloadResult, val extracted: List<ExtractedDownload> = emptyList())
+class InteractiveProviderRequiredException(
+    val provider: String, val providerUrl: String,
+    message: String = "$provider requires an interactive/account download session."
+) : Exception(message)
+class AdapterException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class HttpStatusException(val code: Int, message: String) : Exception(message)
+class SyncCancelledException : Exception("Sync cancelled")

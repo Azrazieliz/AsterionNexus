@@ -1,0 +1,487 @@
+package com.azrael.pixivdumpsync
+
+import android.content.Context
+import android.net.Uri
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.MessageDigest
+import java.util.Locale
+import kotlin.math.min
+
+/**
+ * Unofficial TeraBox web uploader based on the documented open-source
+ * OpenList/rclone-extra flows. NDUS remains on device; all requests are HTTPS
+ * and restricted to TeraBox hosts. No browser, Round Sync, or secondary copy.
+ */
+class NduTeraboxClient(private val ndus: String,
+                      private val domain: String = "www.terabox.com") {
+    private var jsToken = ""
+    private var bdstoken = ""
+    private val createdFolders = hashSetOf<String>()
+    // nephobox.com redirects its homepage (HTTP 301) to www.nephobox.com.
+    // Canonicalize BEFORE sending the encrypted NDUS session, never replay
+    // credentialed requests through arbitrary HTTP redirects.
+    private val canonicalHost=if(domain=="nephobox.com")"www.nephobox.com" else domain
+    private val base = "https://$canonicalHost"
+    private val userAgent = "terabox;1.37.0.7;PC;PC-Windows;10.0.22631;WindowsTeraBox"
+
+    init { require(domain in setOf("www.terabox.com","nephobox.com")) }
+
+    companion object {
+        const val CHUNK_SIZE = 4*1024*1024
+        /** TeraBox increases part size above 4 GiB to keep block counts bounded.
+         * Matching the provider's transfer strategy avoids oversize block lists for games.
+         */
+        internal fun chunkSizeFor(fileSize:Long):Int {
+            require(fileSize>0)
+            var chunk=CHUNK_SIZE.toLong()
+            var threshold=4L*1024*1024*1024
+            while(fileSize>threshold){
+                chunk*=2
+                threshold*=2
+            }
+            return chunk.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        }
+        // Values used by the open-source TeraBox web backend for precreate.
+        private const val DUMMY_MD5_A = "5910a591dd8fc18c32a8f3df4fdc1761"
+        private const val DUMMY_MD5_B = "a5fc157d78e6ad1c7e114b056c92821e"
+        fun checkedUploadHost(host: String): String {
+            val clean = host.trim().lowercase(Locale.ROOT)
+            require(clean.matches(Regex("[a-z0-9.-]{4,200}")) &&
+                (clean.endsWith(".terabox.com") || clean.endsWith(".nephobox.com"))) {
+                "Upload endpoint was not a trusted TeraBox host"
+            }
+            return clean
+        }
+        fun safeFileName(raw: String): String {
+            val name = raw.substringAfterLast('/').trim()
+            require(name.length in 1..180 && !name.contains("..") &&
+                name.none { it in "\\/\r\n\t" || it.code < 32 }) { "Invalid filename" }
+            return name
+        }
+        fun formEncode(values: Map<String,String>): String =
+            values.entries.joinToString("&") {
+                java.net.URLEncoder.encode(it.key,"UTF-8") + "=" +
+                    java.net.URLEncoder.encode(it.value,"UTF-8")
+            }
+        fun partHashes(bytes: ByteArray): String = MessageDigest.getInstance("MD5")
+            .digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+
+    private fun connection(url: String, method: String, attachCookie: Boolean): HttpURLConnection {
+        val uri = Uri.parse(url)
+        val host=uri.host?.lowercase(Locale.ROOT).orEmpty()
+        require(uri.scheme=="https" &&
+            (host=="www.terabox.com" || host=="nephobox.com" ||
+             host=="www.nephobox.com" ||
+             host.endsWith(".terabox.com") || host.endsWith(".nephobox.com"))) {
+            "Refusing untrusted TeraBox endpoint"
+        }
+        val conn=URL(url).openConnection() as HttpURLConnection
+        conn.instanceFollowRedirects=false
+        conn.requestMethod=method
+        conn.connectTimeout=20000
+        conn.readTimeout=60000
+        conn.setRequestProperty("User-Agent",userAgent)
+        conn.setRequestProperty("Accept","application/json, text/plain, */*")
+        conn.setRequestProperty("Referer",base)
+        conn.setRequestProperty("X-Requested-With","XMLHttpRequest")
+        if (attachCookie) conn.setRequestProperty("Cookie","ndus=$ndus")
+        return conn
+    }
+    private fun read(conn: HttpURLConnection): String {
+        try {
+            val status=conn.responseCode
+            if (status !in 200..299)
+                throw java.io.IOException("TeraBox HTTP $status")
+            return conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText().take(1_000_000) }
+        } finally { conn.disconnect() }
+    }
+    private fun urlFor(path: String, params: Map<String,String> = emptyMap()): String {
+        val common=linkedMapOf("app_id" to "250528","web" to "1",
+            "channel" to "dubox","clienttype" to "0")
+        if (jsToken.isNotBlank()) common["jsToken"]=jsToken
+        common.putAll(params)
+        return base+path+"?"+formEncode(common)
+    }
+    private fun request(path: String, method: String="GET",
+                        query: Map<String,String> = emptyMap(),
+                        fields: Map<String,String>? = null): JSONObject {
+        val c=connection(urlFor(path,query),method,true)
+        if (fields!=null) {
+            c.doOutput=true
+            c.setRequestProperty("Content-Type","application/x-www-form-urlencoded")
+            val body=formEncode(fields).toByteArray(Charsets.UTF_8)
+            c.setFixedLengthStreamingMode(body.size)
+            c.outputStream.use { it.write(body) }
+        }
+        val text=read(c)
+        return try { JSONObject(text) }
+        catch (e: Exception) { throw java.io.IOException("TeraBox did not return JSON",e) }
+    }
+    private fun ok(json: JSONObject, step: String) {
+        val code=json.optInt("errno",0)
+        if (code!=0) throw java.io.IOException("$step rejected by TeraBox (code $code)")
+    }
+
+    fun connect() {
+        // Check cookie before exposing any upload operation.
+        val login=request("/api/check/login")
+        val status=login.optInt("errno",Int.MIN_VALUE)
+        if(status!=0)
+            throw java.io.IOException(
+                if(status==-6 || status==-9 || status==2)
+                    "NDUS is expired or the account is not signed in on "+
+                    canonicalHost+" (TeraBox code "+status+")"
+                else "TeraBox NDUS login was not accepted (code "+status+")")
+        ok(login,"NDUS authentication")
+        // Web token is necessary for precreate/create. Sources sometimes ship
+        // the token in a URL-encoded inline JS function.
+        val c=connection(base,"GET",true)
+        val html=read(c)
+        val patterns=listOf(
+            Regex("fn%28%22([a-zA-Z0-9_-]{8,})%22%29"),
+            Regex("window\\.jsToken\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]"),
+            Regex("[\"']jsToken[\"']\\s*:\\s*[\"']([^\"']+)[\"']")
+        )
+        jsToken=patterns.firstNotNullOfOrNull { it.find(html)?.groupValues?.get(1) }.orEmpty()
+        bdstoken=listOf(
+            Regex("""(?i)["']bdstoken["']\\s*:\\s*["']([A-Za-z0-9_-]{8,})["']"""),
+            Regex("""(?i)bdstoken%22%3A%22([A-Za-z0-9_-]{8,})%22""")
+        ).firstNotNullOfOrNull { it.find(html)?.groupValues?.get(1) }
+            ?: login.optJSONObject("data")?.optString("bdstoken").orEmpty()
+
+        if (jsToken.isBlank())
+            throw java.io.IOException("NDUS login accepted, but TeraBox web token could not be read")
+    }
+
+    fun createDirectory(path: String) {
+        val verified=NduSettings.validateDirectory(path)
+        if (verified in createdFolders) return
+        var dir=""
+        for (segment in verified.split('/').drop(1)) {
+            dir+="/$segment"
+            val result=request("/api/create","POST",
+                mapOf("a" to "commit"),
+                mapOf("path" to dir,"isdir" to "1","block_list" to "[]"))
+            if (result.optInt("errno",0)!=0) {
+                // Directory already existing: verify via API before ignoring failure.
+                val check=request("/api/list","GET",mapOf("dir" to dir,"page" to "1","num" to "1"))
+                ok(check,"Check directory $dir")
+            }
+            createdFolders.add(dir)
+        }
+    }
+
+    /** Do not mark an upload complete just because /api/create accepted the request.
+     * Check that the remote object exists at the expected path with exact file size.
+     * When a remote whole-file hash is available, require it to match as well.
+     */
+    private fun confirmRemote(path:String,size:Long,localMd5:String,
+                              requireRemoteHash:Boolean=false):NduRemoteReceipt? {
+        repeat(4){attempt->
+            val response=request("/api/filemetas","GET",mapOf(
+                "target" to JSONArray(listOf(path)).toString(),"dlink" to "0"))
+            ok(response,"Remote file verification")
+            val files=response.optJSONArray("info")?:JSONArray()
+            for(i in 0 until files.length()){
+                val item=files.optJSONObject(i)?:continue
+                val remotePath=item.optString("path")
+                val remoteSize=item.optLong("size",-1L)
+                val fsId=item.optLong("fs_id",0L)
+                val remoteMd5=item.optString("md5").trim()
+                if(remotePath!=path || remoteSize!=size || fsId<=0L)continue
+                if(remoteMd5.isNotBlank() && !remoteMd5.equals(localMd5,true))
+                    throw java.io.IOException("TeraBox remote hash does not match the local file")
+                if(!NduRemoteProof.matches(path,size,localMd5,remotePath,
+                    remoteSize,fsId,remoteMd5,requireRemoteHash))continue
+                return NduRemoteReceipt(path,size,fsId,
+                    remoteMd5.ifBlank{null},System.currentTimeMillis())
+            }
+            if(attempt<3)Thread.sleep(1200L*(attempt+1))
+        }
+        return null
+    }
+    /** Recheck historical completed records before crediting them as verified. */
+    fun verifyExisting(context:Context,uri:Uri,fileName:String,
+                       categoryPath:String,cancelled:()->Boolean={false}):NduRemoteReceipt?{
+        val path=NduSettings.validateDirectory(categoryPath)+"/"+safeFileName(fileName)
+        val size=context.contentResolver.openFileDescriptor(uri,"r")?.use{it.statSize}?:-1L
+        if(size<=0L)return null
+        val digest=MessageDigest.getInstance("MD5")
+        context.contentResolver.openInputStream(uri)?.use{stream->
+            val buffer=ByteArray(128*1024)
+            while(true){
+                if(cancelled())throw InterruptedException("Cloud verification cancelled")
+                val n=stream.read(buffer)
+                if(n<0)break
+                digest.update(buffer,0,n)
+            }
+        }?:return null
+        val md5=digest.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
+        return confirmRemote(path,size,md5)
+    }
+    fun upload(context: Context, uri: Uri, fileName: String, categoryPath: String,
+               cancelled: () -> Boolean = { false },
+               progress: (Long,Long) -> Unit = { _,_ -> }):NduRemoteReceipt {
+        val name=safeFileName(fileName)
+        val folder=NduSettings.validateDirectory(categoryPath)
+        val path="$folder/$name"
+        val resolver=context.contentResolver
+        val size=resolver.openFileDescriptor(uri,"r")?.use { it.statSize } ?: -1
+        require(size>0) { "Empty or inaccessible local file" }
+        require(size<=128L*1024*1024*1024) { "File larger than 128 GB" }
+        createDirectory(folder)
+
+        val blocks=if (size>CHUNK_SIZE) JSONArray(listOf(DUMMY_MD5_A,DUMMY_MD5_B))
+            else JSONArray(listOf(DUMMY_MD5_A))
+        val pre=request("/api/precreate","POST",emptyMap(),mapOf(
+            "path" to path,"autoinit" to "1","target_path" to folder,
+            "block_list" to blocks.toString(),"local_mtime" to (System.currentTimeMillis()/1000).toString(),
+            "file_limit_switch_v34" to "true"))
+        ok(pre,"Precreate")
+        // Rapid upload is not proof that this file's bytes are present remotely.
+        // Compute the actual content hash before accepting that response.
+        if(pre.optInt("return_type")==2){
+            val whole=MessageDigest.getInstance("MD5")
+            resolver.openInputStream(uri)?.use { stream ->
+                val buffer=ByteArray(128*1024)
+                while(true){
+                    if(cancelled())throw InterruptedException("Cloud upload cancelled")
+                    val read=stream.read(buffer)
+                    if(read<0)break
+                    whole.update(buffer,0,read)
+                }
+            }?:throw java.io.IOException("Cannot read rapid-upload source")
+            val md5=whole.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
+            val proof=confirmRemote(path,size,md5,requireRemoteHash=true)
+                ?: throw java.io.IOException("Rapid upload not independently verified")
+            progress(size,size)
+            return proof
+        }
+        val uploadId=pre.optString("uploadid").takeIf { it.isNotBlank() }
+            ?: throw java.io.IOException("TeraBox did not return upload ID")
+        val locate=JSONObject(read(connection(
+            "https://jp-data.terabox.com/rest/2.0/pcs/file?method=locateupload",
+            "GET",false)))
+        val host=checkedUploadHost(locate.optString("host"))
+        val md5List=JSONArray()
+        val whole=MessageDigest.getInstance("MD5")
+        val chunkSize=chunkSizeFor(size)
+        var uploaded=0L
+        resolver.openInputStream(uri)?.use { stream ->
+            var part=0
+            val buffer=ByteArray(128*1024)
+            while(uploaded<size) {
+                if(cancelled())throw InterruptedException("Cloud upload cancelled")
+                val length=min(chunkSize.toLong(),size-uploaded).toInt()
+                val cache=File.createTempFile("asterion-cloud-part-", ".tmp",context.cacheDir)
+                try {
+                    val chunkMd5=MessageDigest.getInstance("MD5")
+                    var left=length
+                    FileOutputStream(cache).buffered().use { output ->
+                        while(left>0){
+                            if(cancelled())throw InterruptedException("Cloud upload cancelled")
+                            val n=stream.read(buffer,0,min(left,buffer.size))
+                            if(n<0)throw java.io.EOFException("Local file truncated")
+                            if(n==0)continue
+                            output.write(buffer,0,n)
+                            whole.update(buffer,0,n)
+                            chunkMd5.update(buffer,0,n)
+                            left-=n
+                        }
+                    }
+                    val md5=chunkMd5.digest()
+                        .joinToString(""){"%02x".format(it.toInt() and 255)}
+                    uploadChunk(host,path,uploadId,part,name,cache,md5)
+                    md5List.put(md5)
+                    uploaded+=length
+                    progress(uploaded,size)
+                    part++
+                }finally{cache.delete()}
+            }
+        } ?: throw java.io.IOException("Cannot read local download")
+        val finalized=request("/api/create","POST",
+            mapOf("isdir" to "0","rtype" to "1"),
+            mapOf("path" to path,"size" to size.toString(),"uploadid" to uploadId,
+                "target_path" to folder,"block_list" to md5List.toString(),
+                "local_mtime" to (System.currentTimeMillis()/1000).toString()))
+        ok(finalized,"Finalize upload")
+        val md5=whole.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
+        return confirmRemote(path,size,md5)
+            ?: throw java.io.IOException("TeraBox has not confirmed the uploaded file")
+    }
+
+    /** Public URL -> TeraBox cloud. It does not touch Android file storage.
+     * TeraBox accepted != file saved; callers must query remote file metadata
+     * later before crediting a cloud receipt. Never send login cookies or
+     * private origin headers to the URL host from the Android device.
+     */
+    internal data class RemoteImportTicket(val taskId:String?)
+    internal fun submitRemoteOriginal(source:String,directory:String):RemoteImportTicket {
+        require(TeraBoxRemoteOriginals.verifiedPublicFileLink(source)){
+            "Remote import requires a publicly fetchable original-file HTTPS link"
+        }
+        val destination=NduSettings.validateDirectory(directory)
+        createDirectory(destination)
+        val response=request("/api/webmaster/remoteupload/submit","POST",
+            fields=mapOf("urls" to source,"upload_to" to destination))
+        ok(response,"TeraBox remote original submission")
+        val data=response.optJSONObject("data")
+        val first=data?.optJSONArray("list")?.optJSONObject(0)
+            ?:data?.optJSONArray("tasks")?.optJSONObject(0)
+        val task=listOfNotNull(
+            data?.optString("task_id")?.takeIf{it.isNotBlank()},
+            data?.optString("taskid")?.takeIf{it.isNotBlank()},
+            first?.optString("task_id")?.takeIf{it.isNotBlank()},
+            first?.optString("taskid")?.takeIf{it.isNotBlank()},
+            response.optString("task_id").takeIf{it.isNotBlank()}
+        ).firstOrNull()?.take(120)
+        return RemoteImportTicket(task)
+    }
+    /**
+     * TeraBox cloud_dl backend for magnet links, no phone-side pieces.
+     * A task ticket is NOT an original-file receipt.
+     */
+    data class CloudTorrentTicket(val taskId:String)
+    fun submitCloudMagnet(magnet:String,savePath:String):CloudTorrentTicket {
+        require(CloudTorrentPolicy.infoHash(magnet)!=null){
+            "Require a valid selected BitTorrent v1 magnet info hash"
+        }
+        require(bdstoken.isNotBlank()){
+            "TeraBox did not expose the authorized cloud-download token"
+        }
+        val directory=NduSettings.validateDirectory(savePath)
+        val response=request("/rest/2.0/services/cloud_dl","POST",
+            query=mapOf("bdstoken" to bdstoken),
+            fields=mapOf("method" to "add_task","type" to "4",
+                "task_from" to "1","source_url" to magnet,
+                "selected_idx" to "","save_path" to directory))
+        val errno=response.optInt("errno",
+            response.optInt("error_code",0))
+        check(errno==0){"TeraBox refused cloud torrent task ($errno)"}
+        val data=response.optJSONObject("data")
+        val task=listOf(response.optString("task_id"),
+            data?.optString("task_id").orEmpty(),
+            response.optString("taskid")).firstOrNull{
+                it.matches(Regex("[A-Za-z0-9_-]{1,120}"))
+            }?:throw java.io.IOException("Cloud torrent task ID missing")
+        return CloudTorrentTicket(task)
+    }
+    fun cloudTorrentTask(taskId:String):JSONObject {
+        require(taskId.matches(Regex("[A-Za-z0-9_-]{1,120}")))
+        require(bdstoken.isNotBlank()){"Missing cloud-download token"}
+        val response=request("/rest/2.0/services/cloud_dl","POST",
+            query=mapOf("bdstoken" to bdstoken),
+            fields=mapOf("method" to "query_task","op_type" to "0",
+                "task_ids" to taskId))
+        val error=response.optInt("errno",
+            response.optInt("error_code",0))
+        check(error==0){"TeraBox torrent query failed ($error)"}
+        return response
+    }
+    /** A task status must be corroborated by actual nonempty files in its
+     * isolated output directory. Do not treat an empty directory as complete.
+     */
+    fun cloudTorrentRemoteFiles(path:String):Pair<Int,Long>{
+        val directory=NduSettings.validateDirectory(path)
+        val response=request("/api/list","GET",
+            query=mapOf("dir" to directory,"num" to "1000",
+                "page" to "1","order" to "name"))
+        ok(response,"TeraBox torrent file inventory")
+        val files=response.optJSONArray("list")?:return 0 to 0L
+        var count=0
+        var total=0L
+        for(i in 0 until files.length()){
+            val row=files.optJSONObject(i)?:continue
+            val size=row.optLong("size",0L)
+            if(row.optInt("isdir",0)!=0 || size<=0L ||
+                row.optLong("fs_id",0L)<=0L)continue
+            val name=row.optString("path")
+            if(!name.startsWith(directory+"/"))continue
+            count++
+            total+=size
+        }
+        return count to total
+    }
+    /** Real TeraBox transfer record: never interpret a task-submitted
+     * response alone as full file delivery. The server may not expose every
+     * pending task or task URL; missing record is unknown, not a success.
+     */
+    fun remoteImportRecords(page:Int=1,limit:Int=30):JSONObject {
+        require(page in 1..1000 && limit in 1..50)
+        val response=request("/api/webmaster/remoteupload/record","POST",
+            fields=mapOf("page" to page.toString(),
+                "page_size" to limit.toString(),"order" to "desc","by" to "ctime"))
+        ok(response,"TeraBox remote original task listing")
+        return response
+    }
+    /** Remote read-after-write. Returns evidence that *a file* exists at
+     * the newly reserved cloud path with a positive byte size and fs_id;
+     * publisher-original identity requires separate source proof.
+     */
+    fun remoteOriginalReceipt(path:String):NduRemoteReceipt? {
+        require(NduSettings.validateDirectory(path.substringBeforeLast('/'))+
+            "/"+safeFileName(path.substringAfterLast('/'))==path){
+            "Untrusted TeraBox remote receipt path"
+        }
+        val response=request("/api/filemetas","GET",
+            mapOf("target" to JSONArray(listOf(path)).toString(),"dlink" to "0"))
+        ok(response,"TeraBox original read-after-write")
+        val files=response.optJSONArray("info")?:return null
+        for(i in 0 until files.length()){
+            val item=files.optJSONObject(i)?:continue
+            val bytes=item.optLong("size",-1L)
+            val fsId=item.optLong("fs_id",0L)
+            if(item.optString("path")!=path || bytes<=0L || fsId<=0L)
+                continue
+            return NduRemoteReceipt(path,bytes,fsId,
+                item.optString("md5").trim().takeIf{it.isNotBlank()},
+                System.currentTimeMillis())
+        }
+        return null
+    }
+
+    private fun uploadChunk(host:String, path:String, uploadId:String, part:Int,
+                            name:String, data:File, md5:String) {
+        val uri="https://$host/rest/2.0/pcs/superfile2?"+formEncode(
+            linkedMapOf("method" to "upload","path" to path,
+                "uploadid" to uploadId,"partseq" to part.toString(),
+                "app_id" to "250528","web" to "1"))
+        val boundary="----Nocturne"+System.nanoTime().toString(16)
+        val prefix=("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"" +
+            name.replace("\"","") + "\"\r\nContent-Type: application/octet-stream\r\n\r\n").toByteArray()
+        val suffix="\r\n--$boundary--\r\n".toByteArray()
+        var failure:Exception?=null
+        repeat(4) { attempt ->
+            if(attempt>0) Thread.sleep(1200L*(attempt+1))
+            try {
+                val conn=connection(uri,"POST",true)
+                conn.doOutput=true
+                conn.setRequestProperty("Content-Type","multipart/form-data; boundary=$boundary")
+                conn.setFixedLengthStreamingMode(prefix.size.toLong()+data.length()+
+                    suffix.size.toLong())
+                conn.outputStream.use { output ->
+                    output.write(prefix)
+                    data.inputStream().buffered().use { input ->
+                        input.copyTo(output,128*1024)
+                    }
+                    output.write(suffix)
+                }
+                val result=JSONObject(read(conn))
+                val remoteHash=result.optString("md5")
+                if(!remoteHash.equals(md5,true))
+                    throw java.io.IOException("TeraBox chunk integrity mismatch")
+                return
+            } catch (e:Exception) { failure=e }
+        }
+        throw java.io.IOException("TeraBox upload chunk failed: " +
+            (failure?.message ?: "unknown"))
+    }
+}

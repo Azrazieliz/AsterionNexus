@@ -1,0 +1,1961 @@
+package com.ailm.android.runtime
+
+import android.content.ContentValues
+import android.graphics.BitmapFactory
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
+import android.util.Log
+import java.io.File
+import kotlin.random.Random
+
+class LocalRepository(
+    private val database: LocalDatabase,
+) {
+    private companion object {
+        private const val REPO_TRACE_TAG = "AilmTraceRepo"
+    }
+
+    private data class VerifiedPreview(
+        val path: String,
+        val bytes: Long,
+        val lastModified: Long,
+    )
+    private val verifiedPreviewLock = Any()
+    private val verifiedPreviewCache = object :
+        LinkedHashMap<String, VerifiedPreview>(128, 0.75f, true) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<String, VerifiedPreview>?,
+        ): Boolean = size > 512
+    }
+
+    private val fusionRepository: FusionDatabaseRepository by lazy {
+        FusionDatabaseRepository(database)
+    }
+
+    data class ImageRecord(
+        val imageId: Int,
+        val uri: String,
+        val filename: String,
+        val folderUri: String,
+        val parentUri: String,
+        val sizeBytes: Long?,
+        val width: Int?,
+        val height: Int?,
+        val createdAtMs: Long?,
+        val modifiedAtMs: Long?,
+        val extension: String,
+        val mimeType: String,
+        val resolutionText: String?,
+        val aspectRatio: Double?,
+        val orientation: String?,
+        val folderName: String,
+        val relativePath: String,
+        val importedOrder: Long,
+        val tagsText: String,
+        val taxonomyText: String,
+        val metadataText: String,
+        val active: Int,
+        val lastModifiedMs: Long?,
+        val scannedAtMs: Long,
+    )
+
+    data class ImageUpsertResult(
+        val imageId: Int,
+        val needsAiProcessing: Boolean,
+    )
+
+    fun registerFolder(folderUri: String, enabled: Boolean = true) {
+        val values = ContentValues().apply {
+            put("folder_uri", folderUri)
+            put("enabled", if (enabled) 1 else 0)
+            put("added_at_ms", System.currentTimeMillis())
+        }
+        database.writableDatabase.insertWithOnConflict(
+            "library_folders",
+            null,
+            values,
+            SQLiteDatabase.CONFLICT_IGNORE,
+        )
+    }
+
+    fun setFolderEnabled(folderUri: String, enabled: Boolean): Boolean {
+        val values = ContentValues().apply {
+            put("enabled", if (enabled) 1 else 0)
+        }
+        val count = database.writableDatabase.update(
+            "library_folders",
+            values,
+            "folder_uri = ?",
+            arrayOf(folderUri),
+        )
+        return count > 0
+    }
+
+    fun removeFolder(folderUri: String): Boolean {
+        database.writableDatabase.beginTransaction()
+        try {
+            database.writableDatabase.delete("images", "folder_uri = ?", arrayOf(folderUri))
+            database.writableDatabase.delete("library_folders", "folder_uri = ?", arrayOf(folderUri))
+            database.writableDatabase.setTransactionSuccessful()
+            return true
+        } finally {
+            database.writableDatabase.endTransaction()
+        }
+    }
+
+    fun listFolders(includeDisabled: Boolean = true): List<Map<String, Any>> {
+        val where = if (includeDisabled) "" else "WHERE enabled = 1"
+        val sql = """
+            SELECT folder_uri, enabled, added_at_ms, last_scan_started_ms, last_scan_completed_ms, last_scan_status, last_scan_count
+            FROM library_folders
+            $where
+            ORDER BY added_at_ms ASC
+        """.trimIndent()
+        val rows = mutableListOf<Map<String, Any>>()
+        database.readableDatabase.rawQuery(sql, emptyArray()).use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += mapOf(
+                    "folder_uri" to cursor.getString(0),
+                    "enabled" to (cursor.getInt(1) == 1),
+                    "added_at_ms" to cursor.getLong(2),
+                    "last_scan_started_ms" to if (cursor.isNull(3)) 0L else cursor.getLong(3),
+                    "last_scan_completed_ms" to if (cursor.isNull(4)) 0L else cursor.getLong(4),
+                    "last_scan_status" to (if (cursor.isNull(5)) "" else cursor.getString(5)),
+                    "last_scan_count" to cursor.getInt(6),
+                )
+            }
+        }
+        return rows
+    }
+
+    fun beginScanRun(folderUri: String, startedAtMs: Long): Long {
+        registerFolder(folderUri, enabled = true)
+
+        val folderValues = ContentValues().apply {
+            put("last_scan_started_ms", startedAtMs)
+            put("last_scan_status", "running")
+        }
+        database.writableDatabase.update(
+            "library_folders",
+            folderValues,
+            "folder_uri = ?",
+            arrayOf(folderUri),
+        )
+
+        val runValues = ContentValues().apply {
+            put("folder_uri", folderUri)
+            put("started_at_ms", startedAtMs)
+            put("status", "running")
+            put("discovered_count", 0)
+            put("skipped_count", 0)
+        }
+        return database.writableDatabase.insert("scan_runs", null, runValues)
+    }
+
+    fun updateScanProgress(scanId: Long, discovered: Int, skipped: Int) {
+        val values = ContentValues().apply {
+            put("discovered_count", discovered)
+            put("skipped_count", skipped)
+        }
+        database.writableDatabase.update("scan_runs", values, "scan_id = ?", arrayOf(scanId.toString()))
+    }
+
+    fun finishScanRun(
+        scanId: Long,
+        folderUri: String,
+        completedAtMs: Long,
+        status: String,
+        discoveredCount: Int,
+        skippedCount: Int,
+        errorMessage: String?,
+    ) {
+        val runValues = ContentValues().apply {
+            put("completed_at_ms", completedAtMs)
+            put("status", status)
+            put("discovered_count", discoveredCount)
+            put("skipped_count", skippedCount)
+            put("error_message", errorMessage ?: "")
+        }
+        database.writableDatabase.update(
+            "scan_runs",
+            runValues,
+            "scan_id = ?",
+            arrayOf(scanId.toString()),
+        )
+
+        val folderValues = ContentValues().apply {
+            put("last_scan_completed_ms", completedAtMs)
+            put("last_scan_status", status)
+            put("last_scan_count", discoveredCount)
+        }
+        database.writableDatabase.update(
+            "library_folders",
+            folderValues,
+            "folder_uri = ?",
+            arrayOf(folderUri),
+        )
+    }
+
+    fun isUnchangedImage(uri:String,size:Long?,modified:Long?):Boolean{
+        database.readableDatabase.rawQuery(
+            "SELECT size_bytes, COALESCE(last_modified_ms,modified_at_ms), active FROM images WHERE uri=? LIMIT 1",
+            arrayOf(uri)
+        ).use { row ->
+            if(!row.moveToFirst()||row.getInt(2)!=1)return false
+            val priorSize=if(row.isNull(0))null else row.getLong(0)
+            val priorModified=if(row.isNull(1))null else row.getLong(1)
+            return priorSize==size&&priorModified==modified
+        }
+    }
+
+    fun upsertImage(
+        node: StorageNode,
+        folderUri: String,
+        scannedAtMs: Long,
+        importOrder: Long,
+        metadata: ScanMetadata,
+        tagsText: String = "",
+        taxonomyText: String = "",
+        metadataText: String = "",
+    ): ImageUpsertResult {
+        if (node.isDirectory) {
+            return ImageUpsertResult(imageId = 0, needsAiProcessing = false)
+        }
+
+        val existing = readImagePreferences(node.uri)
+            ?: findUniqueRenameCandidate(
+                folderUri = folderUri,
+                newUri = node.uri,
+                sizeBytes = metadata.sizeBytes ?: node.sizeBytes,
+                modifiedAtMs = metadata.modifiedAtMs ?: node.lastModifiedMs,
+                currentScanStartedAtMs = scannedAtMs,
+            )
+        // For unchanged files only refresh scan presence, preserving all
+        // tags, dimensions, classifications, previews and FTS search tokens.
+        // This is the dominant path in repeated 100k+ image scans.
+        if(existing!=null&&existing.uri==node.uri&&existing.active&&
+           existing.sizeBytes==(metadata.sizeBytes?:node.sizeBytes)&&
+           existing.modifiedAtMs==(metadata.modifiedAtMs?:node.lastModifiedMs)){
+            val presence=ContentValues().apply{
+                put("scanned_at_ms",scannedAtMs)
+            }
+            database.writableDatabase.update("images",presence,
+                "image_id = ?",arrayOf(existing.imageId.toString()))
+            return ImageUpsertResult(existing.imageId,false)
+        }
+        val resolvedFolderName = FolderUriUtils.displayName(folderUri)
+        val resolvedRelativePath = if (node.uri.startsWith(folderUri)) {
+            node.uri.removePrefix(folderUri).trimStart('/')
+        } else {
+            metadata.relativePath
+        }
+        val values = ContentValues().apply {
+            put("uri", node.uri)
+            put("filename", node.name)
+            put("folder_uri", folderUri)
+            put("parent_uri", node.parentUri)
+            put("size_bytes", metadata.sizeBytes ?: node.sizeBytes)
+            // Preserve already-known dimensions on metadata-only rescans.
+            if (metadata.width != null || existing == null) put("width", metadata.width)
+            if (metadata.height != null || existing == null) put("height", metadata.height)
+            put("created_at_ms", metadata.createdAtMs)
+            put("modified_at_ms", metadata.modifiedAtMs ?: node.lastModifiedMs)
+            put("extension", metadata.extension)
+            put("mime_type", metadata.mimeType)
+            if (metadata.resolution != null || existing == null) put("resolution_text", metadata.resolution)
+            if (metadata.aspectRatio != null || existing == null) put("aspect_ratio", metadata.aspectRatio)
+            if (metadata.orientation != null || existing == null) put("orientation", metadata.orientation)
+            put("folder_name", if (resolvedFolderName.isBlank()) metadata.folderName else resolvedFolderName)
+            put("relative_path", resolvedRelativePath)
+            put("imported_order", existing?.importedOrder ?: importOrder)
+            put("tags_text", if (tagsText.isBlank()) existing?.tagsText ?: "" else tagsText)
+            put("taxonomy_text", if (taxonomyText.isBlank()) existing?.taxonomyText ?: "" else taxonomyText)
+            put("metadata_text", if (metadataText.isBlank()) node.name else metadataText)
+            put("active", 1)
+            put("last_modified_ms", metadata.modifiedAtMs ?: node.lastModifiedMs)
+            put("scanned_at_ms", scannedAtMs)
+        }
+        val sourceChanged = existing != null && database.readableDatabase.rawQuery(
+            "SELECT size_bytes, COALESCE(modified_at_ms,last_modified_ms) FROM images WHERE image_id = ?",
+            arrayOf(existing.imageId.toString()),
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) false else {
+                val oldSize = if (cursor.isNull(0)) null else cursor.getLong(0)
+                val oldModified = if (cursor.isNull(1)) null else cursor.getLong(1)
+                val newSize = metadata.sizeBytes ?: node.sizeBytes
+                val newModified = metadata.modifiedAtMs ?: node.lastModifiedMs
+                (oldSize != null && newSize != null && oldSize != newSize) ||
+                    (oldModified != null && newModified != null && oldModified != newModified)
+            }
+        }
+        val imageId = if (existing == null) {
+            database.writableDatabase.insert("images", null, values).toInt()
+        } else {
+            val db = database.writableDatabase
+            db.update(
+                "images",
+                values,
+                "image_id = ?",
+                arrayOf(existing.imageId.toString()),
+            )
+            if (sourceChanged) {
+                // The source content changed. Invalidate ONLY its thumbnail
+                // database reference, not the original image or catalog row.
+                db.delete("thumbnail_cache", "image_uri = ?", arrayOf(existing.uri))
+                // An updated image must not inherit an old provider failure cooldown.
+                db.delete("thumbnail_generation_state", "image_uri = ?", arrayOf(existing.uri))
+            } else if (existing.uri != node.uri) {
+                db.execSQL("UPDATE OR IGNORE thumbnail_cache SET image_uri = ? WHERE image_uri = ?",
+                    arrayOf(node.uri, existing.uri))
+            }
+            existing.imageId
+        }
+        return ImageUpsertResult(
+            imageId = imageId,
+            needsAiProcessing = existing == null,
+        )
+    }
+
+    fun markImageInactive(imageId: Int): Boolean {
+        val values = ContentValues().apply { put("active", 0) }
+        return database.writableDatabase.update(
+            "images",
+            values,
+            "image_id = ?",
+            arrayOf(imageId.toString()),
+        ) > 0
+    }
+
+    fun markFolderImagesInactiveBefore(folderUri: String, scannedAtMs: Long) {
+        val values = ContentValues().apply {
+            put("active", 0)
+        }
+        database.writableDatabase.update(
+            "images",
+            values,
+            "folder_uri = ? AND scanned_at_ms < ?",
+            arrayOf(folderUri, scannedAtMs.toString()),
+        )
+    }
+
+    fun markMissingFolderImagesInactive(folderUri: String, seenUris: Set<String>, scannedAtMs: Long) {
+        val values = ContentValues().apply {
+            put("active", 0)
+            put("scanned_at_ms", scannedAtMs)
+        }
+        if (seenUris.isEmpty()) {
+            database.writableDatabase.update(
+                "images",
+                values,
+                "folder_uri = ?",
+                arrayOf(folderUri),
+            )
+            return
+        }
+
+        val placeholders = seenUris.joinToString(",") { "?" }
+        val args = mutableListOf<String>()
+        args += folderUri
+        args += seenUris
+        database.writableDatabase.update(
+            "images",
+            values,
+            "folder_uri = ? AND uri NOT IN ($placeholders)",
+            args.toTypedArray(),
+        )
+    }
+
+    fun searchImages(options: LibraryQueryOptions): List<Map<String, Any>> {
+        val normalizedPage = if (options.page < 1) 1 else options.page
+        val normalizedSize = if (options.pageSize < 0) 0 else options.pageSize
+        val offset = (normalizedPage - 1) * normalizedSize
+
+        val whereClauses = mutableListOf<String>()
+        val args = mutableListOf<String>()
+
+        if (!options.includeInactive) {
+            whereClauses += "i.active = 1"
+        }
+        when (options.organizationStatus) {
+            "organized" -> whereClauses +=
+                "EXISTS (SELECT 1 FROM fusion_automation_state organized " +
+                    "WHERE organized.image_id = i.image_id " +
+                    "AND organized.state = 'complete' AND organized.organization_complete = 1)"
+            "not_organized" -> whereClauses +=
+                "NOT EXISTS (SELECT 1 FROM fusion_automation_state organized " +
+                    "WHERE organized.image_id = i.image_id " +
+                    "AND organized.state = 'complete' AND organized.organization_complete = 1)"
+        }
+
+        options.imageId?.let {
+            whereClauses += "i.image_id = ?"
+            args += it.toString()
+        }
+        options.collection?.takeIf { it.isNotBlank() }?.let {
+            whereClauses += "i.folder_uri = ?"
+            args += it
+        }
+        options.folderQuery?.takeIf { it.isNotBlank() }?.let {
+            whereClauses += "LOWER(i.folder_uri) LIKE ?"
+            args += "%${it.trim().lowercase()}%"
+        }
+        if (!options.query.isNullOrBlank()) {
+            whereClauses += "(LOWER(i.filename) LIKE ? OR LOWER(i.uri) LIKE ? OR LOWER(i.metadata_text) LIKE ?)"
+            val term = "%${options.query.trim().lowercase()}%"
+            args += term
+            args += term
+            args += term
+        }
+        for (tag in options.tags.map { it.trim().lowercase() }.filter { it.isNotBlank() }) {
+            whereClauses += "LOWER(i.tags_text) LIKE ?"
+            args += "%$tag%"
+        }
+        options.minWidth?.let {
+            whereClauses += "COALESCE(i.width, 0) >= ?"
+            args += it.toString()
+        }
+        options.minHeight?.let {
+            whereClauses += "COALESCE(i.height, 0) >= ?"
+            args += it.toString()
+        }
+        options.fileFormat?.takeIf { it.isNotBlank() }?.let {
+            whereClauses += "LOWER(COALESCE(i.extension, '')) = ?"
+            args += it.trim().lowercase()
+        }
+        options.orientation?.takeIf { it.isNotBlank() && !it.equals("any", ignoreCase = true) }?.let {
+            whereClauses += "LOWER(COALESCE(i.orientation, '')) = ?"
+            args += it.trim().lowercase()
+        }
+        if (!options.includeHidden) {
+            whereClauses += "i.filename NOT LIKE '.%'"
+        }
+        if (options.missingOnly) {
+            whereClauses += "i.active = 0"
+        }
+        for ((key, value) in options.taxonomyFilters) {
+            if (key.isBlank() || value.isBlank()) {
+                continue
+            }
+            whereClauses += "LOWER(i.taxonomy_text) LIKE ?"
+            args += "%${key.lowercase()}=${value.lowercase()}%"
+        }
+
+        val joinFts = !options.fullText.isNullOrBlank()
+        if (joinFts) {
+            whereClauses += "image_fts MATCH ?"
+            args += options.fullText!!.trim()
+        }
+
+        val where = if (whereClauses.isEmpty()) "" else "WHERE ${whereClauses.joinToString(" AND ")}"
+        val orderBy = when (options.sortBy.lowercase()) {
+            "filename", "filename_asc", "filename_desc" -> {
+                val dir = when (options.sortBy.lowercase()) {
+                    "filename_asc" -> "ASC"
+                    "filename_desc" -> "DESC"
+                    else -> direction(options.sortDirection)
+                }
+                "i.filename COLLATE NOCASE $dir"
+            }
+            "date" -> "COALESCE(i.modified_at_ms, i.created_at_ms, i.last_modified_ms, 0) ${direction(options.sortDirection)}"
+            "date_added" -> "COALESCE(i.imported_order, i.scanned_at_ms, 0) ${direction(options.sortDirection)}"
+            "date_modified" -> "COALESCE(i.modified_at_ms, i.last_modified_ms, i.created_at_ms, 0) ${direction(options.sortDirection)}"
+            "size" -> "COALESCE(i.size_bytes, 0) ${direction(options.sortDirection)}"
+            "resolution" -> "(COALESCE(i.width, 0) * COALESCE(i.height, 0)) ${direction(options.sortDirection)}"
+            "import_order" -> "i.imported_order ${direction(options.sortDirection)}"
+            "random" -> "RANDOM()"
+            else -> "i.imported_order DESC"
+        }
+
+        // Source fingerprints preserve decoded dimensions even when a cloud
+        // DocumentsProvider omits them during SAF discovery.
+        val dimensionJoin = " LEFT JOIN " +
+            FusionDatabaseSchema.TABLE_IMAGE_FINGERPRINTS +
+            " dimensions ON dimensions.image_id = i.image_id"
+        val from = if (joinFts) {
+            "FROM images i JOIN image_fts fts ON fts.rowid = i.image_id" + dimensionJoin
+        } else {
+            "FROM images i" + dimensionJoin
+        }
+
+        val sql = """
+            SELECT i.image_id, i.uri, i.filename, i.parent_uri, i.folder_uri, i.size_bytes, i.modified_at_ms,
+                     i.created_at_ms,
+                     COALESCE(NULLIF(i.width,0), NULLIF(dimensions.pixel_width,0)) AS width,
+                     COALESCE(NULLIF(i.height,0), NULLIF(dimensions.pixel_height,0)) AS height,
+                     i.tags_text, i.taxonomy_text,
+                     i.metadata_text, i.imported_order, i.active, i.scanned_at_ms, i.last_modified_ms,
+                     i.extension, i.mime_type, i.resolution_text, i.aspect_ratio, i.orientation, i.folder_name, i.relative_path
+            $from
+            $where
+            ORDER BY $orderBy
+        """.trimIndent()
+
+        val pagedSql = if (normalizedSize > 0) "$sql LIMIT ? OFFSET ?" else sql
+        val finalArgs = if (normalizedSize > 0) {
+            args + listOf(normalizedSize.toString(), offset.toString())
+        } else {
+            args
+        }
+        val rows = mutableListOf<Map<String, Any>>()
+        database.readableDatabase.rawQuery(pagedSql, finalArgs.toTypedArray()).use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += cursorToImage(cursor)
+            }
+        }
+
+        if (options.sortBy.equals("random", ignoreCase = true) && rows.size > 1) {
+            rows.shuffle(Random(System.currentTimeMillis()))
+        }
+        return rows
+    }
+
+    fun searchByImageId(imageId: Int): Map<String, Any>? {
+        return searchImages(
+            LibraryQueryOptions(imageId = imageId, page = 1, pageSize = 1, includeInactive = true),
+        ).firstOrNull()
+    }
+
+    fun getImageRecordsByIds(imageIds: List<Int>): List<ImageRecord> {
+        if (imageIds.isEmpty()) {
+            return emptyList()
+        }
+        val placeholders = imageIds.joinToString(",") { "?" }
+        val sql = """
+            SELECT image_id, uri, filename, folder_uri, parent_uri, size_bytes, width, height,
+                   created_at_ms, modified_at_ms, extension, mime_type, resolution_text,
+                   aspect_ratio, orientation, folder_name, relative_path, imported_order,
+                   tags_text, taxonomy_text, metadata_text, active,
+                   last_modified_ms, scanned_at_ms
+            FROM images
+            WHERE image_id IN ($placeholders)
+        """.trimIndent()
+        val rows = mutableListOf<ImageRecord>()
+        database.readableDatabase.rawQuery(sql, imageIds.map { it.toString() }.toTypedArray()).use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += ImageRecord(
+                    imageId = cursor.getInt(0),
+                    uri = cursor.getString(1),
+                    filename = cursor.getString(2),
+                    folderUri = cursor.getString(3),
+                    parentUri = cursor.getString(4) ?: "",
+                    sizeBytes = if (cursor.isNull(5)) null else cursor.getLong(5),
+                    width = if (cursor.isNull(6)) null else cursor.getInt(6),
+                    height = if (cursor.isNull(7)) null else cursor.getInt(7),
+                    createdAtMs = if (cursor.isNull(8)) null else cursor.getLong(8),
+                    modifiedAtMs = if (cursor.isNull(9)) null else cursor.getLong(9),
+                    extension = cursor.getString(10) ?: "",
+                    mimeType = cursor.getString(11) ?: "",
+                    resolutionText = if (cursor.isNull(12)) null else cursor.getString(12),
+                    aspectRatio = if (cursor.isNull(13)) null else cursor.getDouble(13),
+                    orientation = if (cursor.isNull(14)) null else cursor.getString(14),
+                    folderName = cursor.getString(15) ?: "",
+                    relativePath = cursor.getString(16) ?: "",
+                    importedOrder = if (cursor.isNull(17)) 0L else cursor.getLong(17),
+                    tagsText = cursor.getString(18) ?: "",
+                    taxonomyText = cursor.getString(19) ?: "",
+                    metadataText = cursor.getString(20) ?: "",
+                    active = cursor.getInt(21),
+                    lastModifiedMs = if (cursor.isNull(22)) null else cursor.getLong(22),
+                    scannedAtMs = if (cursor.isNull(23)) System.currentTimeMillis() else cursor.getLong(23),
+                )
+            }
+        }
+        return rows.sortedBy { imageIds.indexOf(it.imageId) }
+    }
+
+    fun updateImageRecordPath(
+        imageId: Int,
+        newUri: String,
+        newFilename: String,
+        newFolderUri: String,
+        newParentUri: String,
+        newFolderName: String,
+        newRelativePath: String,
+        newModifiedAtMs: Long?,
+    ): Boolean {
+        val values = ContentValues().apply {
+            put("uri", newUri)
+            put("filename", newFilename)
+            put("folder_uri", newFolderUri)
+            put("parent_uri", newParentUri)
+            put("folder_name", newFolderName)
+            put("relative_path", newRelativePath)
+            put("modified_at_ms", newModifiedAtMs)
+            put("last_modified_ms", newModifiedAtMs)
+            put("scanned_at_ms", System.currentTimeMillis())
+            put("active", 1)
+        }
+        val count = database.writableDatabase.update("images", values, "image_id = ?", arrayOf(imageId.toString()))
+        return count > 0
+    }
+
+    fun updateImagePathAndClearThumbnails(
+        imageId: Int,
+        newUri: String,
+        newFilename: String,
+        newFolderUri: String,
+        newParentUri: String,
+        newFolderName: String,
+        newRelativePath: String,
+        newModifiedAtMs: Long?,
+        oldUri: String,
+    ): Boolean {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            logImageRows("before path update", imageId, oldUri, newUri)
+            // A new destination URI may already belong to a scan record.
+            // Never silently delete another image's catalog row to force a
+            // move; preserve existing user metadata and fail this transaction.
+            val destinationInUse = db.rawQuery(
+                "SELECT 1 FROM images WHERE uri = ? AND image_id != ? LIMIT 1",
+                arrayOf(newUri, imageId.toString()),
+            ).use { cursor -> cursor.moveToFirst() }
+            if (destinationInUse) return false
+            val updated = updateImageRecordPath(
+                imageId = imageId,
+                newUri = newUri,
+                newFilename = newFilename,
+                newFolderUri = newFolderUri,
+                newParentUri = newParentUri,
+                newFolderName = newFolderName,
+                newRelativePath = newRelativePath,
+                newModifiedAtMs = newModifiedAtMs,
+            )
+            if (!updated) {
+                return false
+            }
+            db.execSQL("UPDATE OR IGNORE thumbnail_cache SET image_uri = ? WHERE image_uri = ?",
+                arrayOf(newUri, oldUri))
+            logImageRows("after path update", imageId, oldUri, newUri)
+            db.setTransactionSuccessful()
+            return true
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun insertCopiedImageRecord(
+        source: ImageRecord,
+        newUri: String,
+        newFilename: String,
+        newFolderUri: String,
+        newParentUri: String,
+        newFolderName: String,
+        newRelativePath: String,
+        scannedAtMs: Long,
+        importOrder: Long,
+    ): Int? {
+        val values = ContentValues().apply {
+            put("uri", newUri)
+            put("filename", newFilename)
+            put("folder_uri", newFolderUri)
+            put("parent_uri", newParentUri)
+            put("size_bytes", source.sizeBytes)
+            put("width", source.width)
+            put("height", source.height)
+            put("created_at_ms", source.createdAtMs)
+            put("modified_at_ms", source.modifiedAtMs)
+            put("extension", source.extension)
+            put("mime_type", source.mimeType)
+            put("resolution_text", source.resolutionText)
+            put("aspect_ratio", source.aspectRatio)
+            put("orientation", source.orientation)
+            put("folder_name", newFolderName)
+            put("relative_path", newRelativePath)
+            put("imported_order", importOrder)
+            put("tags_text", source.tagsText)
+            put("taxonomy_text", source.taxonomyText)
+            put("metadata_text", source.metadataText)
+            put("active", 1)
+            put("last_modified_ms", source.lastModifiedMs)
+            put("scanned_at_ms", scannedAtMs)
+        }
+        val newId = database.writableDatabase.insert("images", null, values)
+        return if (newId < 0) null else newId.toInt()
+    }
+
+    fun deleteImageRecordById(imageId: Int): Boolean {
+        val count = database.writableDatabase.delete("images", "image_id = ?", arrayOf(imageId.toString()))
+        return count > 0
+    }
+
+    fun deleteImageAndThumbnail(imageId: Int, imageUri: String): Boolean {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            logImageRows("before delete", imageId, imageUri, imageUri)
+            val deleted = db.delete(
+                "images",
+                "image_id = ? OR uri = ?",
+                arrayOf(imageId.toString(), imageUri),
+            ) > 0
+            if (!deleted) {
+                return false
+            }
+            db.delete("thumbnail_cache", "image_uri = ?", arrayOf(imageUri))
+            logImageRows("after delete", imageId, imageUri, imageUri)
+            db.setTransactionSuccessful()
+            return true
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun deleteImageRecordByUri(uri: String): Int {
+        return database.writableDatabase.delete("images", "uri = ?", arrayOf(uri))
+    }
+
+    fun renameFolderUriReferences(oldFolderUri: String, newFolderUri: String): Int {
+        val values = ContentValues().apply {
+            put("folder_uri", newFolderUri)
+            put("folder_name", FolderUriUtils.displayName(newFolderUri))
+            put("scanned_at_ms", System.currentTimeMillis())
+        }
+        return database.writableDatabase.update("images", values, "folder_uri = ?", arrayOf(oldFolderUri))
+    }
+
+    fun replaceLibraryFolderUri(oldFolderUri: String, newFolderUri: String): Boolean {
+        val enabled = readFolderEnabled(oldFolderUri) ?: true
+        database.writableDatabase.beginTransaction()
+        try {
+            database.writableDatabase.delete("library_folders", "folder_uri = ?", arrayOf(oldFolderUri))
+            registerFolder(newFolderUri, enabled)
+            database.writableDatabase.setTransactionSuccessful()
+            return true
+        } finally {
+            database.writableDatabase.endTransaction()
+        }
+    }
+
+    fun renameFolderAndLibraryUri(oldFolderUri: String, newFolderUri: String): Boolean {
+        val enabled = readFolderEnabled(oldFolderUri) ?: true
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            val values = ContentValues().apply {
+                put("folder_uri", newFolderUri)
+                put("folder_name", FolderUriUtils.displayName(newFolderUri))
+                put("scanned_at_ms", System.currentTimeMillis())
+            }
+            db.update("images", values, "folder_uri = ?", arrayOf(oldFolderUri))
+            db.delete("library_folders", "folder_uri = ?", arrayOf(oldFolderUri))
+            val folderValues = ContentValues().apply {
+                put("folder_uri", newFolderUri)
+                put("enabled", if (enabled) 1 else 0)
+                put("added_at_ms", System.currentTimeMillis())
+            }
+            db.insertWithOnConflict(
+                "library_folders",
+                null,
+                folderValues,
+                SQLiteDatabase.CONFLICT_IGNORE,
+            )
+            db.setTransactionSuccessful()
+            return true
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun clearThumbnailByUri(imageUri: String) {
+        database.writableDatabase.delete("thumbnail_cache", "image_uri = ?", arrayOf(imageUri))
+    }
+
+    fun listImages(query: String?, page: Int, pageSize: Int): List<Map<String, Any>> {
+        return searchImages(
+            LibraryQueryOptions(
+                query = query,
+                page = page,
+                pageSize = pageSize,
+                sortBy = "import_order",
+                sortDirection = "desc",
+            ),
+        )
+    }
+
+    fun statistics(): Map<String, Any> {
+        val sql = """
+            SELECT
+                SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS total_images,
+                COALESCE(SUM(CASE WHEN active = 1 THEN size_bytes ELSE 0 END), 0) AS total_size_bytes
+            FROM images
+        """.trimIndent()
+        database.readableDatabase.rawQuery(sql, emptyArray()).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return mapOf(
+                    "total_images" to 0,
+                    "total_size_bytes" to 0L,
+                )
+            }
+            return mapOf(
+                "total_images" to cursor.getInt(0),
+                "total_size_bytes" to cursor.getLong(1),
+            )
+        }
+    }
+
+    fun collections(page: Int, pageSize: Int): List<Map<String, Any>> {
+        val normalizedPage = if (page < 1) 1 else page
+        val normalizedSize = if (pageSize < 1) 1 else pageSize
+        val offset = (normalizedPage - 1) * normalizedSize
+        val rows = mutableListOf<Map<String, Any>>()
+        val sql = """
+            SELECT f.folder_uri, f.enabled, COUNT(i.image_id) AS image_count
+            FROM library_folders f
+            LEFT JOIN images i ON i.folder_uri = f.folder_uri AND i.active = 1
+            GROUP BY f.folder_uri, f.enabled
+            ORDER BY f.added_at_ms ASC
+            LIMIT ? OFFSET ?
+        """.trimIndent()
+        database.readableDatabase.rawQuery(sql, arrayOf(normalizedSize.toString(), offset.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                val folderUri = cursor.getString(0)
+                rows += mapOf(
+                    "collection_id" to folderUri.hashCode(),
+                    "name" to if (folderUri.isBlank()) "(root)" else folderUri,
+                    "kind" to "dynamic",
+                    "image_count" to cursor.getInt(2),
+                    "metadata" to mapOf(
+                        "folder_uri" to folderUri,
+                        "enabled" to (cursor.getInt(1) == 1),
+                    ),
+                )
+            }
+        }
+        return rows
+    }
+
+    /**
+     * Removes legacy placeholder review rows that were created merely because an
+     * image was discovered by a scan. Real Review entries are created only by
+     * recognition/runtime/organization logic when human attention is required.
+     */
+    fun removeLegacyScanDiscoveryReviews(): Int {
+        return database.writableDatabase.delete(
+            "review_items",
+            "status = ? AND review_type = ? AND reason = ?",
+            arrayOf("pending", "generic", "Discovered during scan"),
+        )
+    }
+
+    /** Relabel older perceptual matches as variants without touching
+     * originals, exact-hash duplicates, user notes or resolved decisions. */
+    fun relabelLegacyVisualDuplicates(): Int {
+        return database.writableDatabase.update(
+            "review_items",
+            ContentValues().apply {
+                put("review_type", "visual_variant")
+                put("reason", "Visually similar artwork, not an exact duplicate. " +
+                    "Describe the difference or confirm it is a distinct variant.")
+            },
+            "status = 'pending' AND review_type = 'duplicate_candidate' " +
+                "AND payload_json LIKE ?",
+            arrayOf("%conservative_visual%"),
+        )
+    }
+
+    /** Exact live number of actionable Review notices (not last-run history). */
+    fun countPendingReviews(): Int = database.readableDatabase.rawQuery(
+        "SELECT COUNT(*) FROM review_items WHERE status = 'pending'",
+        emptyArray(),
+    ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    fun reviewQueue(limit: Int = 250, beforeTime: Long = Long.MAX_VALUE, beforeId: Long = Long.MAX_VALUE): List<Map<String, Any>> {
+        val rows = mutableListOf<Map<String, Any>>()
+        val sql = """
+            SELECT r.review_id, r.image_uri, COALESCE(r.image_id, 0), r.status, r.review_type,
+                   COALESCE(r.reason, ''), r.payload_json, r.correction_json, r.last_updated_ms,
+                   COALESCE(i.filename, ''), COALESCE(i.folder_uri, ''),
+                   COALESCE(s.state, 'unknown'), COALESCE(s.pipeline_complete, 0),
+                   COALESCE(s.organization_complete, 0),
+                   (SELECT COUNT(DISTINCT t.tag_id) FROM fusion_image_canonical_tags t
+                    WHERE t.image_id = r.image_id AND t.tag_scope != 'character_reference'),
+                   COALESCE((SELECT GROUP_CONCAT(t.tag_id || ': ' || COALESCE(ft.canonical_name, t.tag_name), ' | ')
+                             FROM fusion_image_canonical_tags t
+                             LEFT JOIN fusion_tags ft ON ft.tag_id = t.tag_id
+                             WHERE t.image_id = r.image_id AND t.tag_scope != 'character_reference'
+                               AND NOT EXISTS (
+                                   SELECT 1 FROM fusion_image_canonical_tags older
+                                   WHERE older.image_id = t.image_id AND older.tag_id = t.tag_id
+                                     AND older.tag_scope != 'character_reference'
+                                     AND older.rowid < t.rowid
+                               )), ''),
+                   COALESCE(p.metadata_json, '{}')
+            FROM review_items r
+            LEFT JOIN images i ON i.image_id = r.image_id
+            LEFT JOIN fusion_automation_state s ON s.image_id = r.image_id
+            LEFT JOIN fusion_image_profiles p ON p.image_id = r.image_id
+            WHERE r.status = 'pending' AND (r.last_updated_ms,r.review_id) < (?,?)
+            ORDER BY r.last_updated_ms DESC, r.review_id DESC
+            LIMIT ?
+        """.trimIndent()
+        database.readableDatabase.rawQuery(sql, arrayOf(beforeTime.toString(), beforeId.toString(), limit.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                val liveProfile = runCatching {
+                    org.json.JSONObject(cursor.getString(16).orEmpty())
+                }.getOrDefault(org.json.JSONObject())
+                val missingArray = liveProfile.optJSONArray("canonical_missing_families")
+                val missingFamilies = (0 until (missingArray?.length() ?: 0))
+                    .map { missingArray!!.optString(it) }.filter(String::isNotBlank)
+                val firstMissing = liveProfile.optString("canonical_first_missing_family", "")
+                // Stale first-pass errors must not obscure the actual next
+                // required family after the user corrects an earlier field.
+                val originalReason = cursor.getString(5).orEmpty()
+                val visibleReason = if (cursor.getString(4) in setOf("character_resolution", "visual_observation_review") && missingFamilies.isNotEmpty()) {
+                    "Next required Fusion family: " +
+                        firstMissing.ifBlank { missingFamilies.first() } +
+                        ". Remaining: " + missingFamilies.joinToString(", ") +
+                        ". Review the affected subject to continue."
+                } else originalReason
+                rows += mapOf(
+                    "id" to cursor.getLong(0).toString(),
+                    "item_id" to cursor.getLong(0).toString(),
+                    "path" to cursor.getString(1),
+                    "image_id" to cursor.getInt(2),
+                    "status" to cursor.getString(3),
+                    "review_type" to cursor.getString(4),
+                    "reason" to visibleReason,
+                    "original_reason" to originalReason,
+                    "payload_json" to cursor.getString(6).orEmpty(),
+                    "correction_json" to cursor.getString(7).orEmpty(),
+                    "user_note" to runCatching {
+                        org.json.JSONObject(cursor.getString(7).orEmpty())
+                            .optString("user_note", "")
+                    }.getOrDefault(""),
+                    "updated_at_ms" to cursor.getLong(8),
+                    "filename" to cursor.getString(9),
+                    "folder_uri" to cursor.getString(10),
+                    "automation_state" to cursor.getString(11),
+                    "pipeline_complete" to (cursor.getInt(12) == 1),
+                    "organization_complete" to (cursor.getInt(13) == 1),
+                    "canonical_tag_count" to cursor.getInt(14),
+                    "canonical_tags" to cursor.getString(15),
+                    "canonical_profile_complete" to runCatching {
+                        liveProfile.optBoolean("canonical_profile_complete", false)
+                    }.getOrDefault(false),
+                    "canonical_missing_families" to runCatching {
+                        liveProfile.optJSONArray("canonical_missing_families")?.toString() ?: "[]"
+                    }.getOrDefault("[]"),
+                    "visual_medium" to runCatching {
+                        liveProfile.optString("visual_medium", "")
+                    }.getOrDefault(""),
+                    "family_coverage" to runCatching {
+                        liveProfile.optJSONArray("taxonomy_family_coverage")?.toString() ?: "[]"
+                    }.getOrDefault("[]"),
+                    "subject_detection_status" to runCatching {
+                        liveProfile.optString("native_subject_detection_status", "")
+                    }.getOrDefault(""),
+                    "subject_crop_inference_count" to runCatching {
+                        liveProfile.optInt("native_subject_crop_inference_count", -1)
+                    }.getOrDefault(-1),
+                    "native_tagger_model_id" to runCatching {
+                        liveProfile.optString("native_tagger_model_id", "")
+                    }.getOrDefault(""),
+                )
+            }
+        }
+        return rows
+    }
+
+    /** Persist a review explanation without resolving or moving the image. */
+    fun saveReviewNote(itemId: String, rawNote: String): Boolean {
+        val id = itemId.toLongOrNull() ?: return false
+        val old = database.readableDatabase.rawQuery(
+            "SELECT correction_json FROM review_items WHERE review_id = ? LIMIT 1",
+            arrayOf(id.toString()),
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0).orEmpty() else return false }
+        val payload = runCatching { org.json.JSONObject(old) }
+            .getOrDefault(org.json.JSONObject())
+        payload.put("user_note", rawNote.trim().take(1000))
+        return database.writableDatabase.update(
+            "review_items",
+            ContentValues().apply {
+                put("correction_json", payload.toString())
+                put("last_updated_ms", System.currentTimeMillis())
+            },
+            "review_id = ?", arrayOf(id.toString()),
+        ) == 1
+    }
+
+    /**
+     * Explicitly dismiss EVERY pending Review notice with one atomic SQLite
+     * statement. This is a queue operation, NOT image deletion, approval,
+     * or a claim that missing visual tags were recognized.
+     *
+     * Unlike bulk per-item "reject", this intentionally includes mandatory
+     * recognition failures; the user's decision to clear Review is respected.
+     * Stored images, canonical tags, subject observations and correction
+     * history remain unchanged. No 250-row presentation limit applies.
+     */
+    fun discardAllPendingReviews(): Int {
+        return database.writableDatabase.update(
+            "review_items",
+            ContentValues().apply {
+                put("status", "dismissed")
+                put("last_updated_ms", System.currentTimeMillis())
+            },
+            "status = 'pending'",
+            null,
+        )
+    }
+
+    /**
+     * One atomic optional-only Review rejection. Mandatory identity, visual,
+     * recovery and organization reviews are excluded even if an older UI
+     * accidentally submits their IDs. The unrelated images/tags are untouched.
+     */
+    fun rejectOptionalReviews(itemIds: List<String>): Int {
+        val ids = itemIds.mapNotNull { it.trim().toLongOrNull()?.takeIf { id -> id > 0 } }
+            .distinct().take(250)
+        if (ids.isEmpty()) return 0
+        val placeholders = ids.joinToString(",") { "?" }
+        return database.writableDatabase.update(
+            "review_items",
+            ContentValues().apply {
+                put("status", "rejected")
+                put("last_updated_ms", System.currentTimeMillis())
+            },
+            "status = 'pending' AND review_id IN ($placeholders) " +
+                "AND review_type NOT IN ('character_resolution', 'runtime_failure', " +
+                "'visual_observation_review', 'organization_unresolved', 'organization_failure')",
+            ids.map(Long::toString).toTypedArray(),
+        )
+    }
+
+    fun updateReview(itemId: String, action: String, reason: String?): Boolean {
+        val id = itemId.toLongOrNull() ?: return false
+        val status = when (action.lowercase()) {
+            "approve" -> "approved"
+            "reject" -> "rejected"
+            "skip" -> "skipped"
+            else -> return false
+        }
+        val values = ContentValues().apply {
+            put("status", status)
+            // The machine reason identifies the event. Owner notes are stored separately.
+            put("last_updated_ms", System.currentTimeMillis())
+        }
+        val count = database.writableDatabase.update(
+            "review_items",
+            values,
+            "review_id = ?",
+            arrayOf(id.toString()),
+        )
+        return count > 0
+    }
+
+    /** Undo one owner decision and return the exact affected image and category. */
+    fun undoLastReviewUpdate(reviewId: Long? = null): Pair<Int, String>? {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            val condition = if (reviewId == null) "" else " AND review_id=?"
+            val args = reviewId?.let { arrayOf(it.toString()) } ?: emptyArray()
+            val changed = db.rawQuery(
+                "SELECT review_id,image_id,review_type FROM review_items " +
+                    "WHERE status IN ('approved','rejected','dismissed','skipped')" + condition +
+                    " ORDER BY last_updated_ms DESC, review_id DESC LIMIT 1", args,
+            ).use { row ->
+                if (!row.moveToFirst()) return null
+                db.update("review_items", ContentValues().apply {
+                    put("status", "pending")
+                    put("last_updated_ms", System.currentTimeMillis())
+                }, "review_id=?", arrayOf(row.getLong(0).toString()))
+                row.getInt(1) to row.getString(2).orEmpty()
+            }
+            db.setTransactionSuccessful()
+            return changed
+        } finally { db.endTransaction() }
+    }
+
+    fun listAutomationImageIds(forceAll: Boolean = false): List<Int> {
+        val profileTable = FusionDatabaseSchema.TABLE_IMAGE_PROFILES
+        val predicate = if (forceAll) {
+            "i.active = 1"
+        } else {
+            """
+            i.active = 1 AND (
+                p.image_id IS NULL OR
+                COALESCE(p.updated_at_ms, 0) < COALESCE(i.scanned_at_ms, 0) OR
+                p.metadata_json NOT LIKE '%\"ai_workflow_updated_at_ms\"%'
+            )
+            """.trimIndent()
+        }
+        val sql = """
+            SELECT i.image_id
+            FROM images i
+            LEFT JOIN $profileTable p ON p.image_id = i.image_id
+            WHERE $predicate
+            ORDER BY i.imported_order ASC, i.image_id ASC
+        """.trimIndent()
+        val ids = mutableListOf<Int>()
+        database.readableDatabase.rawQuery(sql, emptyArray()).use { cursor ->
+            while (cursor.moveToNext()) {
+                ids += cursor.getInt(0)
+            }
+        }
+        return ids
+    }
+
+    fun setTags(imageId: Int, tags: List<String>): Boolean {
+        val normalized = tags.map { it.trim() }.filter { it.isNotBlank() }.joinToString("|")
+        val values = ContentValues().apply { put("tags_text", normalized) }
+        val whereClause = "image_id = ?"
+        val whereArgs = arrayOf(imageId.toString())
+        logImmediatePreferenceSelect(imageId, "before tags update")
+        Log.d(REPO_TRACE_TAG, "SQLite UPDATE SQL: UPDATE images SET tags_text = ? WHERE $whereClause args=[$normalized, ${whereArgs.joinToString()}]")
+        val count = try {
+            database.writableDatabase.update("images", values, whereClause, whereArgs)
+        } catch (t: Throwable) {
+            Log.e(REPO_TRACE_TAG, "SQLite UPDATE failed (tags): imageId=$imageId requestedTags=$normalized", t)
+            throw t
+        }
+        Log.d(REPO_TRACE_TAG, "AFTER UPDATE reached (tags): imageId=$imageId")
+        try {
+            Log.d(REPO_TRACE_TAG, "SQLite rows affected (tags): imageId=$imageId rows=$count")
+            if (count == 0) {
+                Log.d(REPO_TRACE_TAG, "SQLite UPDATE affected 0 rows (tags): where=$whereClause whereArgs=${whereArgs.joinToString()}")
+            }
+            logSqlChangeCounters("tags", imageId)
+            logImmediatePreferenceSelect(imageId, "after tags update")
+            logImmediateFtsSelect(imageId)
+            Log.d(REPO_TRACE_TAG, "SQLite statement transaction result (tags): imageId=$imageId committed=${count > 0}")
+            Log.d(REPO_TRACE_TAG, "Repository returning (tags): imageId=$imageId result=${count > 0}")
+            return count > 0
+        } catch (t: Throwable) {
+            Log.e(REPO_TRACE_TAG, "Post-update logging failed (tags): imageId=$imageId", t)
+            throw t
+        }
+    }
+
+    private fun logImmediatePreferenceSelect(imageId: Int, action: String) {
+        val sql = "SELECT image_id, tags_text FROM images WHERE image_id = ?"
+        database.readableDatabase.rawQuery(sql, arrayOf(imageId.toString())).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                Log.d(REPO_TRACE_TAG, "Immediate SELECT ($action): imageId=$imageId row=missing")
+                return
+            }
+            val selectedImageId = cursor.getInt(0)
+            val tags = cursor.getString(1) ?: ""
+            Log.d(REPO_TRACE_TAG, "Immediate SELECT ($action): image_id=$selectedImageId tags_text=$tags")
+        }
+    }
+
+    private fun logImmediateFtsSelect(imageId: Int) {
+        val sql = "SELECT rowid, tags_text FROM image_fts WHERE rowid = ?"
+        database.readableDatabase.rawQuery(sql, arrayOf(imageId.toString())).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                Log.d(REPO_TRACE_TAG, "Immediate FTS SELECT: imageId=$imageId row=missing")
+                return
+            }
+            Log.d(
+                REPO_TRACE_TAG,
+                "Immediate FTS SELECT: rowid=${cursor.getLong(0)} tags_text=${cursor.getString(1) ?: ""}",
+            )
+        }
+    }
+
+    private fun logSqlChangeCounters(action: String, imageId: Int) {
+        database.readableDatabase.rawQuery("SELECT changes()", emptyArray()).use { cursor ->
+            if (cursor.moveToFirst()) {
+                Log.d(REPO_TRACE_TAG, "SQLite changes() ($action): imageId=$imageId changes=${cursor.getInt(0)}")
+            }
+        }
+        database.readableDatabase.rawQuery("SELECT total_changes()", emptyArray()).use { cursor ->
+            if (cursor.moveToFirst()) {
+                Log.d(REPO_TRACE_TAG, "SQLite total_changes() ($action): imageId=$imageId total_changes=${cursor.getLong(0)}")
+            }
+        }
+    }
+
+    fun countImages(options: LibraryQueryOptions): Int {
+        val whereClauses = mutableListOf<String>()
+        val args = mutableListOf<String>()
+
+        if (!options.includeInactive) {
+            whereClauses += "i.active = 1"
+        }
+        when (options.organizationStatus) {
+            "organized" -> whereClauses +=
+                "EXISTS (SELECT 1 FROM fusion_automation_state organized " +
+                    "WHERE organized.image_id = i.image_id " +
+                    "AND organized.state = 'complete' AND organized.organization_complete = 1)"
+            "not_organized" -> whereClauses +=
+                "NOT EXISTS (SELECT 1 FROM fusion_automation_state organized " +
+                    "WHERE organized.image_id = i.image_id " +
+                    "AND organized.state = 'complete' AND organized.organization_complete = 1)"
+        }
+
+        options.imageId?.let {
+            whereClauses += "i.image_id = ?"
+            args += it.toString()
+        }
+        options.collection?.takeIf { it.isNotBlank() }?.let {
+            whereClauses += "i.folder_uri = ?"
+            args += it
+        }
+        options.folderQuery?.takeIf { it.isNotBlank() }?.let {
+            whereClauses += "LOWER(i.folder_uri) LIKE ?"
+            args += "%${it.trim().lowercase()}%"
+        }
+        if (!options.query.isNullOrBlank()) {
+            whereClauses += "(LOWER(i.filename) LIKE ? OR LOWER(i.uri) LIKE ? OR LOWER(i.metadata_text) LIKE ?)"
+            val term = "%${options.query.trim().lowercase()}%"
+            args += term
+            args += term
+            args += term
+        }
+        for (tag in options.tags.map { it.trim().lowercase() }.filter { it.isNotBlank() }) {
+            whereClauses += "LOWER(i.tags_text) LIKE ?"
+            args += "%$tag%"
+        }
+        options.minWidth?.let {
+            whereClauses += "COALESCE(i.width, 0) >= ?"
+            args += it.toString()
+        }
+        options.minHeight?.let {
+            whereClauses += "COALESCE(i.height, 0) >= ?"
+            args += it.toString()
+        }
+        options.fileFormat?.takeIf { it.isNotBlank() }?.let {
+            whereClauses += "LOWER(COALESCE(i.extension, '')) = ?"
+            args += it.trim().lowercase()
+        }
+        options.orientation?.takeIf { it.isNotBlank() && !it.equals("any", ignoreCase = true) }?.let {
+            whereClauses += "LOWER(COALESCE(i.orientation, '')) = ?"
+            args += it.trim().lowercase()
+        }
+        if (!options.includeHidden) {
+            whereClauses += "i.filename NOT LIKE '.%'"
+        }
+        if (options.missingOnly) {
+            whereClauses += "i.active = 0"
+        }
+        val joinFts = !options.fullText.isNullOrBlank()
+        if (joinFts) {
+            whereClauses += "image_fts MATCH ?"
+            args += options.fullText!!.trim()
+        }
+        val from = if (joinFts) {
+            "FROM images i JOIN image_fts fts ON fts.rowid = i.image_id"
+        } else {
+            "FROM images i"
+        }
+        val where = if (whereClauses.isEmpty()) "" else "WHERE ${whereClauses.joinToString(" AND ")}" 
+        val sql = "SELECT COUNT(*) $from $where"
+        database.readableDatabase.rawQuery(sql, args.toTypedArray()).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return 0
+            }
+            return cursor.getInt(0)
+        }
+    }
+
+    fun listStoredTags(limit: Int = 1000): List<String> {
+        val rows = mutableListOf<String>()
+        val sql = """
+            SELECT tags_text
+            FROM images
+            WHERE active = 1 AND tags_text != ''
+            ORDER BY imported_order DESC
+            LIMIT ?
+        """.trimIndent()
+        database.readableDatabase.rawQuery(sql, arrayOf(limit.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                val tags = cursor.getString(0).orEmpty()
+                    .split('|')
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                rows += tags
+            }
+        }
+        return rows.distinct()
+    }
+
+    fun setSetting(key: String, value: String) {
+        val values = ContentValues().apply {
+            put("key", key)
+            put("value", value)
+        }
+        database.writableDatabase.insertWithOnConflict("settings", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun getSetting(key: String, defaultValue: String = ""): String {
+        val sql = "SELECT value FROM settings WHERE key = ?"
+        database.readableDatabase.rawQuery(sql, arrayOf(key)).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return defaultValue
+            }
+            return cursor.getString(0)
+        }
+    }
+
+    fun rebuildSearchIndex() {
+        database.writableDatabase.execSQL("INSERT INTO image_fts(image_fts) VALUES ('rebuild')")
+    }
+
+    fun optimizeDatabase() {
+        database.writableDatabase.execSQL("PRAGMA optimize")
+    }
+
+    fun fusionManagementStatus(): Map<String, Any> {
+        return fusionRepository.managementStatus() + mapOf(
+            "last_build_ms" to (getSetting("fusion.last_build_ms", "0").toLongOrNull() ?: 0L),
+            "last_optimization_ms" to (getSetting("fusion.last_optimization_ms", "0").toLongOrNull() ?: 0L),
+            "last_export_ms" to (getSetting("fusion.last_export_ms", "0").toLongOrNull() ?: 0L),
+        )
+    }
+
+    fun rebuildFusionOptimizations(): Map<String, Any> {
+        val before = fusionRepository.logicalContentCounts()
+        val db = database.writableDatabase
+        var after = before
+        var rebuildError: String? = null
+        var logicalContentPreserved = false
+        db.beginTransaction()
+        try {
+            FusionDatabaseSchema.ensureArtifacts(db)
+            rebuildSearchIndex()
+            optimizeDatabase()
+            after = fusionRepository.logicalContentCounts()
+            logicalContentPreserved = before == after
+            if (logicalContentPreserved) {
+                db.setTransactionSuccessful()
+            } else {
+                rebuildError = "Rebuild aborted because logical Fusion row counts changed."
+            }
+        } catch (error: Throwable) {
+            rebuildError = error.message ?: "Fusion rebuild failed."
+        } finally {
+            db.endTransaction()
+        }
+        val validation = fusionRepository.validateDatabase(persistRun = logicalContentPreserved)
+        if (logicalContentPreserved) {
+            val now = System.currentTimeMillis()
+            setSetting("fusion.last_build_ms", now.toString())
+            setSetting("fusion.last_optimization_ms", now.toString())
+        }
+        return fusionManagementStatus() + mapOf(
+            "ok" to (logicalContentPreserved && validation.valid),
+            "action" to "rebuild_fusion_optimizations",
+            "logical_content_preserved" to logicalContentPreserved,
+            "before_logical_table_counts" to before,
+            "after_logical_table_counts" to after,
+            "error" to (rebuildError ?: ""),
+        )
+    }
+
+    /**
+     * Bounded keyset paging over indexed images, never a 300K-item in-memory list.
+     * Cloud failures are cooled down, while images with permanent previews
+     * are excluded. A changed source loses its prior thumbnail cache mapping
+     * during normal incremental upsert and becomes eligible again.
+     */
+    data class PendingArtworkPreview(
+        val imageId: Int,
+        val uri: String,
+        val importedOrder: Long,
+        val sizeBytes: Long?,
+    )
+
+    fun pendingArtworkPreviewBatch(
+        afterOrder: Long,
+        afterImageId: Int,
+        limit: Int = 24,
+        nowMs: Long = System.currentTimeMillis(),
+    ): List<PendingArtworkPreview> {
+        val results = mutableListOf<PendingArtworkPreview>()
+        database.readableDatabase.rawQuery(
+            """
+            SELECT i.image_id, i.uri, i.imported_order, i.size_bytes
+            FROM images i
+            LEFT JOIN thumbnail_cache cache ON cache.image_uri = i.uri
+            LEFT JOIN thumbnail_generation_state generation ON generation.image_uri = i.uri
+            WHERE i.active = 1
+              AND (i.imported_order < ? OR (i.imported_order = ? AND i.image_id < ?))
+              AND cache.image_uri IS NULL
+              AND (generation.state IS NULL OR generation.state != 'failed'
+                   OR generation.updated_at_ms < ?)
+            ORDER BY i.imported_order DESC, i.image_id DESC
+            LIMIT ?
+            """.trimIndent(),
+            arrayOf(
+                afterOrder.toString(), afterOrder.toString(), afterImageId.toString(),
+                (nowMs - 6L * 60L * 60L * 1000L).toString(), limit.coerceIn(1, 64).toString(),
+            ),
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                results += PendingArtworkPreview(
+                    imageId = cursor.getInt(0),
+                    uri = cursor.getString(1),
+                    importedOrder = cursor.getLong(2),
+                    sizeBytes = if (cursor.isNull(3)) null else cursor.getLong(3),
+                )
+            }
+        }
+        return results
+    }
+
+    fun markArtworkPreviewFailure(uri: String, reason: String) {
+        database.writableDatabase.insertWithOnConflict(
+            "thumbnail_generation_state", null, ContentValues().apply {
+                put("image_uri", uri)
+                put("state", "failed")
+                put("updated_at_ms", System.currentTimeMillis())
+                put("last_error", reason.take(160))
+            }, SQLiteDatabase.CONFLICT_REPLACE,
+        )
+    }
+
+    fun outstandingArtworkPreviewCount(): Int =
+        database.readableDatabase.rawQuery(
+            """
+            SELECT COUNT(*) FROM images i
+            LEFT JOIN thumbnail_cache cache ON cache.image_uri = i.uri
+            WHERE i.active = 1 AND cache.image_uri IS NULL
+            """.trimIndent(), emptyArray(),
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    /**
+     * Use the indexed catalog dimensions when asking SAF for a preview.
+     * A square size request may cause some providers to letterbox portraits
+     * into a grey square. It is never necessary to decode a cloud original
+     * just to determine the requested preview dimensions.
+     */
+    /** Request a real HD provider preview, preserving source aspect ratio.
+     * 720px is the MINIMUM short edge, 1280px is the preferred long edge. */
+    fun thumbnailPreferredSize(imageUri: String, maxSide: Int = 1280): Pair<Int, Int> {
+        val ratio = database.readableDatabase.rawQuery(
+            "SELECT COALESCE(width,0), COALESCE(height,0), COALESCE(aspect_ratio,0) " +
+                "FROM images WHERE uri = ? LIMIT 1",
+            arrayOf(imageUri),
+        ).use { row ->
+            if (!row.moveToFirst()) 1.0 else {
+                val w = row.getInt(0)
+                val h = row.getInt(1)
+                if (w > 0 && h > 0) w.toDouble() / h.toDouble()
+                else row.getDouble(2)
+            }
+        }
+        val aspect = ratio.takeIf { it.isFinite() && it in 0.1..10.0 } ?: 1.0
+        // A 720px SHORT edge meets the stored HD preview contract.
+        // Asking a square provider for 1280x1280 multiplies network, encode,
+        // and heap costs without adding required detail.
+        val longest = (720.0 * maxOf(aspect, 1.0 / aspect))
+            .coerceAtMost(3840.0)
+        return if (aspect >= 1) {
+            longest.toInt() to (longest / aspect).toInt().coerceAtLeast(720)
+        } else {
+            (longest * aspect).toInt().coerceAtLeast(720) to longest.toInt()
+        }
+    }
+
+    fun thumbnailSourceVersion(uri: String): String =
+        database.readableDatabase.rawQuery(
+            "SELECT COALESCE(size_bytes,-1),COALESCE(modified_at_ms,last_modified_ms,-1) FROM images WHERE uri = ? LIMIT 1",
+            arrayOf(uri),
+        ).use { cursor ->
+            if (cursor.moveToFirst()) cursor.getLong(0).toString() + ":" + cursor.getLong(1)
+            else "-1:-1"
+        }
+
+    fun durableThumbnailUri(imageUri: String): String? =
+        database.readableDatabase.rawQuery(
+            "SELECT cache_path, size_bytes FROM thumbnail_cache WHERE image_uri = ? LIMIT 1",
+            arrayOf(imageUri),
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val file = File(cursor.getString(0))
+            val bytes = cursor.getLong(1)
+            if (!file.isFile || bytes <= 64L || file.length() != bytes) {
+                synchronized(verifiedPreviewLock) { verifiedPreviewCache.remove(imageUri) }
+                return@use null
+            }
+            val metadata = VerifiedPreview(file.absolutePath, bytes, file.lastModified())
+            val alreadyVerified = synchronized(verifiedPreviewLock) {
+                verifiedPreviewCache[imageUri] == metadata
+            }
+            if (alreadyVerified) return@use file.absolutePath
+
+            // Only the first access after a process restart or cache change
+            // needs a decode-bounds check. AtomicFile already validated the
+            // committed image before the SQLite reference was created.
+            val valid = runCatching {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(file.absolutePath, bounds)
+                minOf(bounds.outWidth, bounds.outHeight) >=
+                    PersistentArtworkThumbnails.MIN_SHORT_SIDE_PX
+            }.getOrDefault(false)
+            synchronized(verifiedPreviewLock) {
+                if (valid) verifiedPreviewCache[imageUri] = metadata
+                else verifiedPreviewCache.remove(imageUri)
+            }
+            if (valid) file.absolutePath else null
+        }
+
+    fun thumbnailStatistics(): Map<String, Any> {
+        val total = database.readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM images WHERE active = 1", emptyArray(),
+        ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+        val verified = database.readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM thumbnail_cache tc JOIN images i ON i.uri = tc.image_uri WHERE i.active = 1",
+            emptyArray(),
+        ).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+        return mapOf("indexed" to total, "thumbnail_committed" to verified,
+            "thumbnail_pending" to (total - verified).coerceAtLeast(0))
+    }
+
+    fun previousScanMetadata(node: StorageNode): ScanMetadata? =
+        database.readableDatabase.rawQuery(
+            """SELECT width,height,size_bytes,modified_at_ms,created_at_ms,extension,
+                      mime_type,resolution_text,aspect_ratio,orientation,folder_name,relative_path
+               FROM images WHERE uri = ? AND active = 1 LIMIT 1""",
+            arrayOf(node.uri),
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val size = if (cursor.isNull(2)) null else cursor.getLong(2)
+            val modified = if (cursor.isNull(3)) null else cursor.getLong(3)
+            if (node.sizeBytes != null && size != null && node.sizeBytes != size) return@use null
+            if (node.lastModifiedMs != null && modified != null && node.lastModifiedMs != modified) return@use null
+            val width = if (cursor.isNull(0)) null else cursor.getInt(0)
+            val height = if (cursor.isNull(1)) null else cursor.getInt(1)
+            if (width == null || height == null) return@use null
+            ScanMetadata(
+                width = width, height = height, sizeBytes = node.sizeBytes ?: size,
+                modifiedAtMs = node.lastModifiedMs ?: modified,
+                createdAtMs = if (cursor.isNull(4)) null else cursor.getLong(4),
+                extension = cursor.getString(5).orEmpty(),
+                mimeType = cursor.getString(6).orEmpty(),
+                resolution = cursor.getString(7),
+                aspectRatio = if (cursor.isNull(8)) null else cursor.getDouble(8),
+                orientation = cursor.getString(9), folderName = cursor.getString(10).orEmpty(),
+                relativePath = cursor.getString(11).orEmpty(),
+                indexedAtMs = System.currentTimeMillis(),
+            )
+        }
+
+    fun putThumbnailCache(imageUri: String, cachePath: String, sizeBytes: Long, lastAccessMs: Long) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            val values = ContentValues().apply {
+                put("image_uri", imageUri)
+                put("cache_path", cachePath)
+                put("size_bytes", sizeBytes)
+                put("last_access_ms", lastAccessMs)
+            }
+            db.insertWithOnConflict("thumbnail_cache", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+            db.insertWithOnConflict("thumbnail_generation_state", null, ContentValues().apply {
+                put("image_uri", imageUri)
+                put("state", "verified")
+                put("updated_at_ms", lastAccessMs)
+                put("last_error", "")
+            }, SQLiteDatabase.CONFLICT_REPLACE)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        synchronized(verifiedPreviewLock) { verifiedPreviewCache.remove(imageUri) }
+    }
+
+    /**
+     * Reclaim obsolete app-owned 144/384/512px thumbnail files after the v16
+     * cache migration. Only .webp files from the private preview directory
+     * are considered, and recently written files are never touched.
+     * Bounded work avoids blocking startup on 300K-image catalogs.
+     */
+    fun pruneOrphanArtworkPreviews(directory: File, maxDeletions: Int = 160): Int {
+        if (!directory.isDirectory) return 0
+        val root = directory.canonicalFile
+        val db = database.readableDatabase
+        val cutoff = System.currentTimeMillis() - 30L * 60L * 1000L
+        var examined = 0
+        var removed = 0
+        java.nio.file.Files.newDirectoryStream(root.toPath(), "*.webp").use { stream ->
+            for (entry in stream) {
+                if (examined++ >= 2048 || removed >= maxDeletions) break
+                val candidate = entry.toFile()
+                if (!candidate.isFile || candidate.lastModified() > cutoff ||
+                    candidate.parentFile?.canonicalFile != root) continue
+                val referenced = db.rawQuery(
+                    "SELECT EXISTS(SELECT 1 FROM thumbnail_cache WHERE cache_path=? LIMIT 1)",
+                    arrayOf(candidate.absolutePath),
+                ).use { cursor -> cursor.moveToFirst() && cursor.getInt(0) == 1 }
+                if (!referenced && candidate.delete()) removed++
+            }
+        }
+        return removed
+    }
+
+    fun pruneThumbnailCache(maxBytes: Long, cacheDir: File): Map<String, Any> {
+        var totalBytes = 0L
+        val entries = mutableListOf<Triple<String, String, Long>>()
+        database.readableDatabase.rawQuery(
+            "SELECT image_uri, cache_path, size_bytes FROM thumbnail_cache ORDER BY last_access_ms DESC",
+            emptyArray(),
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val uri = cursor.getString(0)
+                val path = cursor.getString(1)
+                val size = cursor.getLong(2)
+                totalBytes += size
+                entries += Triple(uri, path, size)
+            }
+        }
+
+        var removed = 0
+        if (totalBytes > maxBytes) {
+            for ((uri, path, size) in entries.asReversed()) {
+                if (totalBytes <= maxBytes) {
+                    break
+                }
+                val file = File(path)
+                if (file.exists()) {
+                    file.delete()
+                }
+                database.writableDatabase.delete("thumbnail_cache", "image_uri = ?", arrayOf(uri))
+                totalBytes -= size
+                removed += 1
+            }
+        }
+
+        // Remove records with missing files.
+        database.readableDatabase.rawQuery(
+            "SELECT image_uri, cache_path FROM thumbnail_cache",
+            emptyArray(),
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val uri = cursor.getString(0)
+                val path = cursor.getString(1)
+                if (!File(path).exists() || !path.startsWith(cacheDir.absolutePath)) {
+                    database.writableDatabase.delete("thumbnail_cache", "image_uri = ?", arrayOf(uri))
+                }
+            }
+        }
+
+        return mapOf(
+            "max_bytes" to maxBytes,
+            "current_bytes" to totalBytes,
+            "removed_entries" to removed,
+        )
+    }
+
+    fun scanStatistics(limit: Int = 20): List<Map<String, Any>> {
+        val sql = """
+            SELECT scan_id, folder_uri, started_at_ms, completed_at_ms, status, discovered_count, skipped_count, COALESCE(error_message, '')
+            FROM scan_runs
+            ORDER BY started_at_ms DESC, scan_id DESC
+            LIMIT ?
+        """.trimIndent()
+        val rows = mutableListOf<Map<String, Any>>()
+        database.readableDatabase.rawQuery(sql, arrayOf(limit.toString())).use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += mapOf(
+                    "scan_id" to cursor.getLong(0),
+                    "folder_uri" to cursor.getString(1),
+                    "started_at_ms" to cursor.getLong(2),
+                    "completed_at_ms" to if (cursor.isNull(3)) 0L else cursor.getLong(3),
+                    "status" to cursor.getString(4),
+                    "discovered_count" to cursor.getInt(5),
+                    "skipped_count" to cursor.getInt(6),
+                    "error_message" to cursor.getString(7),
+                )
+            }
+        }
+        return rows
+    }
+
+    fun exportFusionDatabase(format: FusionImportFormat = FusionImportFormat.JSON, pretty: Boolean = true): String {
+        return when (format) {
+            FusionImportFormat.JSON -> fusionRepository.exportJson(pretty = pretty)
+            FusionImportFormat.WORKBOOK_COMPAT -> fusionRepository.exportWorkbookCompatJson(pretty = pretty)
+        }
+    }
+
+    fun importFusionDatabase(
+        payload: String,
+        format: FusionImportFormat = FusionImportFormat.JSON,
+        replaceExisting: Boolean = false,
+    ): FusionImportResult {
+        val sourceType = when (format) {
+            FusionImportFormat.JSON -> ExternalImportSourceType.JSON
+            FusionImportFormat.WORKBOOK_COMPAT -> ExternalImportSourceType.WORKBOOK_COMPAT_JSON
+        }
+        val result = fusionRepository.importDatabase(
+            request = ExternalImportRequest(
+                sourceType = sourceType,
+                source = payload,
+                replaceExisting = replaceExisting,
+            ),
+        )
+        return result.toFusionImportResult(format)
+    }
+
+    fun persistFusionRows(candidates: List<FusionRowCandidate>, replaceExisting: Boolean = false): Map<String, Any> {
+        return fusionRepository.persistFusionRows(candidates, replaceExisting)
+    }
+
+    fun previewImport(
+        request: ExternalImportRequest,
+        callback: ExternalImportProgressCallback? = null,
+    ): ExternalImportPreview {
+        return fusionRepository.previewImport(request, callback)
+    }
+
+    fun importDatabase(
+        request: ExternalImportRequest,
+        callback: ExternalImportProgressCallback? = null,
+    ): ExternalImportExecutionResult {
+        return fusionRepository.importDatabase(request, callback)
+    }
+
+    fun cancelImport(importId: String): Boolean {
+        return fusionRepository.cancelImport(importId)
+    }
+
+    fun rollbackImport(
+        importId: String? = null,
+        callback: ExternalImportProgressCallback? = null,
+    ): ExternalImportExecutionResult {
+        return fusionRepository.rollbackImport(importId, callback)
+    }
+
+    fun validateImport(
+        request: ExternalImportRequest,
+        callback: ExternalImportProgressCallback? = null,
+    ): FusionValidationReport {
+        return fusionRepository.validateImport(request, callback)
+    }
+
+    fun validateFusionDatabase(persistRun: Boolean = true): FusionValidationReport {
+        return fusionRepository.validateDatabase(persistRun = persistRun)
+    }
+
+    private fun direction(sortDirection: String): String {
+        return if (sortDirection.equals("asc", ignoreCase = true)) "ASC" else "DESC"
+    }
+
+    private fun cursorToImage(cursor: Cursor): Map<String, Any> {
+        val imageId = cursor.getLong(cursor.getColumnIndexOrThrow("image_id")).toInt()
+        val uri = cursor.getString(cursor.getColumnIndexOrThrow("uri"))
+        val filename = cursor.getString(cursor.getColumnIndexOrThrow("filename"))
+        val folderUri = cursor.getString(cursor.getColumnIndexOrThrow("folder_uri")) ?: ""
+        val extensionCol = cursor.getColumnIndexOrThrow("extension")
+        val mimeTypeCol = cursor.getColumnIndexOrThrow("mime_type")
+        val resolutionTextCol = cursor.getColumnIndexOrThrow("resolution_text")
+        val aspectRatioCol = cursor.getColumnIndexOrThrow("aspect_ratio")
+        val orientationCol = cursor.getColumnIndexOrThrow("orientation")
+        val folderNameCol = cursor.getColumnIndexOrThrow("folder_name")
+        val relativePathCol = cursor.getColumnIndexOrThrow("relative_path")
+        val widthCol = cursor.getColumnIndexOrThrow("width")
+        val heightCol = cursor.getColumnIndexOrThrow("height")
+        val metadata = linkedMapOf<String, Any>()
+        metadata["parent_uri"] = cursor.getString(cursor.getColumnIndexOrThrow("parent_uri")) ?: ""
+        metadata["folder_uri"] = folderUri
+        metadata["imported_order"] = cursor.getLong(cursor.getColumnIndexOrThrow("imported_order"))
+        metadata["active"] = cursor.getInt(cursor.getColumnIndexOrThrow("active")) == 1
+        val tagsText = cursor.getString(cursor.getColumnIndexOrThrow("tags_text")) ?: ""
+        metadata["tags"] = tagsText
+            .split('|')
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+        metadata["user_tags"] = tagsText
+        metadata["taxonomy_text"] = cursor.getString(cursor.getColumnIndexOrThrow("taxonomy_text")) ?: ""
+        metadata["metadata_text"] = cursor.getString(cursor.getColumnIndexOrThrow("metadata_text")) ?: ""
+        metadata["uri"] = uri
+        metadata["filename"] = filename
+
+        val extension = if (!cursor.isNull(extensionCol)) cursor.getString(extensionCol) else ""
+        val format = if (extension.isBlank()) fileFormatFromName(filename) else extension.lowercase()
+        metadata["format"] = format
+        val mimeType = if (!cursor.isNull(mimeTypeCol)) cursor.getString(mimeTypeCol) else ""
+        metadata["mime_type"] = mimeType
+        metadata["scan_source"] = folderUri
+
+        val folderName = if (!cursor.isNull(folderNameCol)) cursor.getString(folderNameCol) else ""
+        if (folderName.isNotBlank()) {
+            metadata["folder_name"] = folderName
+        }
+
+        val relativePath = if (!cursor.isNull(relativePathCol)) cursor.getString(relativePathCol) else ""
+        if (relativePath.isNotBlank()) {
+            metadata["relative_path"] = relativePath
+        }
+
+        val sizeCol = cursor.getColumnIndexOrThrow("size_bytes")
+        if (!cursor.isNull(sizeCol)) {
+            metadata["size_bytes"] = cursor.getLong(sizeCol)
+        }
+        val createdCol = cursor.getColumnIndexOrThrow("created_at_ms")
+        if (!cursor.isNull(createdCol)) {
+            metadata["created_at_ms"] = cursor.getLong(createdCol)
+        }
+        val modifiedCol = cursor.getColumnIndexOrThrow("modified_at_ms")
+        if (!cursor.isNull(modifiedCol)) {
+            metadata["modified_at_ms"] = cursor.getLong(modifiedCol)
+        }
+        val lastModifiedCol = cursor.getColumnIndexOrThrow("last_modified_ms")
+        if (!cursor.isNull(lastModifiedCol)) {
+            metadata["last_modified_ms"] = cursor.getLong(lastModifiedCol)
+        }
+        val scannedAtCol = cursor.getColumnIndexOrThrow("scanned_at_ms")
+        if (!cursor.isNull(scannedAtCol)) {
+            metadata["date_indexed_ms"] = cursor.getLong(scannedAtCol)
+        }
+        if (!cursor.isNull(resolutionTextCol)) {
+            metadata["resolution"] = cursor.getString(resolutionTextCol)
+        }
+        if (!cursor.isNull(aspectRatioCol)) {
+            metadata["aspect_ratio"] = cursor.getDouble(aspectRatioCol)
+        }
+        if (!cursor.isNull(orientationCol)) {
+            metadata["orientation"] = cursor.getString(orientationCol)
+        }
+        if (!cursor.isNull(widthCol) && !cursor.isNull(heightCol)) {
+            val width = cursor.getInt(widthCol)
+            val height = cursor.getInt(heightCol)
+            metadata["width"] = width
+            metadata["height"] = height
+            if (width > 0 && height > 0) {
+                if (!metadata.containsKey("resolution")) {
+                    metadata["resolution"] = "${width}×${height}"
+                }
+                if (!metadata.containsKey("aspect_ratio")) {
+                    metadata["aspect_ratio"] = width.toDouble() / height
+                }
+                if (!metadata.containsKey("orientation")) {
+                    metadata["orientation"] = when {
+                        width > height -> "landscape"
+                        height > width -> "portrait"
+                        else -> "square"
+                    }
+                }
+            }
+        }
+
+        return linkedMapOf(
+            "image_id" to imageId,
+            "path" to uri,
+            "uri" to uri,
+            "filename" to filename,
+            "folder_uri" to folderUri,
+            "format" to format,
+            "mime_type" to mimeType,
+            "thumbnail_url" to (durableThumbnailUri(uri) ?: uri),
+            "file_url" to uri,
+            "date_indexed_ms" to (metadata["date_indexed_ms"] ?: 0L),
+            "metadata" to metadata,
+        )
+    }
+
+    private fun readFolderEnabled(folderUri: String): Boolean? {
+        val sql = "SELECT enabled FROM library_folders WHERE folder_uri = ? LIMIT 1"
+        database.readableDatabase.rawQuery(sql, arrayOf(folderUri)).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return null
+            }
+            return cursor.getInt(0) == 1
+        }
+    }
+
+    private fun fileFormatFromName(name: String): String {
+        val idx = name.lastIndexOf('.')
+        if (idx < 0 || idx >= name.lastIndex) {
+            return "unknown"
+        }
+        return name.substring(idx + 1).lowercase()
+    }
+
+    private data class ImagePreferences(
+        val imageId: Int,
+        val uri: String,
+        val tagsText: String,
+        val taxonomyText: String,
+        val importedOrder: Long,
+        val sizeBytes: Long?=null,
+        val modifiedAtMs: Long?=null,
+        val active: Boolean=true,
+    )
+
+    private fun readImagePreferences(uri: String): ImagePreferences? {
+        val sql = "SELECT image_id, uri, tags_text, taxonomy_text, imported_order, size_bytes, COALESCE(last_modified_ms,modified_at_ms), active FROM images WHERE uri = ? LIMIT 1"
+        database.readableDatabase.rawQuery(sql, arrayOf(uri)).use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return null
+            }
+            return ImagePreferences(
+                imageId = cursor.getInt(0),
+                uri = cursor.getString(1) ?: uri,
+                tagsText = cursor.getString(2) ?: "",
+                taxonomyText = cursor.getString(3) ?: "",
+                importedOrder = if (cursor.isNull(4)) 0L else cursor.getLong(4),
+                sizeBytes = if(cursor.isNull(5)) null else cursor.getLong(5),
+                modifiedAtMs = if(cursor.isNull(6)) null else cursor.getLong(6),
+                active = cursor.getInt(7)==1,
+            )
+        }
+    }
+
+    private fun findUniqueRenameCandidate(
+        folderUri: String,
+        newUri: String,
+        sizeBytes: Long?,
+        modifiedAtMs: Long?,
+        currentScanStartedAtMs: Long,
+    ): ImagePreferences? {
+        if (sizeBytes == null || modifiedAtMs == null || modifiedAtMs <= 0L) {
+            return null
+        }
+
+        // Rows already seen in this scan have scanned_at_ms >= currentScanStartedAtMs.
+        // This is constant-memory and avoids an ever-growing SQL NOT IN list.
+        val sql = """
+            SELECT image_id, uri, tags_text, taxonomy_text, imported_order
+            FROM images
+            WHERE folder_uri = ?
+              AND active = 1
+              AND uri <> ?
+              AND COALESCE(size_bytes, -1) = ?
+              AND COALESCE(last_modified_ms, modified_at_ms, -1) = ?
+              AND scanned_at_ms < ?
+            LIMIT 2
+        """.trimIndent()
+        val args = mutableListOf(
+            folderUri,
+            newUri,
+            sizeBytes.toString(),
+            modifiedAtMs.toString(),
+            currentScanStartedAtMs.toString(),
+        )
+        val candidates = mutableListOf<ImagePreferences>()
+        database.readableDatabase.rawQuery(sql, args.toTypedArray()).use { cursor ->
+            while (cursor.moveToNext()) {
+                candidates += ImagePreferences(
+                    imageId = cursor.getInt(0),
+                    uri = cursor.getString(1) ?: "",
+                    tagsText = cursor.getString(2) ?: "",
+                    taxonomyText = cursor.getString(3) ?: "",
+                    importedOrder = if (cursor.isNull(4)) 0L else cursor.getLong(4),
+                )
+            }
+        }
+        return candidates.singleOrNull()
+    }
+
+    private fun logImageRows(action: String, imageId: Int, oldUri: String, newUri: String) {
+        val sql = """
+            SELECT image_id, uri, relative_path, filename, active
+            FROM images
+            WHERE image_id = ? OR uri IN (?, ?)
+            ORDER BY image_id
+        """.trimIndent()
+        val rows = mutableListOf<String>()
+        database.readableDatabase.rawQuery(sql, arrayOf(imageId.toString(), oldUri, newUri)).use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += "id=${cursor.getInt(0)} uri=${cursor.getString(1)} relative_path=${cursor.getString(2)} filename=${cursor.getString(3)} active=${cursor.getInt(4)}"
+            }
+        }
+        Log.d(REPO_TRACE_TAG, "Image rows $action: ${rows.ifEmpty { listOf("none") }.joinToString(" | ")}")
+    }
+}

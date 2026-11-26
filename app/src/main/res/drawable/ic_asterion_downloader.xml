@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Asterion: orbital horizon and four-point constellation, no lettering or arrows. -->
+    <path android:fillColor="#0B1020" android:pathData="M22,4H86C97,4 104,11 104,22V86C104,97 97,104 86,104H22C11,104 4,97 4,86V22C4,11 11,4 22,4Z"/>
+    <path android:fillColor="#182339" android:pathData="M21,13H87C92,13 95,16 95,21V87C95,92 92,95 87,95H21C16,95 13,92 13,87V21C13,16 16,13 21,13Z"/>
+    <path android:strokeColor="#8465D5" android:strokeWidth="6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M23,62 C39,31 76,27 89,55"/>
+    <path android:strokeColor="#74F0DE" android:strokeWidth="6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M18,76 C48,88 76,76 91,57"/>
+    <path android:strokeColor="#BDB1FF" android:strokeWidth="2" android:fillColor="#00000000"
+        android:pathData="M20,54 C38,77 71,80 87,37"/>
+    <path android:fillColor="#E6F9FC" android:pathData="M54,27 L60,47 L78,53 L60,59 L54,80 L48,59 L30,53 L48,47 Z"/>
+    <path android:fillColor="#77F3DD" android:pathData="M54,39 L58,49 L68,53 L58,57 L54,67 L50,57 L40,53 L50,49 Z"/>
+    <path android:fillColor="#D6ADFF" android:pathData="M80,20 L82,26 L88,28 L82,30 L80,36 L78,30 L72,28 L78,26 Z"/>
+    <path android:fillColor="#83DDF3" android:pathData="M22,27 L23.5,31 L27,32.5 L23.5,34 L22,38 L20.5,34 L17,32.5 L20.5,31 Z"/>
+</vector>

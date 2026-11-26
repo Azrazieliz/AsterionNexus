@@ -1,0 +1,596 @@
+package com.azrael.pixivdumpsync
+
+import android.content.Context
+import org.json.JSONObject
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import java.net.InetSocketAddress
+import java.net.Proxy
+import java.net.URI
+import java.net.URLEncoder
+import java.util.Base64
+import java.util.Locale
+
+/**
+ * Multi-source video discovery. Providers may index ordinary websites, adult sites,
+ * mirrors, and Tor-reachable sources. No preconfigured site-category blacklist.
+ * Discovery is metadata-based; it does not bypass protected streams or DRM.
+ */
+enum class VideoSearchArea { HENTAI, PORN, PIRACY_DARKWEB, GENERAL }
+
+object KeywordSources {
+    private const val PREFS="asterion_keyword_sources"
+    // The owner explicitly rejected these publishers. Discovery across the
+    // open web must not add them back, even if a search index finds them.
+    // Historical download records and unrelated video adapters are unchanged.
+    private val rejectedDiscoveryHosts=setOf(
+        "spankbang.com","thisvid.com","manyvids.com")
+    internal fun eligibleDiscoveryUrl(value:String):Boolean {
+        val uri=runCatching{URI(value)}.getOrNull()?:return false
+        val host=uri.host.orEmpty().lowercase(java.util.Locale.ROOT)
+            .removePrefix("www.")
+        return SearchRanking.validUrl(value) &&
+            rejectedDiscoveryHosts.none{host==it || host.endsWith("."+it)} &&
+            !ProviderRetirement.isRetired(value)
+    }
+    private fun preferences(context:Context)=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+    fun endpoint(context:Context):String=preferences(context).getString("searxng","").orEmpty()
+    fun setEndpoint(context:Context,address:String){
+        preferences(context).edit().putString("searxng",address.trim()).apply()
+    }
+    /** Search video websites directly; never substitute a search-engine results page. */
+    /** Separate actual search sources for each of the three requested categories. */
+    private val hentaiSites=listOf(
+        "html|https://hanime.tv/search?query={query}|Hanime",
+        "html|https://hentai.tv/series?search={query}|HentaiTV"
+    )
+    private val pornSites=listOf(
+        "html|https://watchporn.to/search/{query}/|WatchPorn",
+        "html|https://www.pornhub.com/video/search?search={query}|Pornhub",
+        "html|https://xhamster.com/search/{query}|xHamster",
+        "html|https://www.eporner.com/search/{query}/|Eporner",
+        "html|https://www.redtube.com/?search={query}|RedTube"
+    )
+    /** Indexed listings are not playable video files and open as source pages. */
+    private val clearnetIndexes=listOf(
+        "html|https://nyaa.si/?f=0&c=0_0&q={query}|Nyaa",
+        "html|https://sukebei.nyaa.si/?page=rss&q={query}|Sukebei",
+        "html|https://thepiratebay.org/search.php?q={query}|The Pirate Bay",
+        "html|https://1337x.to/search/{query}/1/|1337x"
+    )
+    internal fun siteDefinitions(area:VideoSearchArea)=when(area){
+        VideoSearchArea.HENTAI -> hentaiSites
+        VideoSearchArea.PORN -> pornSites
+        VideoSearchArea.PIRACY_DARKWEB -> clearnetIndexes
+        // Internet-wide video discovery does not depend on configured sites.
+        VideoSearchArea.GENERAL -> emptyList()
+    }
+    private fun isOldBrowser(line:String)=
+        line.contains("www.bing.com/videos/search",true) ||
+        line.contains("search.brave.com/search",true)
+    fun sources(context:Context):String {
+        // Search does not depend on choosing or configuring a search provider.
+        return (hentaiSites+pornSites+clearnetIndexes)
+            .joinToString("\n")+
+            preferences(context).getString("providers","")
+                .orEmpty().takeIf{it.isNotBlank()}?.let{"\n"+it}.orEmpty()
+    }
+    private fun searchProviders(context:Context,area:VideoSearchArea):List<SearchProvider> {
+        val direct=SearchRanking.parseProviders(
+            siteDefinitions(area).joinToString("\n")).toMutableList()
+        val configured=endpoint(context).trim().trimEnd('/')
+        if(SearchRanking.validUrl(configured) &&
+            configured.startsWith("https://")){
+            direct.add(SearchProvider(SearchProviderKind.SEARXNG,configured,
+                "Federated web index"))
+        }
+        val torEnabled=context.getSharedPreferences(
+            "video_options",Context.MODE_PRIVATE).getBoolean("tor_proxy",false)
+        val extraTemplates=runCatching{
+            SearchRanking.parseProviders(
+                preferences(context).getString("providers","").orEmpty())
+        }.getOrDefault(emptyList())
+        // User-selected providers are SEARCHABLE in every category; the old
+        // early return prevented saved sources from ever joining adult search.
+        val saved=runCatching {com.asterion.videoflow.VideoDb(context).use{db->
+            db.listWatches().filter{it.enabled}.mapNotNull{watch->
+                val url=watch.address
+                val host=runCatching{URI(url.replace("{query}","test"))
+                    .host.orEmpty().lowercase()}.getOrDefault("")
+                if(host.endsWith(".onion") && !torEnabled)null
+                else runCatching{
+                    SearchRanking.parseProviders(
+                        "html|"+url+"|"+watch.label).first()
+                }.getOrNull()
+            }
+        }}.getOrDefault(emptyList())
+        val category=when(area){
+            VideoSearchArea.PORN->AlohaArea.ADULT
+            VideoSearchArea.HENTAI->AlohaArea.HENTAI
+            else->null
+        }
+        val integrated=category?.let{AlohaSources.by(it).filter{
+            site->site.host!="onejav.com" &&
+                !ProviderRetirement.isRetired(site.url)
+        }.map{SearchProvider(SearchProviderKind.HTML,
+            it.url,it.name)}}.orEmpty()
+        // Deduplicate identical source templates, not all hosts: one
+        // publisher may expose independent video / gallery / search routes.
+        return (direct+extraTemplates+saved+integrated).filter{provider->
+            val host=runCatching{URI(provider.url.replace("{query}","sample")
+                .replace("{name}","sample")).host.orEmpty().lowercase()}
+                .getOrDefault("")
+            host.isNotBlank() && (!host.endsWith(".onion") || torEnabled) &&
+                eligibleDiscoveryUrl(provider.url.replace("{query}","sample")
+                    .replace("{name}","sample"))
+        }.distinctBy{it.kind.name+"|"+it.url.trimEnd('/')}
+    }
+    fun setSources(context:Context,lines:String){
+        SearchRanking.parseProviders(lines) // Reject invalid values before persistence.
+        preferences(context).edit().putString("providers",lines.trim()).apply()
+    }
+    private fun proxy(context:Context,url:String):Proxy? {
+        if(!URI(url).host.orEmpty().endsWith(".onion",true))return null
+        val settings=context.getSharedPreferences("video_options",Context.MODE_PRIVATE)
+        if(!settings.getBoolean("tor_proxy",false))return null
+        return Proxy(Proxy.Type.SOCKS,InetSocketAddress.createUnresolved(
+            "127.0.0.1",settings.getInt("tor_port",9050).coerceIn(1,65535)))
+    }
+    // Search is interactive. A 25-second per-source socket timeout with
+    // eight workers meant the first configured sites consumed the entire
+    // global 38-second budget and all later owner-approved sources NEVER
+    // got an attempt. Short source-local connect/read deadlines preserve
+    // a multi-site result set while long downloads remain unaffected.
+    internal const val SEARCH_SOURCE_TIMEOUT_MS=8_500
+
+    private fun connection(context:Context,url:String):org.jsoup.Connection {
+        require(SearchRanking.validUrl(url)){"Invalid search source address"}
+        val host=URI(url).host.orEmpty().lowercase()
+        val route=proxy(context,url)
+        require(!host.endsWith(".onion")||route!=null){
+            "Enable a running local SOCKS5/Tor proxy for .onion search sources"
+        }
+        val call=Jsoup.connect(url).timeout(SEARCH_SOURCE_TIMEOUT_MS)
+            .maxBodySize(4_000_000)
+            .followRedirects(true).userAgent("Mozilla/5.0 (Linux; Android 16; Mobile)")
+        // Do not silently fall back to an unproxied request when the proxy is enabled.
+        if(route!=null)call.proxy(route)
+        return call
+    }
+    internal fun federatedIndexUrl(base:String,keyword:String,page:Int):String {
+        require(page>=0){"Negative search page"}
+        val escaped=URLEncoder.encode(keyword,"UTF-8")
+        return base.trimEnd('/')+
+            "/search?q=$escaped&format=json&categories=videos,general&pageno="+
+            (page.toLong()+1L)
+    }
+    private fun index(context:Context,provider:SearchProvider,keyword:String,
+                      page:Int=0):List<RankedHit> {
+        val address=federatedIndexUrl(provider.url,keyword,page)
+        val response=connection(context,address).ignoreContentType(true).execute()
+        require(response.statusCode() in 200..299){
+            "Search provider returned HTTP ${response.statusCode()}"
+        }
+        val found=JSONObject(response.body()).optJSONArray("results")
+            ?:error("Search index did not return JSON results")
+        val results=ArrayList<RankedHit>()
+        for(i in 0 until minOf(found.length(),250)){
+            val row=found.optJSONObject(i)?:continue
+            val url=row.optString("url")
+            if(!eligibleDiscoveryUrl(url) ||
+                !SearchRanking.isDiscoverablePage(url))continue
+            val title=row.optString("title",url).take(220)
+            val snippet=row.optString("content").take(500)
+            results.add(RankedHit(title,url,provider.label,snippet))
+        }
+        return results
+    }
+    /** Hanime's search catalog is JSON, not a regular HTML list. */
+    internal fun parseHanimeSearch(payload:String):List<RankedHit>{
+        val response=JSONObject(payload)
+        val value=response.opt("hits")
+        val hits=when(value){
+            is org.json.JSONArray -> value
+            is String -> org.json.JSONArray(value)
+            else -> org.json.JSONArray()
+        }
+        val found=ArrayList<RankedHit>()
+        for(i in 0 until minOf(hits.length(),200)){
+            val row=hits.optJSONObject(i)?:continue
+            val slug=row.optString("slug").trim()
+            val name=row.optString("name").ifBlank{row.optString("title")}.trim()
+            if(!slug.matches(Regex("[a-zA-Z0-9_-]{3,150}"))||name.isBlank())continue
+            found.add(RankedHit(name,"https://hanime.tv/hentai-videos/$slug",
+                "Hanime","",thumbnail=row.optString("cover_url").takeIf{it.startsWith("https://")}))
+        }
+        return found
+    }
+    private fun hanimeApi(context:Context,keyword:String):List<RankedHit>{
+        val request=JSONObject().apply{
+            put("search_text",keyword)
+            put("blacklist",org.json.JSONArray())
+            put("brands",org.json.JSONArray())
+            put("order_by","created_at_unix")
+            put("ordering","desc")
+            put("page",0)
+            put("tags",org.json.JSONArray())
+            put("tags_mode","AND")
+        }
+        val response=connection(context,"https://search.htv-services.com/")
+            .ignoreContentType(true)
+            .header("Content-Type","application/json;charset=UTF-8")
+            .requestBody(request.toString())
+            .method(org.jsoup.Connection.Method.POST)
+            .execute()
+        require(response.statusCode() in 200..299) {
+            "Hanime search endpoint returned HTTP "+response.statusCode()
+        }
+        return parseHanimeSearch(response.body())
+    }
+    private fun sukebeiRss(context:Context,url:String):List<RankedHit>{
+        val doc=connection(context,url).ignoreContentType(true).execute()
+        require(doc.statusCode() in 200..299){"Sukebei RSS HTTP "+doc.statusCode()}
+        val xml=Jsoup.parse(doc.body(),url,org.jsoup.parser.Parser.xmlParser())
+        return xml.select("item").take(200).mapNotNull { item->
+            val title=item.selectFirst("title")?.text()?.trim().orEmpty()
+            val guid=item.selectFirst("guid")?.text()?.trim().orEmpty()
+            val link=item.selectFirst("link")?.text()?.trim().orEmpty()
+            val detail=when{
+                SearchRanking.isIndexPage(guid)->guid
+                SearchRanking.isIndexPage(link)->link
+                else->null
+            }
+            if(title.isBlank()||detail==null)null else RankedHit(
+                title,detail,"Sukebei",item.selectFirst("description")?.text().orEmpty())
+        }
+    }
+    /** Discover an actual GET search form on an approved source; never invent
+     * a /search URL, redirect to a search-engine page, or send a keyword elsewhere. */
+    internal fun searchFormUrl(html:String,base:String,keyword:String):String?{
+        val origin=runCatching{URI(base)}.getOrNull()?:return null
+        val doc=Jsoup.parse(html,base)
+        val inputs="input[name=s],input[name=q],input[name=query],"+
+            "input[name=search],input[name=keyword],input[name=k],"+
+            "input[name=searchword],input[name=wd]"
+        for(form in doc.select("form")){
+            if(form.attr("method").isNotBlank() &&
+                !form.attr("method").equals("get",true))continue
+            val input=form.selectFirst(inputs)?:continue
+            val action=form.attr("action").ifBlank{base}
+            val url=runCatching{origin.resolve(action)}.getOrNull()?:continue
+            if(url.scheme!="https" || url.host?.lowercase()!=origin.host?.lowercase())
+                continue
+            val params=ArrayList<String>()
+            for(field in form.select("input[name]").take(30)){
+                val name=field.attr("name")
+                if(!name.matches(Regex("[a-zA-Z0-9_-]{1,40}")))continue
+                if(field.attr("type").equals("submit",true) ||
+                    field.attr("type").equals("password",true) ||
+                    field.attr("type").equals("file",true))continue
+                val value=if(field===input)keyword else field.attr("value")
+                if(field===input || value.isNotBlank())params+=
+                    URLEncoder.encode(name,"UTF-8")+"="+URLEncoder.encode(value,"UTF-8")
+            }
+            if(params.isEmpty())continue
+            return url.toString()+(if(url.rawQuery.isNullOrBlank())"?" else "&")+
+                params.joinToString("&")
+        }
+        return null
+    }
+
+    private fun html(context:Context,provider:SearchProvider,keyword:String,
+                     area:VideoSearchArea):List<RankedHit> {
+        val encoded=URLEncoder.encode(keyword,"UTF-8")
+        val url=provider.url.replace("{query}",encoded).replace("{name}",encoded)
+        if(!provider.url.contains("{query}") && !provider.url.contains("{name}")){
+            val page=connection(context,url).get()
+            val searchUrl=searchFormUrl(page.outerHtml(),page.location(),keyword)
+                ?:error("No searchable GET form on this source; site-specific adapter needed")
+            val results=connection(context,searchUrl).get()
+            return htmlPageHits(results,searchUrl,provider,keyword,area)
+        }
+        if(area==VideoSearchArea.HENTAI && provider.label=="Hanime"){
+            val direct=runCatching{hanimeApi(context,keyword)}
+            if(direct.isSuccess && direct.getOrDefault(emptyList()).isNotEmpty())
+                return direct.getOrThrow()
+            // Older integrations use an API host that may no longer resolve.
+            // Try the actual website HTML before declaring this source unavailable.
+            val fallback="https://hanime.tv/search?query="+encoded
+            val page=runCatching{connection(context,fallback).get()}
+            if(page.isFailure)
+                throw IllegalStateException("Hanime API and HTML search unavailable: "+
+                    (page.exceptionOrNull()?.message?:direct.exceptionOrNull()?.message))
+            return htmlPageHits(page.getOrThrow(),fallback,provider,keyword,area)
+        }
+        if(area==VideoSearchArea.PIRACY_DARKWEB && provider.label=="Sukebei")
+            return sukebeiRss(context,url)
+        val doc=connection(context,url).get()
+        return htmlPageHits(doc,url,provider,keyword,area)
+    }
+    internal fun htmlPageHits(doc:Document,url:String,provider:SearchProvider,
+        keyword:String,area:VideoSearchArea):List<RankedHit>{
+        val found=ArrayList<RankedHit>()
+        val selectors=".cat-card a[href], li.pcVideoListItem a[href], .videoBox a[href], "+
+            ".thumb-block a[href], [class*=video-thumb] a[href], "+
+            "[class*=video-card] a[href], [class*=thumb] a[href], "+
+            "[class*=video] a[href], article a[href], "+
+            "table.torrent-list a[href], .coll-1 a[href], tr a[href], a[href]"
+        for(node in doc.select(selectors).take(5000)){
+            if(node.closest("header,footer,nav,aside,.menu,.sidebar,.navigation")!=null)continue
+            val absolute=runCatching{
+                URI(doc.location()).resolve(node.attr("href")).toString()
+            }.getOrNull()?:continue
+            val indexedTorrent=area==VideoSearchArea.PIRACY_DARKWEB &&
+                SearchRanking.isIndexPage(absolute)
+            // Owner-supplied websites may publish relevant video DETAIL
+            // pages without /video/ in their URL. The old "Custom site"
+            // search dropped them before checking the selected card.
+            // This exception is scoped ONLY to an explicit custom site,
+            // not to all anchors on every configured provider.
+            val customArticle=provider.label=="Custom site" &&
+                SearchRanking.isDiscoverablePage(absolute) &&
+                node.closest("article,.video-item,.video-card,.videoBox,"+
+                    ".thumb-block,.post-card,li.pcVideoListItem,main")!=null
+            if(!eligibleDiscoveryUrl(absolute) ||
+                !(SearchRanking.isVideoUrl(absolute) || indexedTorrent ||
+                    customArticle))continue
+            val resultHost=runCatching{URI(absolute).host.orEmpty().removePrefix("www.")}.getOrDefault("")
+            val searchHost=URI(url).host.orEmpty().removePrefix("www.")
+            if(resultHost!=searchHost && !resultHost.endsWith("."+searchHost))continue
+            val container=node.closest(
+                ".cat-card, li.pcVideoListItem, .videoBox, .thumb-block, "+
+                "[class*=video-thumb], [class*=video-card], article, "+
+                "[class*=thumb], [class*=video]")
+            val image=(node.selectFirst("img")?:container?.selectFirst("img"))
+            val description=container?.text().orEmpty().take(500)
+            val titles=listOf(
+                container?.selectFirst(".cat-title,h3,h2,[class*=title]")?.text().orEmpty(),
+                node.attr("title"),node.attr("aria-label"),
+                image?.attr("alt").orEmpty(),node.text(),
+                container?.attr("title").orEmpty()
+            ).map{it.trim().take(220)}.filter{it.length>=5}
+            val title=titles.maxByOrNull{
+                SearchRanking.relevance(keyword,it,description)
+            }?:continue
+            if(SearchRanking.relevance(keyword,title,description)==0)continue
+            val thumb=image?.let{img->
+                listOf("data-thumb","data-thumb_url","data-preview",
+                    "data-original","data-src","data-lazy-src","src")
+                    .map{img.attr(it)}.firstOrNull{it.startsWith("http")||
+                        it.startsWith("//")||it.startsWith("/")}
+                    ?.let{runCatching{URI(doc.location()).resolve(it).toString()}.getOrNull()}
+            }?.takeIf{SearchRanking.validUrl(it)}
+            found.add(RankedHit(title,absolute,provider.label,description,
+                thumbnail=thumb))
+            if(found.size>=500)break
+        }
+        return found
+    }
+    /** Recover selected Bing organic publisher URLs, never index tracking URLs. */
+    internal fun organicPublisherDestination(raw:String,label:String):String? {
+        if(label!="Bing Web")return null
+        val outer=runCatching{URI(raw)}.getOrNull()?:return null
+        val outerHost=outer.host.orEmpty().lowercase(Locale.ROOT)
+        val destination=when {
+            label=="Bing Web" &&
+                outerHost in setOf("bing.com","www.bing.com") -> {
+                if(outer.path!="/ck/a" || outer.rawFragment!=null)return null
+                val tokens=outer.rawQuery.orEmpty().split('&').filter{
+                    it.startsWith("u=")
+                }
+                if(tokens.size!=1)return null
+                val encoded=tokens.single().removePrefix("u=")
+                if(!encoded.startsWith("a1") ||
+                    encoded.length !in 14..4000 ||
+                    !encoded.drop(2).matches(Regex("""[A-Za-z0-9_-]+={0,2}""")))
+                    return null
+                runCatching {
+                    String(Base64.getUrlDecoder().decode(encoded.drop(2)),
+                        Charsets.UTF_8)
+                }.getOrNull()?:return null
+            }
+            else -> raw
+        }
+        val uri=runCatching{URI(destination)}.getOrNull()?:return null
+        if(uri.scheme!="https" || uri.host.isNullOrBlank() ||
+            uri.userInfo!=null || uri.port!=-1 || uri.rawFragment!=null)
+            return null
+        val host=uri.host.lowercase(Locale.ROOT).removePrefix("www.")
+        if(host=="bing.com" || host.endsWith(".bing.com") ||
+            host=="yahoo.com" || host.endsWith(".yahoo.com") ||
+            host in setOf("google.com","duckduckgo.com","brave.com"))
+            return null
+        return destination.takeIf{
+            eligibleDiscoveryUrl(it) && SearchRanking.isDiscoverablePage(it)
+        }
+    }
+
+    /**
+     * Broad web discovery in addition to individual adapters. These results
+     * are source-page candidates, never proof that a file is downloadable.
+     * Bing discovery is enriched by existing publisher search adapters.
+     */
+    internal fun parseWebIndex(html:String,base:String,
+                               label:String):List<RankedHit>{
+        val doc=Jsoup.parse(html,base)
+        val hits=ArrayList<RankedHit>()
+        if(label!="Bing Web")return emptyList()
+        val entries=doc.select("li.b_algo h2 a[href]")
+        for(a in entries.take(120)){
+            val href=a.absUrl("href").ifBlank{a.attr("href")}
+            val url=organicPublisherDestination(href,label)?:continue
+            val title=a.text().trim().take(220)
+            if(title.length<3)continue
+            val parent=a.closest("li.b_algo")
+            val snippet=parent?.selectFirst(
+                ".compText,.compText p,.b_caption p")
+                ?.text().orEmpty().take(400)
+            hits+=RankedHit(title,url,label,snippet)
+        }
+        return hits.distinctBy{SearchRanking.canonicalKey(it.url)}
+    }
+    /** Bing can answer HTTP 200 with a JS shell instead of organic links.
+     * Its public first-party RSS response supplies real publisher links
+     * without scraping unrelated site navigation. RSS is first-page ONLY:
+     * do not mislabel identical items as a later search page.
+     */
+    internal fun parseBingRss(xml:String):List<RankedHit>{
+        if(xml.length !in 80..3_000_000)return emptyList()
+        val doc=Jsoup.parse(xml,"https://www.bing.com/",
+            org.jsoup.parser.Parser.xmlParser())
+        if(doc.selectFirst("rss > channel")==null)return emptyList()
+        val found=LinkedHashMap<String,RankedHit>()
+        for(item in doc.select("rss > channel > item").take(60)){
+            val title=item.selectFirst("title")?.text()?.trim()?.take(220)
+                ?.takeIf{it.length>=3}?:continue
+            val link=item.selectFirst("link")?.text()?.trim().orEmpty()
+            val url=organicPublisherDestination(link,"Bing Web")?:continue
+            val description=item.selectFirst("description")?.text().orEmpty()
+                .take(400)
+            found.putIfAbsent(SearchRanking.canonicalKey(url),
+                RankedHit(title,url,"Bing Web",description))
+        }
+        return found.values.toList()
+    }
+
+    /** Bing organic web index, paged and never mistaken for original media. */
+    internal fun webIndexUrl(keyword:String,area:VideoSearchArea,page:Int):String{
+        require(page>=0){"Negative search page"}
+        val scope=when(area){
+            VideoSearchArea.HENTAI->" hentai animation video"
+            VideoSearchArea.PORN->" adult video"
+            VideoSearchArea.PIRACY_DARKWEB->" torrent download"
+            VideoSearchArea.GENERAL->" video"
+        }
+        return "https://www.bing.com/search?q="+
+            URLEncoder.encode(keyword.trim()+scope,"UTF-8")+
+            "&count=50&first="+(page.toLong()*50L+1L)
+    }
+    private fun broadWebIndex(context:Context,keyword:String,
+                              area:VideoSearchArea,page:Int=0):List<RankedHit>{
+        val url=webIndexUrl(keyword,area,page)
+        val response=connection(context,url).ignoreHttpErrors(true)
+            .maxBodySize(3_000_000).timeout(18_000).execute()
+        require(response.statusCode() in 200..299){
+            "Web index HTTP "+response.statusCode()
+        }
+        val htmlHits=parseWebIndex(
+            response.body(),response.url().toString(),"Bing Web")
+        if(htmlHits.isNotEmpty())return htmlHits
+        // Bing's HTTP 200 JavaScript shell has no result cards. Retrying
+        // the first page in supported RSS format is preferable to silently
+        // reporting zero web results. Explicit later pages cannot reuse
+        // first-page RSS results and must surface an index-shape failure.
+        check(page==0){"Bing returned no parseable organic page "+(page+1)}
+        val rssUrl=webIndexUrl(keyword,area,0)+"&format=rss"
+        val rss=connection(context,rssUrl).ignoreHttpErrors(true)
+            .maxBodySize(3_000_000).timeout(12_000).execute()
+        require(rss.statusCode() in 200..299){
+            "Bing RSS HTTP "+rss.statusCode()
+        }
+        val rssHits=parseBingRss(rss.body())
+        check(rssHits.isNotEmpty()){
+            "Bing returned no parseable publisher links in HTML or RSS"
+        }
+        return rssHits
+    }
+
+    /** Broad web indexes must start in the FIRST search batch. The old
+     * task order put them after every site (many of which had no form),
+     * so an interactive search regularly returned zero useful results
+     * even though the independent indexes had publisher results.
+     */
+    internal fun <T> prioritizedTasks(
+        tasks:List<Pair<String,T>>):List<Pair<String,T>> =
+        tasks.sortedWith(compareBy<Pair<String,T>>{
+            if(it.first=="Bing Web")0 else 1
+        })
+
+    fun searchDetailed(context:Context,keyword:String,
+                       area:VideoSearchArea=VideoSearchArea.PORN,
+                       indexPage:Int=0):SearchOutcome {
+        require(keyword.trim().isNotBlank()){"Enter a search term"}
+        require(indexPage>=0){"Negative search page"}
+        val providers=searchProviders(context,area)
+        val tasks=ArrayList<Pair<String,()->List<RankedHit>>>()
+        // Internet indexes are PRIMARY. Individual provider adapters are
+        // optional enrichment, never an allowlist or a prerequisite for search.
+        tasks+="Bing Web" to {broadWebIndex(context,keyword,area,indexPage)}
+        // An independent configured index is a paged route, not a
+        // first-page-only enrichment. Direct publisher searches are unchanged.
+        for(provider in providers){
+            if(indexPage>0 && provider.kind!=SearchProviderKind.SEARXNG)continue
+            tasks+=provider.label to {
+                when(provider.kind){
+                    SearchProviderKind.SEARXNG->index(context,provider,keyword.trim(),indexPage)
+                    SearchProviderKind.HTML->html(context,provider,keyword.trim(),area)
+                }
+            }
+        }
+        val scheduled=prioritizedTasks(tasks)
+        val pool=java.util.concurrent.Executors.newFixedThreadPool(
+            minOf(12,scheduled.size))
+        val completion=java.util.concurrent.ExecutorCompletionService<
+            Triple<String,List<RankedHit>,String?>>(pool)
+        val collected=ArrayList<RankedHit>()
+        val errors=ArrayList<String>()
+        var finished=0
+        var successful=0
+        try {
+            for((label,task) in scheduled)completion.submit(java.util.concurrent.Callable {
+                try {
+                    Triple(label,task(),null)
+                }catch(t:Exception){
+                    Triple(label,emptyList<RankedHit>(),
+                        t.message?:t.javaClass.simpleName)
+                }
+            })
+            // Search engines and direct publishers run in parallel. Results
+            // are only source-page candidates until original resolution.
+            val deadline=System.nanoTime()+
+                java.util.concurrent.TimeUnit.SECONDS.toNanos(26)
+            while(finished<tasks.size){
+                val remaining=deadline-System.nanoTime()
+                if(remaining<=0L)break
+                val result=completion.poll(remaining,
+                    java.util.concurrent.TimeUnit.NANOSECONDS)?:break
+                val (label,hits,error)=result.get()
+                finished++
+                collected.addAll(hits)
+                if(error!=null)errors.add(label+": "+error)
+                else successful++
+            }
+            if(finished<tasks.size)
+                errors.add((tasks.size-finished).toString()+" search sources timed out")
+        }finally{pool.shutdownNow()}
+        return SearchOutcome(
+            if(area==VideoSearchArea.PIRACY_DARKWEB)
+                SearchRanking.deduplicateIndex(keyword,collected.filter{
+                    eligibleDiscoveryUrl(it.url)})
+            else SearchRanking.deduplicateDiscovery(keyword,collected.filter{
+                eligibleDiscoveryUrl(it.url)}),
+            finished,errors,successful)
+    }
+    /** Search one explicitly supplied site, including HTML sites with unusual page URLs. */
+    fun searchCustom(context:Context,keyword:String,address:String):SearchOutcome {
+        require(SearchRanking.validUrl(
+            address.replace("{query}","sample").replace("{name}","sample"))) {
+            "Invalid user-supplied source URL"
+        }
+        val provider=SearchProvider(SearchProviderKind.HTML,address,"Custom site")
+        return try {
+            val candidates=html(context,provider,keyword,
+                VideoSearchArea.PIRACY_DARKWEB)
+            val verifiedIndex=SearchRanking.deduplicateIndex(keyword,candidates)
+            val publicArticles=SearchRanking.deduplicateDiscovery(keyword,candidates)
+            SearchOutcome((publicArticles+verifiedIndex)
+                .distinctBy{SearchRanking.canonicalKey(it.url)},1,emptyList())
+        }catch(t:Exception) {
+            SearchOutcome(emptyList(),1,listOf(
+                "Custom site: ${t.message?:t.javaClass.simpleName}"),0)
+        }
+    }
+    /** Compatibility entry point for older UI and stored creator watch records. */
+    fun search(context:Context,keyword:String):List<Pair<String,String>> =
+        searchDetailed(context,keyword).hits.map{it.title to it.url}
+}

@@ -1,0 +1,194 @@
+package com.ailm.android.workers
+
+import android.content.Context
+import android.os.SystemClock
+import android.util.Log
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
+import com.ailm.android.runtime.StandaloneRuntime
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
+
+/**
+ * Pre-generates durable app-owned small previews without waiting for a gallery
+ * tile to become visible. Never accesses a source with rename/move/delete.
+ *
+ * WorkManager input carries a keyset continuation so even hundreds of
+ * thousands of indexed files are processed in bounded, restartable slices.
+ * Per-source failures are cooled down in SQLite; one dead cloud provider
+ * must not block every other preview.
+ */
+class ArtworkThumbnailWarmupWorker(
+    context: Context,
+    params: WorkerParameters,
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        try {
+            StandaloneRuntime.initialize(applicationContext)
+            // Keep storage bounded while regenerating thousands of previews.
+            // This deletes only old unreferenced app-owned WEBP files.
+            StandaloneRuntime.pruneObsoleteArtworkPreviewFiles()
+            val afterOrder = inputData.getLong(CURSOR_ORDER_KEY, Long.MAX_VALUE)
+            val afterId = inputData.getInt(CURSOR_ID_KEY, Int.MAX_VALUE)
+            var cursorOrder = afterOrder
+            var cursorId = afterId
+            var succeeded = 0
+            var deferred = 0
+            var attempted = 0
+            var pausedForAutomation = false
+            fun isAutomationActive(): Boolean =
+                StandaloneRuntime.automationStatus()["automation_status"]?.toString().orEmpty() in
+                    setOf("queued", "running")
+            val start = SystemClock.elapsedRealtime()
+
+            if (afterOrder == Long.MAX_VALUE && !isAutomationActive()) {
+                // Reconcile SQLite entries whose app-owned preview files were
+                // evicted or lost before querying new work. No originals touched.
+                StandaloneRuntime.manageThumbnailCache(Long.MAX_VALUE)
+            }
+
+            while (!isStopped && attempted < MAX_PER_WORKER &&
+                SystemClock.elapsedRealtime() - start < SLICE_MS
+            ) {
+                if (isAutomationActive()) {
+                    pausedForAutomation = true
+                    break
+                }
+                val candidates = StandaloneRuntime.pendingArtworkPreviews(
+                    cursorOrder, cursorId, minOf(BATCH_SIZE, MAX_PER_WORKER - attempted),
+                )
+                if (candidates.isEmpty()) break
+                // Two independently sourced previews may warm in parallel.
+                // Keep the keyset checkpoint in catalog order, advancing only
+                // after the complete pair has finished, so cancellation and
+                // process death cannot permanently skip an image.
+                for (pair in candidates.chunked(2)) {
+                    if (isStopped) break
+                    if (isAutomationActive()) {
+                        pausedForAutomation = true
+                        break
+                    }
+                    val outcomes = coroutineScope {
+                        pair.map { item ->
+                            async(Dispatchers.IO) {
+                                item to StandaloneRuntime.generateIndexedArtworkPreview(
+                                    item.uri, item.sizeBytes,
+                                )
+                            }
+                        }.awaitAll()
+                    }
+                    for ((item, outcome) in outcomes) {
+                        when (outcome) {
+                            "stored", "cached" -> {
+                                succeeded++
+                                // Use the verified HD preview for quality
+                                // estimation without a second cloud fetch.
+                                runCatching {
+                                    StandaloneRuntime.artworkRating(item.imageId)
+                                }.onFailure { error ->
+                                    Log.w(TAG, "Quality suggestion remains pending for image #"
+                                        + item.imageId, error)
+                                }
+                            }
+                            "provider_busy" -> deferred++
+                            else -> {
+                                StandaloneRuntime.markArtworkPreviewFailure(item.uri, outcome)
+                                deferred++
+                            }
+                        }
+                        attempted++
+                        cursorOrder = item.importedOrder
+                        cursorId = item.imageId
+                        setProgress(
+                            workDataOf(
+                                "preview_attempted" to attempted,
+                                "preview_saved" to succeeded,
+                                "preview_deferred" to deferred,
+                                "last_image_id" to cursorId,
+                            ),
+                        )
+                    }
+                    if (SystemClock.elapsedRealtime() - start >= SLICE_MS) break
+                }
+                if (pausedForAutomation) break
+            }
+
+            if (isStopped) return@withContext Result.retry()
+
+            val remaining = StandaloneRuntime.pendingArtworkPreviews(cursorOrder, cursorId, 1)
+            if (remaining.isNotEmpty() || pausedForAutomation) {
+                val next = OneTimeWorkRequestBuilder<ArtworkThumbnailWarmupWorker>()
+                    .setConstraints(Constraints.Builder()
+                        .setRequiresBatteryNotLow(true)
+                        .setRequiresStorageNotLow(true)
+                        .build())
+                    .setInputData(workDataOf(
+                        CURSOR_ORDER_KEY to cursorOrder,
+                        CURSOR_ID_KEY to cursorId,
+                    ))
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                    .setInitialDelay(if (pausedForAutomation) 10L else 0L, TimeUnit.MINUTES)
+                    .build()
+                WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                    UNIQUE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, next,
+                ).result.get()
+            }
+            val hasMore = remaining.isNotEmpty()
+            Log.i(TAG, "Preview batch attempted=$attempted saved=$succeeded deferred=$deferred hasMore=$hasMore pausedForAutomation=$pausedForAutomation")
+            Result.success()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w(TAG, "Preview checkpoint will retry without modifying any original artwork", error)
+            Result.retry()
+        }
+    }
+
+    companion object {
+        const val UNIQUE_WORK_NAME = "asterion_indexed_artwork_preview_warmup"
+        const val CURSOR_ORDER_KEY = "cursor_imported_order"
+        const val CURSOR_ID_KEY = "cursor_image_id"
+        private const val TAG = "AsterionPreviewWarmup"
+        private const val BATCH_SIZE = 16
+        private const val MAX_PER_WORKER = 48
+        private const val SLICE_MS = 3L * 60L * 1000L
+    }
+}
+
+/**
+ * Rechecks cooled-down provider errors after connectivity/SAF permissions
+ * return. Periodic wakeups do not reopen already-committed previews.
+ */
+class ArtworkPreviewRecoveryWorker(
+    context: Context,
+    params: WorkerParameters,
+) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        try {
+            StandaloneRuntime.initialize(applicationContext)
+            StandaloneRuntime.scheduleArtworkPreviewWarmup()
+            Result.success()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w("AsterionPreviewWarmup", "Recovery rescheduling deferred", error)
+            Result.retry()
+        }
+    }
+
+    companion object {
+        const val UNIQUE_WORK_NAME = "asterion_indexed_artwork_preview_recovery"
+    }
+}

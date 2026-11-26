@@ -1,0 +1,115 @@
+package com.azrael.pixivdumpsync
+
+import android.app.ActivityManager
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.os.Build
+import android.os.PowerManager
+import android.os.SystemClock
+import kotlin.math.abs
+
+/**
+ * Safety admission before any native BitTorrent JNI initialization.
+ * An owner-reported FULL DEVICE crash makes unbounded repeated native
+ * attempts unacceptable. Existing descriptor/partial files are untouched.
+ *
+ * Torrent processing is deferred while battery, thermal or RAM conditions
+ * cannot support a meaningful isolated native transfer. A suspected reboot
+ * DURING a native request puts future JNI attempts on explicit safety hold.
+ * This cannot diagnose the reboot cause; it records an attribution lead.
+ */
+internal object TorrentSafetyGate {
+    private const val PREFS="torrent_native_safety_v1"
+    private fun prefs(c:Context)=c.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+    private fun bootEpoch()=System.currentTimeMillis()-SystemClock.elapsedRealtime()
+    data class Admission(val allowed:Boolean,val reason:String="")
+
+    internal fun batterySafeForNative(level:Int?,scale:Int):Boolean =
+        level!=null && level>=0 && scale>0 &&
+            level.toLong()*100L >= scale.toLong()*30L
+
+    fun assess(c:Context):Admission {
+        val p=prefs(c)
+        val boot=bootEpoch()
+        val previous=p.getLong("last_boot_epoch_ms",0L)
+        if(previous!=0L && abs(boot-previous)>120_000L &&
+            p.getBoolean("native_request_running",false)){
+            p.edit().putBoolean("suspected_device_restart",true).apply()
+        }
+        if(p.getBoolean("suspected_device_restart",false))
+            return Admission(false,
+                "A device reboot occurred during a prior native torrent "+
+                "request. Native processing is suspended pending a reviewed "+
+                "incident; saved metadata and partial files are retained.")
+        val battery=c.registerReceiver(null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val percent=battery?.getIntExtra(
+            BatteryManager.EXTRA_LEVEL,-1)?.takeIf{it>=0}
+        val scale=battery?.getIntExtra(
+            BatteryManager.EXTRA_SCALE,100)?.coerceAtLeast(1)?:100
+        // Native torrent JNI previously coincided with a whole-device reboot.
+        // Charging alone does not establish thermal or power stability.
+        // Keep the metadata and partials intact; defer any native attempt
+        // until the owner's battery is at least 30 percent.
+        if(!batterySafeForNative(percent,scale))
+            return Admission(false,
+                "Native torrent requires a verified battery level of at least "+
+                    "30% after a reported device reboot; charge and retry.")
+        if(Build.VERSION.SDK_INT>=29){
+            val power=c.getSystemService(PowerManager::class.java)
+            if(power!=null &&
+                power.currentThermalStatus>=
+                    PowerManager.THERMAL_STATUS_SEVERE)
+                return Admission(false,
+                    "Device thermal status is severe; torrent JNI deferred")
+        }
+        val am=c.getSystemService(ActivityManager::class.java)
+        val memory=ActivityManager.MemoryInfo()
+        am?.getMemoryInfo(memory)
+        if(am!=null && memory.lowMemory)
+            return Admission(false,
+                "Android reports low memory; native torrent processing deferred")
+        if(am!=null && memory.availMem<768L*1024*1024)
+            return Admission(false,
+                "Less than 768 MiB available RAM; native torrent deferred")
+        return Admission(true)
+    }
+
+    /** Only a deliberate on-screen retry may acknowledge the previous
+     * suspected device restart. Background workers never clear this hold.
+     * Recheck battery, thermal state and available memory before rearming;
+     * a further interrupted native request will trip the hold again.
+     */
+    fun incidentHold(c:Context):Boolean {
+        assess(c) // persist an interrupted-boot observation if present
+        return prefs(c).getBoolean("suspected_device_restart",false)
+    }
+    @Synchronized fun ownerReviewedRetry(c:Context):Admission {
+        if(!incidentHold(c))return assess(c)
+        val p=prefs(c)
+        check(p.edit()
+            .putBoolean("suspected_device_restart",false)
+            .putBoolean("native_request_running",false)
+            .putLong("last_boot_epoch_ms",bootEpoch())
+            .commit()){"Cannot persist torrent incident recovery"}
+        val admission=assess(c)
+        if(!admission.allowed)
+            p.edit().putBoolean("suspected_device_restart",true).commit()
+        return admission
+    }
+
+    @Synchronized fun begin(c:Context):Admission{
+        val admission=assess(c)
+        if(admission.allowed && !prefs(c).edit()
+            .putLong("last_boot_epoch_ms",bootEpoch())
+            .putBoolean("native_request_running",true).commit())
+            return Admission(false,"Unable to persist native incident marker; retry later")
+        return admission
+    }
+    @Synchronized fun finished(c:Context){
+        prefs(c).edit()
+            .putBoolean("native_request_running",false).apply()
+    }
+}

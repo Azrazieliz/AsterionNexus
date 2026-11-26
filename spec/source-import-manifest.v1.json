@@ -1,0 +1,3885 @@
+{
+  "version": "asterion.nexus.source-import.v1",
+  "donors": {
+    "downloader": {
+      "repository": "Azrazieliz/AsterionDownloader",
+      "branch": "repair/downloader-global-search-20261121",
+      "sha": "71f38b91af637bbb0aed74906eea2a92fbb17d03"
+    },
+    "core": {
+      "repository": "Azrazieliz/Asterion-Core",
+      "branch": "recovery/core-v2100-gaps-20261118",
+      "sha": "f453a9d5defd14dbb7fa9fcef107f99766bd65d1"
+    },
+    "rounder": {
+      "repository": "Azrazieliz/AsterionRounder",
+      "branch": "feat/control-recursive-inventory-20261122",
+      "sha": "d6c9a1725a3fdc91d8e325625c25395b5e3962c4"
+    }
+  },
+  "rounder": "pinned assembled workflow",
+  "files": [
+    {
+      "donor": "downloader",
+      "path": "app/src/acceptance/AndroidManifest.xml",
+      "sha256": "077f47f0d8cb666168738b759b1d3fe19318bdc8c877c26d2e9030af6449bbeb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/acceptance/res/values/strings.xml",
+      "sha256": "475d3a6c195838ec83926026c345d707a6680f13739049e940da96f9500158a5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/androidTest/java/com/azrael/pixivdumpsync/DeviceTransferSimulation.kt",
+      "sha256": "c885910f3c2d3754ace58f1d7cccfe13012d3fbf2ee9b8ce3607edb10ca75cfd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/fieldpilot/AndroidManifest.xml",
+      "sha256": "a069b8e0a14b54febb3828e866abf681f0179074ec7e7f943684dcefae79403e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/AndroidManifest.xml",
+      "sha256": "be4a42ea31c1d241537abe6d83259e2947677225c2359fba4ed3237609dc4c58"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/cpp/CMakeLists.txt",
+      "sha256": "a29355129a679fe79557621a118f6123d670f483f2d85e4c1ca18b1c5647e231"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/cpp/asterion_cwd.c",
+      "sha256": "afec4096a29230420bcff92fb1966daa426e4868b8279aa51a554f93abd5357a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/bridge/AsterionControlBridgeProvider.java",
+      "sha256": "fc56dfb293ee819f488eaef0d75d6c8068bef212c7b939a8889a9f70599e4fc3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/AppPrivateStorageAudit.kt",
+      "sha256": "9a592db09501919086a0a104890641236ecd7b592997f76e0c8cfb383b4f911b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/ArchivebateSelectedMedia.kt",
+      "sha256": "dfe4e0fdb644a29371b3641abc4a7214421c5f0d49386f0c4e47a46b3364911b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/AsterionCwd.kt",
+      "sha256": "1752a9bf0bb31d09753ceda09ba6a34375f38bab932b3878e5d4c313b3b295e6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/AuthorizedVideoSession.kt",
+      "sha256": "e75ca4f0ec9ad4ac234283adedaa82664dbee6bad7fc694cdcae5a8110b07aa9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/BubblecumSelectedOriginalSource.kt",
+      "sha256": "aca5c73c48dbedbcb3ca6da5654f9d9029f3fc609b0851ad792360b6b7c8347e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/DownloaderEventJournal.kt",
+      "sha256": "b5e7dbcd2a8cf25a0a15c5daf451e7b6fcbed3ddc90479bb19c1fdce161d0cd6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/DsysavDashHlsBridge.kt",
+      "sha256": "b6bf27cb1428c6ad4bbff5464955a09c96164443d79e8cd1b16727a7024e7986"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/DsysavSelectedOriginal.kt",
+      "sha256": "e0de2f8464f0c14f8283eeee718dbbd0d6978fdf5b411188604cce973581d823"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/EmbeddedYtDlpMetadata.kt",
+      "sha256": "060cb31a7b2ae910c17228ca37b81bcc23b692c680d37ae6cf53a3501627b724"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/EmbeddedYtDlpTransfer.kt",
+      "sha256": "d5a0d723631cce30c5a9272c116e34d2f9b52ed52eb563831326b23b06d3f245"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/EpornerOriginalSource.kt",
+      "sha256": "dca38fef1d423f6881749141ca7d14819e14c513568dbe72a40c583a86fa4872"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/FreePornVideosOriginalSource.kt",
+      "sha256": "c531c8974dba5e796041fd9eab87c5d19f66b771e60d866245f5860b73338f08"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/FreedlSelectedOriginal.kt",
+      "sha256": "c9ac0b6c9315c23744e7a2c4e82c52849cbdd0b8221f8fa5b26aa833662e6890"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/FullLengthVideoPolicy.kt",
+      "sha256": "a21dbb680e573adb819ab32452badcacbf5b1602dd7525c1625ce3144b843179"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/FullPornerOriginalSource.kt",
+      "sha256": "0c1d0de4a817aa201aad334dd3285d6dc9e32aff14c1e1c3186a9f12f40c3fba"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/FullPornerParallelOriginal.kt",
+      "sha256": "45aa8a71901c676d41d95e18618c1d5209d308e018ccf5881e6355284cbd8abe"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/FullSceneRuntimeDb.kt",
+      "sha256": "9e75ed7e2a69a5326ff6d89f0f34527ca2890929f0222a12d425b4a370489f91"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/HentaiHavenEpisodeSource.kt",
+      "sha256": "ecc60512f9b94dc270677577b5193844adce5adec4a5f78b99dc5a918a3464cd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/HentaiVostaPolicy.kt",
+      "sha256": "4c96c2f34e2a2c4627cb424d3e6429eb1524fca59e701fd9f07b9f05fa4ee760"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/JavGuruJkNativeHls.kt",
+      "sha256": "21f09569110b3d19903bbd42430121ff92fa64f037fa4fd25e42030f0012fa74"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/JavGuruOriginalSource.kt",
+      "sha256": "ab88bba86901341e6510452226740121feb0757a1bb9d03bd3ecef31866f9e5c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/JavGuruPythonSelectedPlayer.kt",
+      "sha256": "9ad70caf68ad02f737cdab5778e0b277f082cf1673095d696c499c04ed84af40"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/LegacyYtDlpTransfer.kt",
+      "sha256": "8c0afba4e3976caf4fa0973fcf6fa6b4ed5e4fffa7da8a7ef7daefecd494de5d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/MainActivity.kt",
+      "sha256": "a6e54cfc8f8f7a43fd7a06e640357bec0d9a1168201a3ea4505c70a938879933"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/Mp4HentaiPublishedHost.kt",
+      "sha256": "828ba57851830d70ac42243a896e9b3877e8d694ddfe92362e23d8341060f010"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/NativeMediaDownloader.kt",
+      "sha256": "06938b6bc57751a2a6e583a49920aca82ca2833ab935a5d852520a087f232f3e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/NativeMediaReceipt.kt",
+      "sha256": "f89d40557674b8898686bb2780c945777c974fc2cce86ecca87e6a7f06c22b85"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/NetworkRoute.kt",
+      "sha256": "31530ba516aaaa0dc782ab49477e26c473217cd0d5de31e528fcc5bb3173fdf3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/NotFansSelectedOriginalSource.kt",
+      "sha256": "692cc1d7d39e471fc5337ac1874feeb35b81ab086e0e58ac4c7358d8a34e5274"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/OnScreensOriginalSource.kt",
+      "sha256": "e379f7e738ce982b54466a0d6b42a0db683f52a514dd98335fe33431170c3170"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/PimpBunnySelectedOriginalSource.kt",
+      "sha256": "02d404a3291e6cf9d2fbb8b8e801601a1070f24ac41adb82697f493769d118b0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/PornBuzOriginalSource.kt",
+      "sha256": "4aa0225c972885b371f149dba77aacdef2d60cf6366d7065b040949ee96452d4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/PornhubOriginalSource.kt",
+      "sha256": "cea21dabcdf90fb1394a8d4b9f1c4327b2461f0be4690943cec418a472be09b6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/PublisherOriginalExtractors.kt",
+      "sha256": "d5dd392964909c060d9ee3fedca1df1bb8184b094a77a18a790a9547bddc3f13"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/RoshyPackedOriginalSource.kt",
+      "sha256": "e4f7ab321a6fbc36855919c6c9fc3bfb0b0422e3d62e974fab36f02a8c2d9d33"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/Rule34VideoOriginalSource.kt",
+      "sha256": "93b8f44183c9abcf0e2d3db584d70233b2b2bec851713917b0a4a474efa6a9b6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/Scheduling.kt",
+      "sha256": "e60cf82afc4f97eabffcef947f332ca37eeeea42fb701e55efb068a05c8a1999"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/SecondaryLightNativeOriginal.kt",
+      "sha256": "6ba47b407d1d72eec09839942080a7f279eed6bd81716394b37b1ff5965e035e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/SelectedRecordingNetworkOriginal.kt",
+      "sha256": "d1a4c6f18fd29c1a58dc00663f872e05315bd52b4e06d6792dd27615c226096d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/SiteSpecificOriginalSources.kt",
+      "sha256": "2b7023bba86d2d2998e9aba89e949dc2cd4c6e233d7542b94dd60ee975143ad1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/SiteSpecificPlayerPolicy.kt",
+      "sha256": "a90be9bf50a60054eb504d43f280c857133d0925367d53080017b5baf6578a4b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/SourceDiagnostics.kt",
+      "sha256": "48f5bf1ace9c7ea607c0ad606331f5a8a6b9c75ec1b2a102284494995ca7d2d9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/StreamtapeSelectedOriginal.kt",
+      "sha256": "d832763aedf369a6a6083d8d4b5baeb9b374dd6b397dc01c3fb848516adb94b3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/TaiAvOriginalSource.kt",
+      "sha256": "0e7e271aedd249a60d04d81e6a16506a6e7fde3a6ee0201dde73007eaa3fb87c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/ThreeDHentaiSignedOriginal.kt",
+      "sha256": "9868919480a546e1ac5324296402c0db08aa4ed8c308f337a3177fe9b0026ab6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/TransferAgentTwoService.kt",
+      "sha256": "87d657eec69f4ba19e0d47f6c6afdc57aae96aa2f03709914274d5a2f19c94b3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/TransferService.kt",
+      "sha256": "b680a50b47266c6ff80a43373b70aacca938ad6ff86a4d15784193789c7f17ba"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/UnverifiedSelectedPreviewGuard.kt",
+      "sha256": "db46225a52809ccac49da09d48130d419ad46d74becc3cb52f07a126f4d14d92"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VidaraSelectedOriginal.kt",
+      "sha256": "d0310686bdcb22afad3f3fc26c66a4dfc5536f26db2e65fe226860d2f901ce98"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoAgentAdmission.kt",
+      "sha256": "fcb13e81b2c83ded0708c3351f3f8719cd4522044fcc09fe4aea5f0fcef31ba4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoCancelReceivers.kt",
+      "sha256": "2f43b0715666a62b768af571091d6a8b46a26c246944c49399979602e1065a11"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoCandidatePlan.kt",
+      "sha256": "6abf60890a888adfafd5bc9493b1d17d10390d22b33eafa4b04492e51bd121ca"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoConnectionWatchdog.kt",
+      "sha256": "7ab0bc957a8cd78eafa0838b0088823652f63990d66f551cd42cf664b892a837"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoDb.kt",
+      "sha256": "d7e3fd4efe75446894f5ccb148c592c26481844bbdc0d49aa77f6b07e2798fc0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoDiagnosticsReport.kt",
+      "sha256": "7cdcaeff434085aaeb7379387c184a82620edb414ddcda775ead3447adad38b0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoErrorDetail.kt",
+      "sha256": "9446cbd4f8042e385642c5c5fd938c87625753117d40282d4b2a1d453ff456ae"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoExecutionPools.kt",
+      "sha256": "d47e34daf612ae259a5b8197788a21565b6cfc2ff18977d8db7769a8635ea3dd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoExtractorErrors.kt",
+      "sha256": "2a974c96efcf579242dbd6e5beabdb439f2747d1933e86dba38e3c783910ab6b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoExtractorVersion.kt",
+      "sha256": "6ec20ecc1bf6a8044ae68390b45f98401e0e281ac76ad5e73303aa5fdc509be2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoFailurePolicy.kt",
+      "sha256": "d17968b7c17d3b95cc2619874e94d1ebe5ea20aa14418308daad9f014ac7140b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoHlsDispatch.kt",
+      "sha256": "a52410e49bf3fc838c942e6d67dcb96ee2f6bc851aabf7412e0d20ecaa2b6ef3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoHlsFragmentProgress.kt",
+      "sha256": "3a3f938686a1f4aa95c74331f698c295fc6597dff80bf8614fd39a58195599b0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoMetadataOutput.kt",
+      "sha256": "0e08b860de011410218981d5f248f206829aba12d1cbf07ecd1b1ee9eae045ca"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoPayloadBytes.kt",
+      "sha256": "cd9695851eda4c0684a5f60a3f68778db8397ac6470b6f6104edafb7a0e0cf7a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoQueueClaimPolicy.kt",
+      "sha256": "69bb27d2074b6ff7587aebead67e1dfc64b3900bab79e69ba2b1728191a11387"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoRuntimeState.kt",
+      "sha256": "abd3664fb8203cf389fe7ac9f122c0921f20c146c74d341720e4f6990b2ddaf6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoSiteProfiles.kt",
+      "sha256": "fe891c032e135b1b8af33a1f385eb335522020986171f69246c81d9489bc5bc8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoStaging.kt",
+      "sha256": "b09d1ae6c8bef75c66391d096a0dfe7cd5e0d993fa0fa741a55fce9d9546285b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoTransferJournal.kt",
+      "sha256": "827a3d99dac0c8ed200313072877e86b4d038b8ad33e6b57b6a94e6f5e62b63e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoTransferLimits.kt",
+      "sha256": "f52e7bd0ebc2198861d87fae30fdf2ce50bd674208e12f90d0b62aae60ae50ed"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/VideoTransferProgressPolicy.kt",
+      "sha256": "cae4bb0796a855ad6a231582a7b4a52b6a3710169a359483cd8c175c6ca7d778"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/WatchPornOriginalSource.kt",
+      "sha256": "360999d30eb4fb79121a641548877ec56ae77f851bc117ad04469208395d4cee"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/asterion/videoflow/WebDiscovery.kt",
+      "sha256": "f4378aa88f3c6be4566f74c92692b0f2fc9d01f82ffe3eaa326c681845eceac1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/AdapterRegistry.kt",
+      "sha256": "95261dac057988400e5a1ab579fdbdd9b07c86f35ada6aafccebb89418814387"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/AlbumImageExtractor.kt",
+      "sha256": "ab71d10b72e32dbd5f75b7b8b539c09e30599c802c04524cfb508af06e574e42"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/BootReceiver.kt",
+      "sha256": "1b24500acec453201a1710e5f7371f29a866f313ba115515c7d26e37809982ea"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/CatalogAdapters.kt",
+      "sha256": "c7bd1f0325903b4196814e3a13030df1c291b6eab8993855da3b28ff2b795978"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/CosplayStoragePolicy.kt",
+      "sha256": "36624e7896dc2c7bbc1a54615fa3deb4cbd403b0e633d141b5741ad8f74824c0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/CosplayTeleVideoCompleteness.kt",
+      "sha256": "49754e623a552b81648f9279b08926f6204a8155cee4af4c1c336b75f5772ab9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/DirectSiteAdapters.kt",
+      "sha256": "f95c9112f5d5838309d5b3dcef1adbe757978bb72b74fff80ac474965bdf459b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/ExportManager.kt",
+      "sha256": "01e0062b71275da82c68cbe5533eda7af97aa149ce374f48e28acd9590f9c077"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/FlatStoragePolicy.kt",
+      "sha256": "1bc9338bac0b6c923bd09cbf372c769f918b860bfeb14f5ac6afa6617f342446"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/FlowLinkEmitter.kt",
+      "sha256": "7ee2d7f3c0d106d3782b1ee75773b4925ae64daf117fc8201de7e76924b4b9c3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/GalleryAcquisitionBudget.kt",
+      "sha256": "d3c56714be8656184df88f8ca8768087309a4602eb39dd9eda7d9650e37e10bd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/GalleryDb.kt",
+      "sha256": "c721f7d71badabc00d9ac53b5b1d63b3321444189fe165e12e0e191fecb1145f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/GalleryDetailActivity.kt",
+      "sha256": "3c3a6e2dce01bfb6433e1a2ed9c16b5ee75ffd5a820f50475e6f66e7d497c801"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/GalleryOriginalUrl.kt",
+      "sha256": "81afcfb65e7283aeb4c77d26a853b86979eb4f900eae3e01b1dee92d16f1da9e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/GalleryRequestLedger.kt",
+      "sha256": "83440c5f821a059112c6264531283384c31852256892e196b3fd552d945758e6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/GallerySiteOriginalExtractors.kt",
+      "sha256": "b390c68e4e26b796d5c644b44e3513e2c832a93995291e9e59d7d15734a03b18"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/GenericSiteAdapter.kt",
+      "sha256": "2ed19afd791bf89ab9a320ab2e873717cdbaf862e84cb9466d90198ea921315d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/HttpClient.kt",
+      "sha256": "3b25960575823cb0851b20f34a6b3a72df2c8dec8b96f2fdba6cde0c4f547cc7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/KiutakuAdapter.kt",
+      "sha256": "eb3590d5ff32eeca6d62225f1f414e0f30c54fd3054bb53934e0e3e2eaca8072"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/KyoraSelectedGalleryIdentity.kt",
+      "sha256": "af0a07c46c4f7a34bee217f28a346e280edc0d137f37d5ac2b889ad4e1a67d86"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/LegacySourceImporter.kt",
+      "sha256": "f2efa824661820d0708ae0d864f5c222b715b04d8fea0c5199079f171d7f3497"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/MainActivity.kt",
+      "sha256": "a3336dc74e4645fa2f6fbc035680706779536f286fb28e28ead9e23fa473ebcc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/MediaStoreFiles.kt",
+      "sha256": "596a5da8e4c5be970cac542d2f22224b384667ecb5e4bf5038fec9793b57a57e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/Models.kt",
+      "sha256": "c93d89d189578b10ff4947bec7ecd98618677d0f473f9c785c79dbb39228e35a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/OriginalPayloadVerifier.kt",
+      "sha256": "efbd74cde8d1cc86cf645abaa21f1bd0544f8f9e485ce4c93c23cc118a17c715"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/Prefs.kt",
+      "sha256": "2081f13e642b7485a510bdcd2d33b1b036c8e3db8e78d4d76744528324f5ec33"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/ProviderWebActivity.kt",
+      "sha256": "afede1318bac6787d459778eb7a7ebf9286ee7092e3c31d5532bfd9cb7ea4618"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/RoundSyncBridge.kt",
+      "sha256": "302d16a1575f3fac1407907cc414581637448a41a8d1fe3e1e40697ba729d83b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/Scheduler.kt",
+      "sha256": "936f3e268f2a0674b49d016f74e4e812bdce3530cfa64d9be94fd65c31d82a59"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SelectedAlbumScope.kt",
+      "sha256": "df4cc53cef37854299a46751f27573d311b842d9070c0d99220489e4d37bd310"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SessionCookieProvider.kt",
+      "sha256": "0994af176c9b55169f4ecbf246ad6108d587a3ae84207b074a6b4c59ac337277"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SessionHtmlEnvelope.kt",
+      "sha256": "bd42967709d0d01e516b04c05ba93ca4005c6f71bae7c1e87274771de6eb0e2b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SiteLoginActivity.kt",
+      "sha256": "cfbdf5204baeb9d00b00088723e108cfd5fd03a2311da9d14aa94da4a37f129a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SoraFolderWebResolver.kt",
+      "sha256": "943287443c447f991a26378aff65d90b5c493530cbc034f592cf1ab6ab399dfc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SourceAdapter.kt",
+      "sha256": "c8f5c6480fb273bc580336500df7ad5e2fd3ce7f070223d1372ca33dc63acb00"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SyncControl.kt",
+      "sha256": "01d19cd7e2f0465ab986ca3ebf37988453dc6cfa01912cad35c877c207a2ed47"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SyncEngine.kt",
+      "sha256": "562a2a0d1b3e1f198647953bf18af9c453ac6f1f59a2d8925ebc7673611e19d0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SyncForegroundService.kt",
+      "sha256": "a7e9e51de32a03cb1ed8e1565e0c896230de7ce3168968e736021d9eff993037"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/SyncJobService.kt",
+      "sha256": "8a1871a73d72aaaf931b476c25b5373617c12cc6c127a0cdccab8539f7561dbf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/TagExclusions.kt",
+      "sha256": "f6991269074824a0b76ee7d3d9914fd78d97fae50a25206ad36f81c4f7829b08"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/galleryflow/TeraBoxResolver.kt",
+      "sha256": "8480c858d0584ac194be4c47f7ccff6019bd80836ae1bb606b5a11e096583d95"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AdultProviderListings.kt",
+      "sha256": "f8c5610345170a5460a1abd0e5392b4514214770f77433e4f6001606f38941ea"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AlohaDefaults.kt",
+      "sha256": "dc66853792346e05988c7009f7a313b69d5878b586622aa31d296dca6edce94f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AlohaSources.kt",
+      "sha256": "85e71ae016b00b004c7c3d9f8129ca8ec87445bc785cd7431632abe0547d3d21"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AppDb.kt",
+      "sha256": "00785895a212c6e72fe6dcb0b8ae028c2ae19498960e9a0ffc68e40ee1000f0c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AppPower.kt",
+      "sha256": "ae27d92eb67aefbd5a5ffdd81d1dc26ba7c254a378105b076266ae3603944aba"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ApprovedCosplayActions.kt",
+      "sha256": "c8998a3977b7ef9830c8358fd0668319902cc375a47af653344df956f8f3cd13"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ArchiveContent.kt",
+      "sha256": "b4870f89a07e8ce97b0dd7ebfc9c6ee5e86e52b82a121d1c369e9a68b3492773"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ArchiveIntegrity.kt",
+      "sha256": "5df1967c0745ed1cc3080118aa7d09abe5303996e40f1c0807c120ccdb30232e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ArchivebateDiagnostics.kt",
+      "sha256": "a1af76772ccfae41fe1c0117e51d360a2eab59eb15cff22a85278ad437fceb06"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ArchivebateListingPresence.kt",
+      "sha256": "c04dcf18ee834f5cefd0a17cbf6b2c752565335404efeea1412565d8497add6d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ArchivebateWatchActivity.kt",
+      "sha256": "91e0239fb03a408c7a858b41c8d715fa49fa85a6c14b110824ac66df6ec3622b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ArtworkPreviewCodec.kt",
+      "sha256": "f5fa6215e818f09c47d8868621547936e5bfd3fc43b2fc1f9fdd3e4b749455d2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AssetMarketplaceActivity.kt",
+      "sha256": "bdc7113cc8e9ef6769053223e55368193d4d19ac24a87c198a7cb7c54d72e5ed"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AssetsPanel.kt",
+      "sha256": "93b4a21a3ee70e521a8bc6613753a5ecd0475ed976687c308e0b2287ca25217c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionAccountPanels.kt",
+      "sha256": "75189b57a97fbe8c65900bb4541bcb72d30a9af29c84c75bb5feeedd13bb46d7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionAddedSitesPanel.kt",
+      "sha256": "0c5c64ce8b9c3463ec80ee0151ee743aac52276998ae3d4a89207450b61d4f82"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionAdultHub.kt",
+      "sha256": "6ae6c513df8e65077403cad20a050371eeacaa09929c9d61a633bf57f3f9fcf7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionApplication.kt",
+      "sha256": "1f385d4b01cf119a0dfbf000b5d0c0b9cdd549618f3d6ac9d27cddd42cdaafe6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionComicFollowing.kt",
+      "sha256": "f5430b89fbbaf9cd9bc12eb4746ed1f1589a969bbf5e2a574d7c9b23ce72fd40"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionContentSuggestions.kt",
+      "sha256": "0b054123a7443a7e9a99d61d61837dd0b0848140055fa9e8a7f97349fd0d00d3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionControlDiagnosticsProvider.kt",
+      "sha256": "3ab483b553e634be55c2e8844c55d7ba10058cd52c39be8d3a08f50b463fa06a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionCosplayGallery.kt",
+      "sha256": "2259ae0294e79630e7f0480ebd4e2eda792a491334c5598aaa73ad548a7d9de0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionDownloadIPC.kt",
+      "sha256": "097a59be81edc7fbe8de74a16c36d7282342a99017508fccd765651fcd4b8a61"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionHomeActivity.kt",
+      "sha256": "3f8774e6dccc9e00d51206c878c6d87dc396fe8d88f94681f0120601008a3f23"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionInAppUpdater.kt",
+      "sha256": "8a67cfab5112c0db9a0e45c1ff6cf43ab18a6d4edebcf135a7bfa4a3b64d069c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionPeerTrust.kt",
+      "sha256": "be0fdc4b903a3d8609c750e9200eba32493e074212c8d1394401cdc323eef380"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionRecommendations.kt",
+      "sha256": "88654107454592ea74789c707b4baa3da47996ab5f3f5aabbd472d81fa8a5e72"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionSearchHub.kt",
+      "sha256": "0121cf4990eb47c661c840db6be93d949fae12ee961fc679701f1cd103796c81"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionSmartAdd.kt",
+      "sha256": "538f69e66f15d11b9cd67a08c38d925f30365d10801cbafd72f170060afd601a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionSuggestedUi.kt",
+      "sha256": "61f6677d518816eac918947a7ec5c14761a3938e812e35c1a6afe307b0887971"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionUnifiedFollowing.kt",
+      "sha256": "cdfbdf7e059650f883e84bc96bdc7eb9540c52f7aa38c37f0135d9d63f50fa77"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionUpdateFileProvider.kt",
+      "sha256": "1b6af26b24948f0307e9125b9b141ab6c14f95fa75514d6fb05e82fcd7f35c28"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AsterionVideoAccounts.kt",
+      "sha256": "a188ef0678875084ce70b031fad8367f6b3019a9b9663296b5b62c4794174987"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AuthenticatedItemDownloader.kt",
+      "sha256": "44f5722952bca84345281b3502595ebbb3919f2f93ddb71ed8da242f2f296117"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AuthorizedEndpointInspector.kt",
+      "sha256": "3c44dda8a5bacc28832dbde3c094703fbec9038fa74c7106ce37d800d7e5469b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/AuthorizedOriginalResolver.kt",
+      "sha256": "ef971e89975d39a223d88db53083da3c8988bb1216ec01d05e9117696a6b7222"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/BackfillAgents.kt",
+      "sha256": "81eee3ad2112407576f000d5682bd9b66fa135e70cb0e77d8bd3d4a97ee5e0e1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/BackfillPerformance.kt",
+      "sha256": "9ccd5c2dcb23b14af1544425da694da11705c2068bb044ecb4cfb54ef107e052"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/BackfillStatusNotification.kt",
+      "sha256": "7169a5a5724e5709e60d6d8543313d23498b573f82a66839c4f4d4cb462a4390"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/BencodedTorrentManifest.kt",
+      "sha256": "38be02db31105c4a0206d6889547e707e6486fd92a1119d72985891080da076c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/BootReceiver.kt",
+      "sha256": "2240e0a3d602675a518df7d6e02af1f1d6aed37817f8ced417caf15f2dd68a97"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/BrowserImageFetch.kt",
+      "sha256": "015f7208e0621a4d655cc189695acdf14e658a8d71457f050d3d043d295426f9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/BrowserPageFetch.kt",
+      "sha256": "27c73ce0a85fb2aa672c915e0e0a90ba3cbc2d526eba4b964c5b0784f849acf7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CatalogDiscovery.kt",
+      "sha256": "2ae9fe226bb3770882228c31d8775cf12063028e313eac781b70e0c0b7a5512d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CatalogSearchUi.kt",
+      "sha256": "4ceebe92ad4cd1401f9fd862b7e95d4e2a69fedaa3cdbffd39abe1552bbe0cff"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ChapterArchiveJobService.kt",
+      "sha256": "f2bb13b1472c5df349888b1a9415ee1182cb390f1e26bb655706bf8a4cfdc0e0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ChapterArchives.kt",
+      "sha256": "0da8ec1732c478554b6b49ba27070f7b71b24f226fe3b2e59a2d840b0d157cd2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ChapterQueue.kt",
+      "sha256": "5037f0a0e37544d13bac4ccf7352cbe904ae208f44035c3e134fe487ae38c0ff"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ChapterRecovery.kt",
+      "sha256": "6165fdedf277bd5805452c06c048a5bc8b569cfef07fea83f8272cdf273e0c14"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ChapterScraper.kt",
+      "sha256": "43489b84badb5c3a8353d510c57938f15f865fca3fdb00d0ee869aefeb74a7dc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CloudOriginalRouting.kt",
+      "sha256": "ab0709273edccda26447d1cb8e6be903c10d89e69672bff4d32c736c37ebe2f2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CloudTorrentPolicy.kt",
+      "sha256": "d451fb91ab5d2332c45f3393996d5741d6741dcbd9b03266f38e9fa4e45f681a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CloudUploadQueue.kt",
+      "sha256": "4220b7ba24a1e0f31d9a83933167223e0016aa1a0c3baa0448580a62cd720548"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ContentVerticalsPanel.kt",
+      "sha256": "4e215af001adbce6388fc6dec80edda5d61b759ca9ec5611866fa1f251296388"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CosplayGalleryVisibility.kt",
+      "sha256": "b4b133f7ef5e0a87ec78e2579c847faf6af37ddc96006a0f5acf50e7a07756dc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CrashDiagnostics.kt",
+      "sha256": "17bb01ec8f952f8bf79021b376d74d87129df7ac222d7ec6f44f5559cb59be99"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorArchiveScheduler.kt",
+      "sha256": "4de6f68d5f4d9dd9b3ef3e4529e8581f69cfc52cd85da94fca91a649ee7b368b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorArchiveUi.kt",
+      "sha256": "cd9285504aabd45e25df6c5cd7ab0a7de58a31b649ae0bd0c3ba34e2a2eb1853"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorArchives.kt",
+      "sha256": "369263b3a7a38d1a31d707b0ed5552db62ffc74f3f08c49fc50166b6497886ed"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorLinkDiscovery.kt",
+      "sha256": "4bbeae8603cba83c808fcd9049c87aab16a24a73ca8d6ff7c0162f10d288154d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorNameTokens.kt",
+      "sha256": "6c29150c1af88e8d994d5f8ea30855b91b1bb0fa05e23ab9f056ae15391a69e3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorNames.kt",
+      "sha256": "6cd574a9d300a40940edf9fcfdbc5275e231cc72f3a3862996d6228fac51b5da"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorPreviews.kt",
+      "sha256": "0a48f44dd854eae7dd37a94707c72a287745b786875056f5152d9949b30f06d4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CreatorSiteBackfill.kt",
+      "sha256": "57045d3a0fee53fc5260668f504de301a52753ec41608dc9fbf5b446da15058d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CrossPlatformCreatorProfiles.kt",
+      "sha256": "05c6c7aeba44af7e964a70a34067890790b6892249ff41005d0330defd81315f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/CrossSourceDedup.kt",
+      "sha256": "06053420573082210ce0db7928988349c483d47fa3a45e50f05b8c87f371eaa4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DirectDownloadClearPolicy.kt",
+      "sha256": "de3e2870073a898a778ab702c7b876ec6843ed9195f8e58de9361d0c73865139"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DirectDownloadRetry.kt",
+      "sha256": "a8d90a96b30c3503bb16504bc309c1edb4d696fb4037c30a805cb31fe8f219a9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DirectDownloadTracker.kt",
+      "sha256": "2ebb3f87a533fa7350cd0a29f1a5af8ee6773a51501a0f14cc95f2bfb9251358"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DirectRetryPolicy.kt",
+      "sha256": "b25a050a3f3df16c532f5e7a4bd9b38cc0efa0698d8149f53a1133a39689412c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DirectTransferStallPolicy.kt",
+      "sha256": "acf09d2669b04b8535f21920bda1df65150d20ed395e169069c4e43febe46658"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DoujinGalleryPanel.kt",
+      "sha256": "67ff878f94a6346f4115d83c985bcc01f17994e533f98d84b6b8160d89bca60b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DownloadConsentPolicy.kt",
+      "sha256": "9b8be465967944c7375c65e49d82974a235e7bfc897c92f8156c0f53de0bbbdb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DownloadOverviewPolicy.kt",
+      "sha256": "944cb173efc71f7b1ffb79401787dc24a11c36cd038e6690124ed64c8dd5557a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DownloadProgressPolicy.kt",
+      "sha256": "69d6adb614379dca011c4166a36e5f769ce1739806d91d76f6c33e3065dc3edf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DownloadQueueRecoveryPolicy.kt",
+      "sha256": "72a8fb522718cb73d8140afd7dd18aeb97fb41d00499b201369f14787ac58e10"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DownloadStateSignalProvider.kt",
+      "sha256": "c90c85ba8af1fc87c256b2a888a83ed88ad841be6fc8888c721ca2a31f03a4b1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DownloadStateSignals.kt",
+      "sha256": "10d9f20984fb482db49904b833b93851495f02eddaa441b1727694d49f56227f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/DownloaderHubActivity.kt",
+      "sha256": "269b484eca12a0cb56db16f3e2c78438af79bc49f7470615d330d488fe092104"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/EmergencyBackfillStopReceiver.kt",
+      "sha256": "8caf0a7dabda193b66393214ddedfeaa0c42b3a3812bfe1b98428aba84f2625e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/FileSaveLockPolicy.kt",
+      "sha256": "424154340d6f37fbb1b3a1bdf3832ba770dea6fc6b948bdef49116470955b2c1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/FileStore.kt",
+      "sha256": "b9c77e2ebdb015aec857fc036e3daddb6c223aaedb3f3aa8e1ff49fb4818a299"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/FollowingActivity.kt",
+      "sha256": "e48b06a7c8140d9e35a421367a629dd4b24474b4b59204b9ef98bac797f98365"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/GamePortPlanner.kt",
+      "sha256": "8265d7589239ac2faf31ea857a75e2861c3df4ed7126a603f380c9bc7a5dcf0a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/GameTorrentPolicy.kt",
+      "sha256": "3d04722f9a5d6e32819565bd48a1a434f2f4acc1fbcb8c661904ceb9fee91dbf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/GeneralVideoSearch.kt",
+      "sha256": "86612c7ba9055f22c18a0de58fb80d47ddaf71f0c42d38617792103a41e5dc9c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/IndexedMediaQuality.kt",
+      "sha256": "d601b1167fa941b71ea71d2bf663f80b223db6379442a8679d8a0cbbe0fafc35"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/InputParser.kt",
+      "sha256": "9b32850ede6d5a331fd412ece13ecfed64cc11f23e97ea59fcff750ff0a6d177"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/InterAppOriginalCompletionPolicy.kt",
+      "sha256": "d57e3a0f6f32e13636bfece4d37a511a10f2abd53f6047310d8655278bc7af4a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KeywordSources.kt",
+      "sha256": "59a856912c8ddc0f3d446ca17767e194531821572312d4e16b6b3be66b8d526d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KoikatsuCardAgents.kt",
+      "sha256": "970f1f65197e709a448c55f1e7548ff90a5e8d012335088c8d6d18b08bdde374"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KoikatsuCards.kt",
+      "sha256": "e9f3f0664e7019620cd17bb0e9da8d8a59b35ccdbfc887ff386249d3833381a2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KoikatsuFollowing.kt",
+      "sha256": "3daadd6387a0309fb33aa8784e958bbeab2c4cbfd0113828f50309eb8de29817"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KoikatsuInlineSearch.kt",
+      "sha256": "6cd6df7a5ef8000ae237de1f970221166d6d812e5fe9b2b03f256fee2954a0da"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KurohaMediaPreview.kt",
+      "sha256": "8b51ce4bc1597cecc5e0dc38446f62095879bcf5b6e82b86847899bd6813e8d7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KyoraCreatorPreviews.kt",
+      "sha256": "50a2e3d1b051c581e80d47a25c2f27e94e71568e1feb210973997e472ceabbb3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/KyoraGalleryCoverPolicy.kt",
+      "sha256": "7c1d49ca50942967f8f162408b22ce509082455b7f859541e2c11d91e14bb7c4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/LegacyPixivInventory.kt",
+      "sha256": "88ebe904caaadc6a4eea29aabe24a9b78772aa1edd976d3ea928d0ff0681d7f6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/LiveCursorLogic.kt",
+      "sha256": "887050273d45300433ccb3a570e76ea244f9b7efaa999c08ea2773697e35ab92"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/LoginActivity.kt",
+      "sha256": "6de7c1253ff2da995a3ef3a8beb87dedf29b4140a6c0eda7a516cadc778072f7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/MainActivity.kt",
+      "sha256": "242dd3f9a5787d3b1bf242cd325e4cc810ce228658304bffc13654b1d66ab249"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/MangaDexChapters.kt",
+      "sha256": "37edf74a5f2e5be14f1c49a654437dc3f088a677371e925ab0223afa4cdea646"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ModelOriginalPayloadFormat.kt",
+      "sha256": "6d96a2fc815ab6d5c02d7fda9faa75eb099b9492f24a46c6091834923772d3eb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ModuleOriginalAgents.kt",
+      "sha256": "3e2d228910dc78827d7ae2cedd72a54bfe9e940b8d53512cea05a956ca800fdb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/MonotonicProgressPublisher.kt",
+      "sha256": "5ea17dccb1e4fe5f27eda54d65448881cb79bfb59f566bd77ce538179a4e7f4b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/Mp4SeriesPanel.kt",
+      "sha256": "73144d29e0e299fa5c05d33bebaa655307fb4893e73b4044b291605c82bfd45f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/Mp4SeriesRules.kt",
+      "sha256": "7aa7f7914b1e3a5780d4088aacc5fd8a3447236dc62f3caef547083a5b6defce"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/Mp4SeriesStore.kt",
+      "sha256": "d411507d9e164f273fba75c27a0dccd3affe11102b3f60bba5a5e59e6c5a72e4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/Mp4SeriesSync.kt",
+      "sha256": "5c21d8a3a02589a2cc140e2657c4e43d483bc4f9b54b696985740350b331ba6f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/Mp4VolumeDispatcher.kt",
+      "sha256": "0306d634f11e0ba93377d1e6df8538871eb6d8c60d436d54f9e8f14e7c49b52e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/MultiTorrentSearch.kt",
+      "sha256": "94858fa1d687f8298e22715b4b7936acd685929dd4bfa9f4e37ee26bc71f9181"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NameDiscovery.kt",
+      "sha256": "7bc3dc0b018f17c3c37a47a33e56fd7ba54d00f2b9c52536f9d554acee5c1bb7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduCloudQueue.kt",
+      "sha256": "cad73ef6872fc1c2e7c58e252729eec3ec98a1118bb28048190a2134a854a866"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduCloudScheduler.kt",
+      "sha256": "a32b398c1aa4ee228450a25c6f1e20fe55d132b3afa0c0d72deffe51bed3f72d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduRemoteProof.kt",
+      "sha256": "bb5af75f4ba4f2af018ed538d1dd2d68cd8b74ef5439fe8bce67692338118446"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduSettings.kt",
+      "sha256": "eb3e27c6e8ddce1d9c680fcc04f10414dc72f58e8abca394665ab641c3589cae"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduSettingsDialog.kt",
+      "sha256": "c3b9a17d0f867362a4823dfec7bd22c9c71cf3c0bfed78e9960b9eacd271e43d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduTeraboxClient.kt",
+      "sha256": "cfb96d36a3e534747ecd294db8c84c4cea80705e79be0c64e330abe98799e434"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduUploadEngine.kt",
+      "sha256": "31e6c9234fabe44d267a523b8680d6600f5711e9e4fbd36ad3d0911a43bfdc9b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NduUploadService.kt",
+      "sha256": "fe4a96706878598deac747574e7734f16a74c850833f02f03a475a93b10a0815"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NetworkCookies.kt",
+      "sha256": "39549cc6c3c12f3408bb08f943a22627303a9c9099f808c632bd91be15728c5c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NetworkRequestRegistry.kt",
+      "sha256": "faeea2073c5d47b7e455963fb6571881360c52c5ab81b71eb6c5da7f339a8dc1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NhentaiChapters.kt",
+      "sha256": "2f2ff3314e1b1c9e02a4cd0c74425d094579a1c334e99b45418371041b9ac1c9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NocturneDesign.kt",
+      "sha256": "249635e4101c6cb1fab3447f9fc67ff9f128e9672201216074866b0357790bc4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NovelAccountPolicy.kt",
+      "sha256": "b2a7848c84d08664eb12443b0488ba2831eaa099cc66bf79ae36728d61334f90"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NovelEpub.kt",
+      "sha256": "492d48fbdaf9a5e460976ea0c3b22cf8c4f2336b318d85e6231225565a669574"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NovelEpubQueue.kt",
+      "sha256": "264b28194d4019d6704f7565260e2db28df6a143a3565444c397994c73c036b5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NovelEpubService.kt",
+      "sha256": "97d2d3afbf99157831e9a14b4aacc148bfdfc8432e66cd9c242ec2a9e2c7fb34"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/NovelHttpPacing.kt",
+      "sha256": "16f809292073ba9ecd5b624835f4779436e6fd5f22b790e4e1e73c15ad05ed5d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/OfflineVnActivity.kt",
+      "sha256": "1fce745e9d167112ded7e47bb1186dfc1dd3e2864528c27bf1f0b231e4a22ef0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/OpenWebModelPageDiscovery.kt",
+      "sha256": "8bedad8234aade46afa88942ae6a1c76038b992acf522dba95bf280224d6789a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/OpenWebModelSearch.kt",
+      "sha256": "89b485466bc0e105c27bb1268b0369571bf3dfc34059596143dd9f27ebab927a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/OriginalFileReceipt.kt",
+      "sha256": "6ffa202fc6b4e26036eba9d54c87ebc52bf37f26f1111b99dda21c05d50177b5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/OriginalReceiptState.kt",
+      "sha256": "34fceba3c19f5532aa0f998dcb92f1b5f779a4e656108a5217c3e2aecbacf2f1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/OriginalReceiptVerifier.kt",
+      "sha256": "50229541f3520e9b0ea803e55762f116e314fdda9bdad9172051c2a7440b17e1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PerformerFollowPolicy.kt",
+      "sha256": "5e0351f2d0ea3f1932415334fd9589b167520e056121aea98be2630122524f3e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PerformerIdentity.kt",
+      "sha256": "e8d221ad6185269ea57c1a179a8a7ada492b676e276c08da842c0a6cfbce8d65"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PerformerMediaAttribution.kt",
+      "sha256": "bd476ff6fd162eb86b6d9b4ee91d225f026d06ad63b365556f9bd3fcc6a8ca8a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivApi.kt",
+      "sha256": "61eb5994f570e5de6e47472413129709ba8c82c0b2bf29169f5b10a32e7b0d6d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivCsrf.kt",
+      "sha256": "8e708a5e48c0d055789d79d676c0229ee87630b650fa476afeefd3f608345bc2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivForegroundLifetimePolicy.kt",
+      "sha256": "740a48648f21600603a5b90f1220088be74fa34d946fcd646b12852c9ba93000"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivLegacySyncGate.kt",
+      "sha256": "f6d9e436cbebd3d719fc12ff3089acbac99511a7838735ff28d7b96dd4fefeb3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivLoginVerifier.kt",
+      "sha256": "59bc75284484828f65ef53784b3ea3eb3fc247b9ec88be74cd4a2e42737635c9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivUnifiedArtistAdmission.kt",
+      "sha256": "618e7fe36b746319e7b2ff5d81899ec9e497a3136887bcd1257a4d49588e3427"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivUnifiedFeatures.kt",
+      "sha256": "66ee506b3b118ba9e6bd057abf991558cc0cd40046df7ad252fc1ba1dbe0f52f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PixivWebLoginResult.kt",
+      "sha256": "9905606868eb7695bfca7e71b684010954b93a9060dd7eb1d0a59fafdb014d47"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PortableGameExporter.kt",
+      "sha256": "fddb31dc12d8bc0fc8953c3e4be84bcbaa81d1bb7fdb40f1c58a4acf9cff4b81"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PreviewLoadExecutor.kt",
+      "sha256": "e73d824973b9b786b29c2bb64f317fce7b13f51c3e8133d4892366f5e1584848"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ProviderBackfillActions.kt",
+      "sha256": "13edb72506ffaa8fdddb9f5210a528a7d00c5359adb2fe7079bf577670fb9b52"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ProviderRetirement.kt",
+      "sha256": "0b222643299f56e39bc364f7206c1ee0fdc15c54a0bf2559562b89b77f8c11d9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PublicCreatorEvidence.kt",
+      "sha256": "017affcc4da23ad36b95f8434551e61d9690363a5ccb2e39a4a0cbdfae658cfc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PublisherPreviewFallback.kt",
+      "sha256": "ac5cbf51983f22f0e076e74118298cffbd66dfea298047f097f7048b048a2cfa"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/PublisherSearchPoster.kt",
+      "sha256": "31328f53433ee406c59458a02a4accdd9631a83e7c00eeff4f10730435b0a836"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/RemoteImageLoader.kt",
+      "sha256": "4dae63b6f1eadda832e4c6d73a6df2ecc99ce53c42ff626cdfd9af14d7c1bad3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ResourceDownloads.kt",
+      "sha256": "42e4d0aff17a8e6ef336bf830b01c4c961fde5a8ddd41ba39ae242f2a5a1f9ab"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/RoundSyncBridge.kt",
+      "sha256": "2a2f76e9ffa63afe6b49458338bb817c714fb4df8be7f82af0747d90c6692425"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/RounderDispatch.kt",
+      "sha256": "c2dec7ca2d73e6e78e3df586501f15fb4a9f363c95d0eaa1435bb3becc67db22"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/RounderDownloadCompleteReceiver.kt",
+      "sha256": "b19cefd9c20cc0abef021752a00837a82619937e0fe268cc50eed261bebaad13"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/RounderInventoryIndex.kt",
+      "sha256": "73d8de1c4119c69fdda5bd86ef12f49427d505556778af54b2ec3ffa638c2e7f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/RounderTreeScanner.kt",
+      "sha256": "e299494b33e6f4072de10962c4d874b1ba20d8aba8eb61b7df6cb9721adb31ae"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/Rule34PosterEvidence.kt",
+      "sha256": "5892c7d9aa831ba5f06baa44643a05dc52077f9cfc4c7b9d988770be42ed8d83"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/Scheduler.kt",
+      "sha256": "a9e09905e7022353a4d08d55b50f79d76114528365b57de6f2d1551e911e0432"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SearchExactness.kt",
+      "sha256": "73358b541bbaafc6a11fe810627010497a0a183702316648c300ebfe316b174f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SearchRanking.kt",
+      "sha256": "0bb564baa208ba67020920c6415d48be3151a104b8ca58fe09aa1f5366af6742"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SearchResultsDb.kt",
+      "sha256": "894945cc84f6b3a775682fa5cfbcd93b6c7476bd72c85bcddbedc0a9ea58d877"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SelectedPlayerWaitPolicy.kt",
+      "sha256": "f5612d57c5090d48a0ab1c1e07ca254d157b05eae1dabccb7c93b25a321d2df9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SelectedVideoIframePolicy.kt",
+      "sha256": "84a18ab31905f362b252886fd5a09efd086fb249431d7a12673095b55a5b3bca"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SelectedVideoRouter.kt",
+      "sha256": "27f273d6cfac2eb2817c1bf76b520bb70f46a01fc01d88418a21e8c8ea46fdb1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SequenceOrder.kt",
+      "sha256": "7ca8001372bce124989cb5a76ff2547852c56d1e752f80b8fd4f82080259560f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SessionStore.kt",
+      "sha256": "f4ca8c98915eb4e505be391fbad24d752bf322dcab3ceef6d351248c1e78daa3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SiteBackfillProfiles.kt",
+      "sha256": "395ece729d002e286794afebf39c6b60d74d861b69e0b44305a8d2ef8ad5974f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SiteControls.kt",
+      "sha256": "ccdc8d7325640ac70c8117b591f21c9aba291574bfeef4719e167b99c6156003"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SitePreviewImage.kt",
+      "sha256": "cc40ee1759c529891581d8d7deade1f20e717fba6b583fa64c382d2b9ed8ff24"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SiteRunControl.kt",
+      "sha256": "8259636d018df43fca5c8e0f3ab0c4c5236a54e7ac0c71215f79027cda3d5c5f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SiteRunJob.kt",
+      "sha256": "9cd2eb3393027c46b121ba23f970b847ee4e409c8438fc1030d645e35e1fe857"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SourceIndex.kt",
+      "sha256": "a43a4e42b9b5baa77d20fbe821b2c7029ae913b0ca190bb4abd8e76bdcc2a325"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SourceIndexPanel.kt",
+      "sha256": "c89a5de054e347b8037c342707a1da05f37f3450e4e8d2baa7078576526d262f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SourceRouter.kt",
+      "sha256": "bc5e8688d3f679133cdf1c3640b930c8c1d14256e755353e0c93f3e833b9a98c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SushiScanChapters.kt",
+      "sha256": "e16b8201b14730e3d0d71f79e47b5a83f9ced4a88d3950ff26fbdcccab38f328"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SyncControl.kt",
+      "sha256": "222c4c62619d75bca14d7f66869dfd95df7842b1b67a4f499d80879b06839c4d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SyncEngine.kt",
+      "sha256": "0bdb0d84c4decde676e9a30d438363e05f41c20add0e72af383b2a1feeff5a63"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SyncForegroundService.kt",
+      "sha256": "742b971eddab1beec0ff273320fe2376d8c9c9390201534b7fc8a89389ada7c5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/SyncJobService.kt",
+      "sha256": "c9a9076cfc08e1d89a6e155c7d9bf02b96e453187e6b3a55e6dd4290cda6cdd4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TagExclusionPolicy.kt",
+      "sha256": "0503ced6d73858da0f940f1b847d9e91a088c7bf7bed32cfbd33d90a770bb265"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TeraBoxRemoteOriginals.kt",
+      "sha256": "759693a89f169ea11288648f35cc0e69f538b83782fa291398d135f68b5a0359"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TeraboxSettings.kt",
+      "sha256": "d2df3ea335e2a898050474bb2416c24e3a5e3126dfc991006c216412f383d62c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TeraboxSettingsDialog.kt",
+      "sha256": "c0f842b5f07da355c007493d148ecc10a91d3cd11597e852a7ef589f1b4da3c5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TeraboxUploader.kt",
+      "sha256": "74c698dd02ca4a628f59bb09dfc91dcad1f370f998b543d05bf71c37f5fbb7e8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/ThumbnailFailureJournal.kt",
+      "sha256": "0cea9c7113a852c81f0adb99a4086d632225bc002960772fee3209cabe97a794"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentChooserPagination.kt",
+      "sha256": "3aafedb0c1906f12e4ba61f1b0070661297b4779b336f230adca9ce941068f4d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentContentRisk.kt",
+      "sha256": "9da50594eae16cb26a72a56a3efc573a7136e79ec241bf1cfb2833146a9bde1c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentDeferredSelection.kt",
+      "sha256": "aa948c0f74cde550cc18aba3226579bfb58240f19432f3e5f7ddc91e3e8d2afa"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentDescriptorProvider.kt",
+      "sha256": "91a3f032ec9129e3b7f50dd85bd81544185e683e14acfce39df094b899817a65"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentGalleryClassifier.kt",
+      "sha256": "d6fa6c6942c78d4bebe237e1fbbc7e6468012b7d238bcecf9f0f01b87cdf42a9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentMetadataBridge.kt",
+      "sha256": "410e6327d6b5136dc05c0970e32529694106e8298e81df6518fd1b68d58e0ec1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentPeerDiagnostics.kt",
+      "sha256": "a4dbf988ae3ef4d615f7f44ace26d6468f91a3e222750d467330946249866232"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentQuarantineGate.kt",
+      "sha256": "ff5fc598c5ba65812b6a63cd2e193ba8981e781fa1ea9d9fd441d58bb6842288"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentSafetyGate.kt",
+      "sha256": "5c51b1007ed9516ff581c2d33b8160cc6a1a08c5b2d2df773c0a1d49cb1f5075"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentSearchUi.kt",
+      "sha256": "b9e25b8aa899373e180dcd4b37c94b0fffdb7c72c9e04201820f69993cb9fe21"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentServiceLifetimePolicy.kt",
+      "sha256": "00b02c719ce89e2c5ed2251647473c12f8978c6a266f37627a5066e22b48a200"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentSourceBackfill.kt",
+      "sha256": "721dda7f11420578b3694d2a9b7990b1b7eaac9f982518cf654895aae2fb4799"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentTransfers.kt",
+      "sha256": "514475a8fe57b4e2a7f13123ab58dd1f0802a901615e365a0209d608554c6122"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/TorrentVerifiedExport.kt",
+      "sha256": "0d98919136eafae387554204a1738f1d89ee20386c83b8d8610cccbe6928c3e8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/UiKit.kt",
+      "sha256": "9cf5f6affe225caf8397a779b569efb62b05f00192e39622184c7904999e2740"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/UnifiedDownloadsUi.kt",
+      "sha256": "6d5e2de6cddcf5465d0160ef829b60854ad243d24e39a66f6d9d492e9e9d84e6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/UnifiedKyoraFeatures.kt",
+      "sha256": "f1392e7e2cd121566703b11c91ddf94c89140c7b69b1c4cd960a410a7b8fad0b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/UnifiedMediaGrid.kt",
+      "sha256": "b0ad38d1acd9a77d151bfc8af27b8f16c8d93d11d05e7f9e0e8b9fa180407f45"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/UnifiedVideoFlowFeatures.kt",
+      "sha256": "b209732d7e11a3a1788ad81cca8a48ab60097a0cf950e044b99641a3b5f690c8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/UniversalBackfill.kt",
+      "sha256": "c3cc50dc0bb1b1ab5d6f32c9037b0e2a758a2b2e28cdc6901a74edc04d0e8988"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/VerifiedSiteCatalogApi.kt",
+      "sha256": "7880bc04c4f2d267a805573be2563c97ecb41e03813eaae26c8b68c2a00e14f4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/VideoSearchPreviews.kt",
+      "sha256": "43366c6995f8b0c44882d70b806528a46930170c05420a59afe38c5657332b4b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/VisibleMediaSupport.kt",
+      "sha256": "78c22f0016822483a0b6cd84feb56a08bbff8e3d2e31a7b512158e61e4918347"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/WatchPornPanel.kt",
+      "sha256": "f2e3f06448a36f537a6c61cb78cca593019a3eee426f98b295fbf08488b430d5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XCreatorProfiles.kt",
+      "sha256": "f7c758109e4f56f8529e4363d4374ef780a2ea116ed05b4baa0d9a6398f39d0c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XFollowingImportActivity.kt",
+      "sha256": "7f4406aa8e3398f5bd45eca7df840cb6afb081991708a406ab6870a86e021e9d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XFollowingImportPolicy.kt",
+      "sha256": "516ce7388f7944198d17709faeea490600278cd1478c39823e0e877539a1cf75"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XMediaCaptureActivity.kt",
+      "sha256": "3e18fff9b4bd31d517d29a621b85dcc344a46e232cd3d8020627065e057d01ca"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XPhotoEngine.kt",
+      "sha256": "c53c2be783e28e027407b3c6a691f76ffe0c07350eb7ff82169caa3e47944b48"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XPhotoQueue.kt",
+      "sha256": "ab247a70763f38923ac96c674428456a00fc159a481390b0e462ca2f943e32e5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XPhotoScheduler.kt",
+      "sha256": "2c5510ef75c748a2d7812ae4383ed562b5a641407700b04d9d73503f378fe709"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XProfileUrlPolicy.kt",
+      "sha256": "90d87ae22ae383ea8575899d9d1a3c5fcfd9413bb28f86d7bf77b4a5f8a12b39"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/java/com/azrael/pixivdumpsync/XXXClubTorrentSource.kt",
+      "sha256": "cc4d0731b6f8cdead360a1d3f09614d64f2b99f47978d75e9ea038d17b7b771d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_asterion_downloader.xml",
+      "sha256": "68a25b4b3aec0589aa55f45507fb89dfa28d4c5a6e687c2896f11f9e20391aee"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_kuroha.xml",
+      "sha256": "60e907f48a97ad51d6507ec1cbde5b2d04ba2efa3ab6a790e1c619ea93cd2519"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_nav_add.xml",
+      "sha256": "5479a4f21c7aea9cd67bf13542c75097b2238250c9b122032ba42f647f088ee5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_nav_downloads.xml",
+      "sha256": "d954389f797ddae2042af682ca09275bf9f2488dca0f834fa40bda3005822332"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_nav_home.xml",
+      "sha256": "de044aa90bfd8b026c1540b2aa4cea1392e596b177bbe23098e3218367b25d25"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_nav_search.xml",
+      "sha256": "8e77ba7c2404b2464412f989f355e6349349dd60f13dbf27869327c2d7cc271a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_nav_suggest.xml",
+      "sha256": "28b7771ca8f5033af96242bd7c8a21f7d855e9b1571b24efe754c88c57f4572c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_nocturne_mark.xml",
+      "sha256": "a02b4e1aeab378c76eaf3be6351ac5ec1f4fe2c1c3ee3cf6d098b9199a76cf8a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_pixiflow.xml",
+      "sha256": "b1fe5c56d73a1abba8fad3610d4bc01e08c8dbc4e4693352f68139ffac6f81d8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_creator.xml",
+      "sha256": "8ef9317661c7955d850d8b54dd8ca7355b31c2aec1d40bd2099bb02f3b981865"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_koikatsu.xml",
+      "sha256": "f2b193ea03ce384701f37f6f3c77a579a84ccc3df3520227f8a3b3a5c7ee5ae1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_kyora.xml",
+      "sha256": "ca17595598074f9d23ec1ff35db97dde98eb9b93dfc8112a5036327adc525085"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_pixiv.xml",
+      "sha256": "70de29d402e5c6cb0b6af3209eebc27f5ea956cbe6e6199c4b54e1b76ce9a3aa"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_site.xml",
+      "sha256": "8d455e300898ef152491c3435a8569444e2e3697719c88f8204fd5bfc6557110"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_toonily.xml",
+      "sha256": "d9fbdf262fc201a29b5a44e8f7e5048e9b6234aeb5dc5fe3190d8c45888608e9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_video.xml",
+      "sha256": "d6ba71f95cb45fef2e071ffbd618a1efc15909fda13d87a1557cd98ad37b07ed"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_source_x.xml",
+      "sha256": "3379cfa584c058e5412d1e22e3640ccef3bb85f0c7ba77270db8c5b61ee6f0c2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/drawable/ic_videoflow.xml",
+      "sha256": "5911721c07b8271688bcb05faf142c33ed768ef16877eb3d221415c16bbdeef7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/main/res/values/strings.xml",
+      "sha256": "e9571db846524f705690b69d9f0437488d1cd5319227679078f544b75f1503ad"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/phonepilot/AndroidManifest.xml",
+      "sha256": "9db3f4ee977a707aed62c753d944bb7009c6afe999a32dce842921ce42a4425e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/phonepilot/res/values/strings.xml",
+      "sha256": "2e3256ec855ff0189000803121785ed975a941a944303753bc150b4e5e3ca43e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/pilot/AndroidManifest.xml",
+      "sha256": "c501672cba42215b1a61c557954a80f6cdf576a25270dee7d92a1f469baf72c3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/pilot/res/values/strings.xml",
+      "sha256": "475d3a6c195838ec83926026c345d707a6680f13739049e940da96f9500158a5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/preview/res/drawable/ic_kuroha.xml",
+      "sha256": "a02b4e1aeab378c76eaf3be6351ac5ec1f4fe2c1c3ee3cf6d098b9199a76cf8a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/preview/res/values/strings.xml",
+      "sha256": "8a8a91e1ad17c35e0c546a7b696ee7ba202da0b40344c71d97d9f3b65f8fc42e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/providerpilot/AndroidManifest.xml",
+      "sha256": "4edeaab9cb5d1d55221bd2c3305d176c0ef41d4f482517bce9bf7821fd09f832"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/ActualDownloadSimulationTest.kt",
+      "sha256": "9b5e8c30c08183530067b4d96f8c269b0c79018f228b6e3b992537a27e6426fd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/ArchivebatePublishedEmbedTest.kt",
+      "sha256": "7118ac366335491ad2b2360aab66744ecf98813d2e5cc9d933604cf2d8e91c12"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/ArchivebateSelectedMediaTest.kt",
+      "sha256": "77978179ac74060f4851fd27589d0fa0f7f428edb9d0f4b62dbdedbf4f172123"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/BubblecumSelectedOriginalSourceTest.kt",
+      "sha256": "62d190b626d35f52f2e0b803076585cd0c9596fbc2afb35c61df44aa6f57d4ea"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/CosplayTeleExactIframeTransferTest.kt",
+      "sha256": "385bda711841c19275ae73292202a5cabae7446751ab18564a9eb458c8bbef2d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/CosplayTeleRenderedPlayerRegressionTest.kt",
+      "sha256": "9ee9ee274db06f8698c33a539a7478fb9851955699ba95eaf48b77776e6d43eb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/EpornerFirstPartyFormatsTest.kt",
+      "sha256": "1cbdf7183631b3fe5c5a33fa1fb1423bf0dfb8b8070e47fc259d995b2c72c7c0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/EpornerGatewayTest.kt",
+      "sha256": "fc0baf613f7313a5cfd06a8b90d6c7769594cbcb7af5649c27d1eb516c2f26cb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/EpornerOriginalSourceTest.kt",
+      "sha256": "699da55b41533f24d626eff998daf056ec1c4b04446757688154fa664d690933"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/FreePornVideosOriginalSourceTest.kt",
+      "sha256": "61bdc1093512ab7a547d79ce5b7bae93adff11b5ca97049441633dfe4f3773e8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/FreedlSelectedOriginalTest.kt",
+      "sha256": "bf17b8fe70c9616568a0159b1b1be7a37183b7af361861ff2fefd32601e58eaf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/FullLengthVideoPolicyTest.kt",
+      "sha256": "1e4198cc5dab205aefb51742bc3c0db3977d37479940403ae0ddb62e48a29079"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/FullPornerParallelOriginalTest.kt",
+      "sha256": "eba273ff5e4834748c523d7acc3bf6681c4906ecfd46fb0f7ca05c6e48b114bd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/FullPornerPublishedQualitiesTest.kt",
+      "sha256": "77a61882bc91e62972baf0ba6c7f43e4d357a57c9ff84a82d213ab2fd154dba3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/HelloPornFailurePolicyTest.kt",
+      "sha256": "ecc0377a6311d31035a9a28797676202ce4470950d1ff30418135c895b7faafa"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/HentaiHavenEpisodeSourceTest.kt",
+      "sha256": "78b4bcce031515ee71bcc631de04be1e0e10a06ae3937b96ac6857d820db7ab9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/HentaiVostaPolicyTest.kt",
+      "sha256": "4c6996cce3f56d29e4d8376365dae3654950a0cf94b79d861e98b971dc4405d1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/JavGuruJkNativeHlsTest.kt",
+      "sha256": "9ec401459afca1e5d9d52aa422163424b5a1b0816aa4605edd88c9051eb3781a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/JavGuruJkSelectedOriginalTest.kt",
+      "sha256": "640df326693e0e80835640b35f4396b5fe63a267fa149cdc706f6e231fab83b9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/JavGuruOriginalSourceTest.kt",
+      "sha256": "6ce3240fd864a38aee3b72643d038aa90fb9d2ceb7158de204208d37b4c3a3ca"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/JavGuruSbSelectedOriginalTest.kt",
+      "sha256": "b53cb7225aa7a3009f53c5e636469d27b65080b544e804f41f6d4247f3ba801d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/JavideoPublisherResolveBudgetTest.kt",
+      "sha256": "ab62d10ebc9478ef2f9c76c018bd604a815c664a23de7d1e0e40284791507ed5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/LiveArchivebatePublishedOriginalTest.kt",
+      "sha256": "938fae6179f1dc1549085f38ad250cf0e6700cdb167fe6de30e865969bc2010a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/LiveCamRipsSelectedIframeTest.kt",
+      "sha256": "872a184543d9530d74ec6a03de065d0a24d480cf65bf2cd7810cdbe0bd4d4acc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/LiveFullPornerPublishedOriginalTest.kt",
+      "sha256": "0d89b4df3281cf24113cb203dcbe15b43aba9ae132baac109d6a649823801332"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/LiveJavGuruOriginalSourceTest.kt",
+      "sha256": "881f40f76a08972a2b795e6ba4ec5220faf032c57e5664f36d277509a53d45af"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/LiveThreeDHentaiSignedOriginalTest.kt",
+      "sha256": "a826a9f83f585056ea9fb14e01b45ef714058c63f6ddef250916f009563c73b8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/Mp4HentaiPublishedHostTest.kt",
+      "sha256": "a1135070166f0aa6cd599fa249f7ca8d5ca3dd8339d08f08772b670aabae8632"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/NativeContiguousRangesTest.kt",
+      "sha256": "759c1de811b1262f3760b985e064e0e3e589ef662144bc660fd0c9c95fe17ca7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/NativeMediaDownloaderTest.kt",
+      "sha256": "ae62da118f5adfd857554e923ca70912177e8bf03ef4a98188e3ddce80bdadad"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/NativeMediaReceiptTest.kt",
+      "sha256": "5fa227f3a15435fc4c08c88a7bfb759909fc10ae865540df0a23cf2c1e002b20"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/NetworkRouteTest.kt",
+      "sha256": "07726ced8d31d0bb8460abff13a1337bb4588ec59a7107e3f889822c9f6e9a53"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/NotFansSelectedOriginalSourceTest.kt",
+      "sha256": "e15b08ecca493348563c10328b511ee5cbcf5eee6e342b7aefad9d165650d247"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/NotFansSelectedPlayerTest.kt",
+      "sha256": "33ee8a430048829032c83abaa901397fec16eef9fd416c73198650589963a17b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/PimpBunnySelectedOriginalSourceTest.kt",
+      "sha256": "821fd0bd2f7fb5eba9fc00ff1c10676ec062671571627e7dfbaae68f96f280b8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/PornBuzSelectedFullHlsTest.kt",
+      "sha256": "d147e881728413af460259a2125d2e493bdef0fedf537af1642ebd0aa39fd55b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/PornBuzSelectedOriginalRoutingTest.kt",
+      "sha256": "4d499c6517197dc4b6dad84fa8bba7853a01882c1bb6dcb39478774dc977327e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/PornhubOriginalSourceTest.kt",
+      "sha256": "494015eb0d8ced7fdafb2531078f4e9fe8b71e19702ff2e122fe21e21e15def5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/PublishedVideoEmbedTest.kt",
+      "sha256": "5f357ffec67f1a9cd506dc78a5e29d156364f3f26e39f15796e5159de4ad45c9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/PublisherEmbedsTest.kt",
+      "sha256": "9e03725073d126fb9e24ecc8b4722dbebe78d8b298df6c0930c2d1c41243c90f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/PublisherOriginalExtractorsTest.kt",
+      "sha256": "7eec40275c5e8a9c4bbf263724a13fd93ccf9e70487f93941f10a036f1678849"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/ReportedSiteSpecificOriginalsTest.kt",
+      "sha256": "567f21cf3b60ba7cdfe1105926d60901c5c347aa5aa449c68a18a152504fd1ec"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/RequestedVideoProviderRoutesTest.kt",
+      "sha256": "447189eb174ce039c56aed781a2cc61c9dee478c3fd4cac303942f959d8759b5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/RoshyPackedOriginalSourceTest.kt",
+      "sha256": "b1c4ec6a93d6c31a540ca8e18067af5dee0c98d52fd45e41bd3a2323fa6402cb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/Rule34VideoOriginalSourceTest.kt",
+      "sha256": "785b671b4259d56f423285959c9283cbaf212b7a803c95cc13db7389e3d825f6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/SecondaryLightNativeOriginalTest.kt",
+      "sha256": "5fbd7b2857b4b2a2da68fd078eac246346f2d99b2333b5b88472fb37545697c9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/SelectedBrowserMediaTest.kt",
+      "sha256": "ed7cc3ac43b51615b5c40e35423d8837cfb1aa10fe5d59e830973b5d743cac9e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/SelectedBrowserPlayerHandoffRegressionTest.kt",
+      "sha256": "fb42e0c81bd05119cbb2b45c64552399e51825dceadf6c4c0bac50fb2587010f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/SelectedPublisherEmbedTest.kt",
+      "sha256": "c6c8775a3ccdbe75f04374b551e694b2aa90407682f1e9221dbb992ff06bae68"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/SelectedRecordingNetworkOriginalTest.kt",
+      "sha256": "3e1ac09e6a8f7b44dea05fecde9b0004c958e6b5d467c1745732311ce1a179e1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/SelectedVideoRouteTest.kt",
+      "sha256": "fc870a0d9f8f17ed488ce9b0f3955508be7db3dba3ef8cc67251720e9eba3cc7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/SiteSpecificPlayerPolicyTest.kt",
+      "sha256": "b155a53895ebd72ad66280fc42025489793f0bf8c8d58b1a47c2e2d468bc0652"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/TaiAvOriginalSourceTest.kt",
+      "sha256": "d6f4c7b09411a2ae055f3c6e0b19d870da842ef41c25222771dc364a7a352670"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/ThreeDHentaiSignedOriginalTest.kt",
+      "sha256": "76ac184234bf89fdad52c4a649c78948497bdcaa0afd63460f47a49fa9e04342"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/UncensoredNhPlayerSelectedServerTest.kt",
+      "sha256": "dbe6a15d413110a69ba2390848b3f234c718cbdfd0647a4c6160ed3e8c65dd58"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/UnresolvablePublisherRetryPolicyTest.kt",
+      "sha256": "964a0d12124f41d995fce3306984a14ec91c301fde632bd5f979ee8b00912ab9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/UnverifiedSelectedPreviewGuardTest.kt",
+      "sha256": "3f01bdc78cbb068bb849e7e4a74957b8d2e8443c8932b04e7f5e5b271b5c9e96"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoAccessChallengeTest.kt",
+      "sha256": "f85bf99f5e7884abccfc5dec184b1d3cf0646d9b71fb3cee258a4a5ed5b3ec75"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoAgentAdmissionTest.kt",
+      "sha256": "9955da41321ffd26a1c9600ff2feb4501295c831a5fca762237f844aaeb29ca6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoCandidatePlanTest.kt",
+      "sha256": "0a30f73c09e5447050ffcc7383c717d2d1dd9510dcfd937889b82f673e4dde9f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoConnectionWatchdogTest.kt",
+      "sha256": "c7cb8d4004402ef3af1dd0afe2b3f80873547894d0e057e887db839abf2badc3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoDiagnosticsReportTest.kt",
+      "sha256": "66b35f9265eee23de7eeded77e329927fba28f2e72df1cf520cbeeb16d1fa694"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoErrorDetailTest.kt",
+      "sha256": "470895d9828eef3cb9d45a61943340bd2143ebcacb53702c40e0f6fb82f0a857"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoExecutionPoolsTest.kt",
+      "sha256": "cb803ca54ebc25055c2db6c9e8dd9959764a69f5c30494f779f8813aba1cecd8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoExtractorVersionTest.kt",
+      "sha256": "a92aaa0ee892f632bf8b680dc063ffeba6889b3e2d5b296c257133fb24a4c48a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoFailureHosterTest.kt",
+      "sha256": "b0a75d21c3078789acde3b16a5b7404e9480ca25db4a06d39c2a03bdfd10a961"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoHlsDispatchTest.kt",
+      "sha256": "f422683fff218aa4573b058947c6c71af668e4fea6ba44dfa0fe7db126736771"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoHlsFragmentProgressTest.kt",
+      "sha256": "da19bc30cc1baf695fc3edb97d58b8e07d4a503537d57ff3e39283bf858f7800"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoNoBytesResolutionTest.kt",
+      "sha256": "99c22bf98266fa6b516768de3d6e9a94f0a0c536ec486f2a13e5efddd4f70248"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoPayloadBytesTest.kt",
+      "sha256": "fbe217dea283221c16e870361e039e15bd6b4e7a7e3523533c34787e9030b20e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoProviderRoutingTest.kt",
+      "sha256": "a0099455a95770d95258ccd28560ab8a5dfe13005ddb491b90dca0392c23b3b8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoQueueClaimPolicyTest.kt",
+      "sha256": "56faa69da0422b3c1f5f859ad4203ff3374bade1cb5e0f0ea4cc5df449934fd4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoSiteProfilesTest.kt",
+      "sha256": "d0ac84228f865dfc7a5627d92f4a83a2df66ca0c8df3966f438ae2137ce66486"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoStagingTest.kt",
+      "sha256": "30ea785a8f7dd0d69da39680dd442e8d64bd6398b9b5806c5d4c2fe72c586893"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoTransferJournalTest.kt",
+      "sha256": "a93b378879ccecc405be07acda508d3c8239f7d8ca841d5418fc522a3072f6e5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoTransferProgressPolicyTest.kt",
+      "sha256": "5b872115095afc8f4d0406880c6d33276df682a27ee6c961df12e1a0f24ae5e9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoTransferReliabilityTest.kt",
+      "sha256": "0db25e1add5f4afa24e3723007e211c91f8ab0b7023201598b491123997cc4b8"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/VideoTransferStageBudgetsTest.kt",
+      "sha256": "31649fba47773458915e2a3f2faafe226276da660f5ea22b4d5b07f06c6f0e46"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/WatchPornMediaTest.kt",
+      "sha256": "b4611dd86c33df5dc35b4abcfc6f1c1d2cd4eb753594cfda7bab45f427138c1f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/WatchPornOriginalSourceTest.kt",
+      "sha256": "aa4d1240d024f9c570cd6239891a42be976c9ecc83ceb2c9d5959a527f74a3eb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/WebDiscoveryTest.kt",
+      "sha256": "cd3900f347b7615a293f37ae43661325a4a25e92e4c2e2bc0ff351ddf75a4b3a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/asterion/videoflow/WorkingVideoProviderFreezeTest.kt",
+      "sha256": "1e3af90d96a22bfcbd7e321f45ac8abdfcf922a4ef3d3b812a506a45abecdd15"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/BackfillPaginationTest.kt",
+      "sha256": "8919d6083ee39acb7940c5f1adf6114036da168e172501eb995c746a2c3ad226"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/CoreOnlyRegistryTest.kt",
+      "sha256": "8c049df893fceec3af49dab08c897e43cbad0f6501c08f7ea9fb3d9788590862"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/CosplayStoragePolicyTest.kt",
+      "sha256": "17c000cfba59fdea56db04859ab0749f9f931b34d8a4caae83c88fb44e7984b9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/CosplayTeleNativeAlbumScopeTest.kt",
+      "sha256": "31708bdb2f4dd55ea88fee6558c094c5cd2bd53455525149486fd2d4b741debf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/CosplayTeleVideoCompletenessTest.kt",
+      "sha256": "0c904d17347aa952b8ba0e04b788ec218a59b812835968f6c5f5d8a5ffe20d18"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/DirectGalleryParserTest.kt",
+      "sha256": "b65a0e928a313c2878087956230bf0dc130fce598830579bdb0af338731924e4"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/DownloadPolicyTest.kt",
+      "sha256": "0576aa9943c0aaaefa268b0d65f206237c1766a1a6531d4d30368731e14ee015"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/FourKhdAlbumPaginationTest.kt",
+      "sha256": "fa6984bc06b146c5cf9f4df941ad723b417b5dcf98a8b3d0c05c34e68ed3ed5f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/FourKhdArchiveTransferPolicyTest.kt",
+      "sha256": "2f32f01963bc270a241c1085bed471b6ecc1c0eaf3417f6448ced821e07e789a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/FourKhdBridgeUrlPolicyTest.kt",
+      "sha256": "d5907a4961014058cb68ade023b669f08eafe4a7ce8afc052995ae50c278bcd3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/FourKhdOriginalArchiveTest.kt",
+      "sha256": "97bba2bcf6e9f92c8725654801fa11b18461015901b4141ae29f5627ac4398e1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/FourKhdRenderedArchiveTest.kt",
+      "sha256": "fae5e98383e28820bcfd2b0f645dc6df4253e593287f36bbbb04f38a73245c5b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/FourKhdSingleSiteTest.kt",
+      "sha256": "f55d81cb74c2e22025cb4757e0d3819c259d7768111c1af36ea091fe6f619a37"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/FullAlbumBackfillTest.kt",
+      "sha256": "daad31b4355bc362d653784b999f0ab8432f9cb4789ca3a6fd006eba0a539e63"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/GalleryAcquisitionBudgetTest.kt",
+      "sha256": "aca7de35392b8615373fe6c0e82069771e7aa6eb78b41214b7a68f7c49a93e3c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/GalleryBackfillBudgetTest.kt",
+      "sha256": "0115ac9567b86ce11ff5d17a3892bf59768571239ed21e2a27fe246542a02869"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/GalleryMaskedForbiddenAccessTest.kt",
+      "sha256": "1d5ea8742ff5e072f1f2eada89c7a69b8be74194ac3ed8fa0e220c836802f42b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/GalleryOriginalSetPolicyTest.kt",
+      "sha256": "e5ced48b209e1af3ce88c8479c4a14b84414450abf01654f2833b574a4c0b4fd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/GalleryOriginalUrlTest.kt",
+      "sha256": "3abdd73241634756b061268d739d2551adef7464c224c4783d1077d1bf42cd8a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/GalleryRetryBackoffTest.kt",
+      "sha256": "a79b37f34dc4681b4e84d93caa45ccae5fb1721cb0a131ce5caecf1a29fc683b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/GallerySiteOriginalExtractorsTest.kt",
+      "sha256": "ac7f3357cb02669df86103c0594a8046e5693d5fd4b4720d50788001cee1d5ef"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/KiutakuAdapterTest.kt",
+      "sha256": "844a2a5737481b3105d5af04617ebe0fd7995cf1af5c073406604cb977255e6a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/KyoraHtmlTimeoutRetryTest.kt",
+      "sha256": "40a38cfca1a4cfb12d5258abdb9e8132ae3e773f67d0c767c5e00813b8d82507"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/KyoraOriginalCatalogRegressionTest.kt",
+      "sha256": "04e3ff513ddff12e2740ec587e1c32ecdebe39b72e595da56fcc0effa09b81fc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/KyoraSelectedGalleryIdentityTest.kt",
+      "sha256": "0b8d584af0df18c566c2596faa257457c728ec88122a8d6185d8735785cff92a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/NativeSiteIdentityTest.kt",
+      "sha256": "ecc0dce609dcb1a3e66a9a28801f568622e68bc9d9742e60890f3d112bf780cf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/OriginalPayloadVerifierTest.kt",
+      "sha256": "7a6d2ba1e9afbfe3b4e6c1ca4b3370ea0fa86828dcc92c0b76cab5804775f193"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/SelectedAlbumBoundaryTest.kt",
+      "sha256": "ed319806611eba89587fb7b1df5ecf62597f9e9a504bac05037f52395eec19aa"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/SelectedAlbumCompletionPolicyTest.kt",
+      "sha256": "9943c63e74e92ade6aa93d7ce293b909ffeb3f78eb29bf2d5cfa0225156d5e3a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/SelectedAlbumMixedMediaCountTest.kt",
+      "sha256": "1cc498b08d52600ba106ebd14c0844399af81a967d4f3b8cc644d2ec1cb90b2d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/SelectedAlbumRoutingTest.kt",
+      "sha256": "8b6fd5f2f8b855ded8a876f3cb372a70c3143d53354d2be4862fd1a8417dab87"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/SelectedAlbumScopeTest.kt",
+      "sha256": "81905246bd3ef89ad2abcf04194bdb3170de481a68c694154c6dee154cf6755b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/SessionHtmlEnvelopeTest.kt",
+      "sha256": "9e331755101efe6f3e1322cf01f96f2f147271173c00e5e1023588ad81e16173"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/SyncJobServiceAndroid17RegressionTest.kt",
+      "sha256": "2c60c83dcc52e837629be4178fed31ad78f4b5b0ba2ec737af4edcbbc1998a13"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/TeraBoxShareRequestCompatibilityTest.kt",
+      "sha256": "de4fe570ca5b66e91e8410728ead6528524f25ae7925a0d982d1774a0ec27962"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/galleryflow/UnifiedSourceTest.kt",
+      "sha256": "a07f221009cfb38964372d4983b26d126e051dab825c9d1a2179b51cf51c2d1b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ActualEpubDownloadSimulationTest.kt",
+      "sha256": "cb7dc3b5eb9190e65e81e01d0b240ebe98cb4113f6c59dd0b13beff410a59933"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ActualProviderIntegrationTest.kt",
+      "sha256": "6f1006096f9cad2acc49b01ba035d764c83da35101a69d8429ed0f9ad52ebbac"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AdultProviderListingsTest.kt",
+      "sha256": "bd1a72fab611cf07ad3f18377852dd55a9cc83c4a1ac46ba22b833d163e66d38"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AllSiteGalleryCoverageTest.kt",
+      "sha256": "aea311ce3e6bf62b564b993dc9a265250b180c04b5d91783f48eb0f057285b76"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AlohaProviderSearchTest.kt",
+      "sha256": "76c3f263ec2554544db3fd029e303d813e5c447fc242b1067e518303d072fe1c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AlohaSourcesTest.kt",
+      "sha256": "e7265bb03b3d164a48ff11efd02422c3ef23ee7e845fd35db53dce5c4be52d8a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ApprovedCosplayActionsTest.kt",
+      "sha256": "7e88c46cebad7290eba37db432eca37f8c93224af30cb1df893698468dcc7d23"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ApprovedProviderCoverageTest.kt",
+      "sha256": "f7e060f1ab24258aaa53e8375362a7e4f88c69e322e57e46ef4dd6f7dd39bf3b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ArchiveContentRouteTest.kt",
+      "sha256": "3520a045cf2c06d9c34260b782ffeb02c2c6da80ca8ed3b7bd840c744c396f52"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ArchivebateListingPresenceTest.kt",
+      "sha256": "2665c21d4ab4164827d9cbb1722340659f7d7feaaacb8f85c14bbcfa585ac6ad"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ArtworkPreviewRecoveryTest.kt",
+      "sha256": "646e9de6e8fa6788ab2d75adc1045bd7fcaed32981f064a0088a3a8edec8ef6d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AsterionAdultHubMediaTest.kt",
+      "sha256": "302552e353282358761ba170683be610aedf81915879ad7c9b19c828c131736f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AsterionContentSuggestionsTest.kt",
+      "sha256": "4a9be8c141917c43d5460ca8574b84c720d2b084393eb521c757cb911d1636bf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AsterionInAppUpdaterTest.kt",
+      "sha256": "c4e811de1f059af0a8745eba6130602d382f7b6efc8d5cd8931c1a15e0ffab42"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AsterionPeerTrustTest.kt",
+      "sha256": "9e67b98ddd26cfa98bd32953a31d101e822aba67949e4e4799406cc43778a355"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AsterionRecommendationsTest.kt",
+      "sha256": "0e9a81e315d273520b66326cbaf84342d6e911beb533c0455ddbe49e767c8f6f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AuthorizedOriginalResolverTest.kt",
+      "sha256": "086f8f7a2bd3f60854aef6350d0172150793c93c9ee63cdd0179ce6d84d507e1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/AuthorizedVideoDispatchTest.kt",
+      "sha256": "34b28648517a3c761a79c060de6d2a6568994f7cb6192be8ed9f76ced6f331d1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/BencodedTorrentManifestTest.kt",
+      "sha256": "2c89a837ec907ff08e6b054215137fa97ca20333269affa6fc32bcb8f65d1ba9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/BrowserPageFetchEligibilityTest.kt",
+      "sha256": "065e664e33fd766960ab7c849ff03a633777d23abe5d6417ece7ac1333f6bfc5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/CatalogDiscoveryTest.kt",
+      "sha256": "26a5a2b64a3fb404af945a8398634ecf2a81e96c9702b42d7463b8dd40b591ec"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ChapterScraperTest.kt",
+      "sha256": "119bb745761300b32c24b619ee1b7b37e8b21faf1efe15fa0294a433833a5edb"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ContentVerticalsTest.kt",
+      "sha256": "a1a04e63f0d5b505ea559e3f0e76fb645747a4acf39549f5642a06055540ae9e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/CosplayGalleryVisibilityTest.kt",
+      "sha256": "91b4b53ab3e828b709888c8a79092b06e8199b60a1a7ed33f09ce81d015f2219"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/CreatorArchiveSchedulerTest.kt",
+      "sha256": "5983efc3750e49eb627c0649ae98ed9b028a004f67a7a5653fb2d382a9e0f456"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/CreatorArchivesTest.kt",
+      "sha256": "377bdb8f894f6f6766e8f698e95853a696b24eeb6ff0d765700e4b8e7ef558a9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/CreatorSiteBackfillTest.kt",
+      "sha256": "81efd0f11598fb867f50ad761d2b6c09eaa282e41c1f8bef62eb87e94e4ce186"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/CrossPlatformCreatorProfilesTest.kt",
+      "sha256": "d72f39811d98fdb75981ad1eb1f37024a06978aca4ed4ba480a570f4ee425431"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/CustomWebsiteSearchRegressionTest.kt",
+      "sha256": "a4942602f303003ad5412497fa848d71de0ba8f30eb51de89b26411ffb94dfad"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DirectDownloadClearPolicyTest.kt",
+      "sha256": "c5a4d1a4a00d30dc501635387d0b2d6de40d5846241b25c10cf026433952984d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DirectRetryPolicyTest.kt",
+      "sha256": "6bbde2b85507b3667196f7a81aa901c77c104ca904fc74f11e01c4a06080534e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DirectTransferStallPolicyTest.kt",
+      "sha256": "95b37443855097eb421ed9dc8691d4504d3a2a283890890cbc6dab22807b3040"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DoujinUnifiedRoutingTest.kt",
+      "sha256": "f81009c9864a6c9c9472bb6fce3deaa86649224416ea916e7d404fd0917c89a6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DownloadConsentPolicyTest.kt",
+      "sha256": "df838148e53b8aea332f92291c800ed3574e3adc28302a22b2b06cb7eba38578"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DownloadLiveRateTest.kt",
+      "sha256": "5c39b7921402184996f400e8fec9feeec7d8d21ea84acc5414d836b92f1ffc48"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DownloadOverviewPolicyTest.kt",
+      "sha256": "85df3369ab975e1ecf9842f9c388b9e1b8d6bccad57b72a81bf9460aa4605e10"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DownloadProgressPolicyTest.kt",
+      "sha256": "e804fc70eeee40987ec06f4d1e5d2fb1c736453d51e4b47d0f0d042abe424d1e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DownloadQueueRecoveryPolicyTest.kt",
+      "sha256": "983061bd1cfbaf460287ff43a1aa13465d462e398b428c16234b934b804fe809"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/DsysavBrowserCatalogTest.kt",
+      "sha256": "ed8a9d864a585be9d5915fd13c9a681a6005d98fe74b7a2b7af1ef7db655b637"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/FileSaveLockPolicyTest.kt",
+      "sha256": "77b4637c30d848838b2ddddd7178eefb30ae7716d7617d68949b0fa4a2b4694b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/IdentityAndGallerySearchRegressionTest.kt",
+      "sha256": "6e7773d84ddc2b70d1a0646109defdfe08fe7f1ec384c249fbac0fe833b0e849"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/IndependentIndexPaginationTest.kt",
+      "sha256": "3e1f28256ba7f27ba3887f9533df971e53b0e3d344af888178c87ba9a9cf8f6b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/IndexedMediaQualityTest.kt",
+      "sha256": "bdbebab5a263efb255d81709162da68d04c9a5cd7750883eb43e7fa1f25be84e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/InputParserTest.kt",
+      "sha256": "6bb1dcfb42db719e3873c5155ebbca66ebb23d41fa72fea35532356910c853e9"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/InterAppOriginalCompletionPolicyTest.kt",
+      "sha256": "692f9869255950e9b3f0fdb16cb54d47651f4ce5246d89654836be5e2c837151"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/InternetWideBingSearchTest.kt",
+      "sha256": "6e0a37c876c1e741498e88806f967db80276a33c504c670ecb00c7bc50e7373c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/InternetWideDiscoveryRegressionTest.kt",
+      "sha256": "8c65e9b0ed35a3457458d487b274ad74a9931550177935dff624f59908b21833"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/KiutakuPreviewNativeBridgeTest.kt",
+      "sha256": "666505d5ea3eb2be407d9caa33f5f4c2e9d2682f758e3d8756060f989accf883"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/KiutakuSelectedAlbumTest.kt",
+      "sha256": "e3676066be21bf4d25dc11e5ac73809aac39ca7cac4b506ceba667f600cb464c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/KoikatsuTorrentSearchTest.kt",
+      "sha256": "d6f2fa4d7d641599e6866a37ef3cff7dc605ac4db22d02b65a90210a544f9edd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/KyoraGalleryCoverPolicyTest.kt",
+      "sha256": "0a2cf341f93dbffcac7cb94e9dae571784335761bff243ad1cdea48e73d38852"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/KyoraPreviewSourceIsolationTest.kt",
+      "sha256": "c6035f9bba6898f3daa04f4ef63c6204d92192cfe1c59cc63a6554796e894091"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/LegacyPixivFilenameTest.kt",
+      "sha256": "de4183b30443a769281114c7e602ba14f0900449a2ee11ff059bb74b48dedc4d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/LiveCursorLogicTest.kt",
+      "sha256": "601b3087b00b2d5f9e8bc773bba571c73d6890b4ffa968682f2e4f23efaa532b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/LiveFreeWebNovelReaderTest.kt",
+      "sha256": "9316a5768e1814890eaa3c6bd6aca5b29383509bad25590f9a5874e58fba6611"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/LiveSearchParserTest.kt",
+      "sha256": "11f667a2b4311e8fc7ff6d085bc376c60ee80d7a561d1996ead998fdffdf688f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/MangaDexChaptersTest.kt",
+      "sha256": "b65d154901c805d7e7fe1ff0561cfab2930e1c0a139a9ae46ccd5fbd29582273"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ModelOriginalPayloadFormatTest.kt",
+      "sha256": "b1200901f07b33b2edd4358c4e3a2ff72719e8706b9c048ea9b2b668638aa3fc"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ModuleAgentTopologyTest.kt",
+      "sha256": "260f5cc5cc39414e1f9dcdf025d126fa68303fd8da72956c63e340df0053466d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/MonotonicProgressPublisherTest.kt",
+      "sha256": "4ea333638129c3c90657900be8dd5875258ed7b5892241c152001eed09acc638"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/Mp4SeriesRulesTest.kt",
+      "sha256": "6491e48b3c1654f4ad89ff030dfb9d5f2745d076f0c89f800b4778f6e8eb2c35"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NativeProviderListingTest.kt",
+      "sha256": "a3825b690c22b9f20c0b21128586eb61790742807c484a38aa0089832a555b17"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NduProtocolTest.kt",
+      "sha256": "b3f8295e3afecdcd7396d5c37a514c1f911b0a9e76858a672bb33411ceb990ba"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NduRemoteProofTest.kt",
+      "sha256": "0f511d73e5ea5c2585738970e57bd5be220e7d5b96bc356346eaa4d4845227d3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NduTeraboxClientTest.kt",
+      "sha256": "821b9e2cb015d22343796b1628af76549d78f89a844c24810b3a43dbcff11517"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NhentaiChaptersTest.kt",
+      "sha256": "ddfd862a4ef4fbb06562ba2c1dd639b806beca844c6c0b182b26bef595cd534e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NovelAccountPolicyTest.kt",
+      "sha256": "f7b94c375d056229eedc05ef4ef523109c031779942dafbd5b2f96eb7d9c547e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NovelAutoRetryDecisionTest.kt",
+      "sha256": "759533003543db383bede9b467d4939b6b6f31b753b9c8d79161c76c10cb950e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NovelEpubTest.kt",
+      "sha256": "ce8ed83e886c0d0e257d3c47f1b774c90876f141963c0737a21cf1ba98da57c5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/NovelHttpPacingTest.kt",
+      "sha256": "3442b51e7670999e3320997d35b2c9542309a4e838fc05d5df76e0363bd6efbd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/OpenWebModelPageDiscoveryTest.kt",
+      "sha256": "2ddb760ea63d8552e50cff1c9d6f45f64437d277b6fd2b0e1961ddef8d4aecde"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/OpenWebModelSearchTest.kt",
+      "sha256": "895803933dd331cbd027711d473e90809527a70c4e79313ee3d2180a5c060f6b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/OpenWebTorrentSearchTest.kt",
+      "sha256": "8b8e1b431af102f55210c70ea79d6fb02c18a91cada21ce3669d28220579056d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/OrderedContentTest.kt",
+      "sha256": "675dce8c8b7a066b6f74a2eea48ab1f6e02bb72d7a5498979887b1a062c394c2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/OriginalFileReceiptTest.kt",
+      "sha256": "c7011ed2b638e34790b129f4d4e1ad24cc41f6f57cbcb55ed96dec5ccd6acff0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PerformerFollowPolicyTest.kt",
+      "sha256": "830013bcdb2c4b87b6e298601ca3f8ffb8faefdf901dcc8768db6f0e2f6c0d1d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PerformerIdentityTest.kt",
+      "sha256": "4c446f429d243f44f2dc7cf6ccad96edad45179e928ba754d636dac2f20c350e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PerformerMediaAttributionTest.kt",
+      "sha256": "d4fc232c60eeeca558083d03b07605e0120187cb5fda028717d70e951e1f555c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PimpBunnyModulePreviewRoutingTest.kt",
+      "sha256": "6760bb45f7099693a763165b7260eb03e2ea0b36cc9b817f18ce0d2ea05e7474"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PixivForegroundLifetimePolicyTest.kt",
+      "sha256": "cafa103ff764bd6a0dcbfdbd2ce29568715c5a54198451ca5ea9e7eb66307ad0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PixivLegacySyncGateTest.kt",
+      "sha256": "9409fd6bb65421495002218eee8567f2407eab8ab07aaa4eef5c3cf26a3176ca"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PixivLoginVerifierTest.kt",
+      "sha256": "fd390de78b11c78c34c396560ec89fea91ec3776f060ab4c3ca412af4bfc4849"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PixivManualBackfillPriorityTest.kt",
+      "sha256": "18906e43899524075cdb4880bb1649bf9183677f7c6033fa613236c3c91d07a5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PixivUnifiedBackfillAdmissionTest.kt",
+      "sha256": "be6a36ddeec24c3d3efb5c2e5285187b367c1910b7bbd830cd33fab5e02296d1"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PixivWebLoginResultTest.kt",
+      "sha256": "88e91ebf6613b4aa5f049bcbefb8cbd666a7c93b9888a8c953f84c93d2f3f3ed"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PortableGameExporterTest.kt",
+      "sha256": "c31725d7fe158694b6aa9e6f0def2fff3073f800adedb6f9839e96ed482c49cf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PosterHostCooldownTest.kt",
+      "sha256": "f26db9cb84d32cde528aa0b048f21900fd97cfb5a60eb5db46930d2d6ef8f81b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PreviewLoadExecutorTest.kt",
+      "sha256": "236440cf4fc80a535b912a27f1b777e1344652329e66e3bb6b82724b15a0e811"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ProviderMigrationTest.kt",
+      "sha256": "526bb7f5dd177aa6a6096b26b71391af7625baea523c86ee6588f7fe0c566303"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ProviderRetirementTest.kt",
+      "sha256": "8b0769f75353648f201379e1b84f06860c8c56cf588f9e96bffd1527a30123b2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PublicCreatorEvidenceTest.kt",
+      "sha256": "be0ad8d944875de93cd46e1036b79f2cdaa1fee36601c0daf78ceba696fe3189"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PublisherCatalogCardRegressionTest.kt",
+      "sha256": "79378f3f8095c491f28b9cbfcad68cdaf288c37869b4b53d00b86bc1a8cf10c0"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PublisherPreviewFallbackTest.kt",
+      "sha256": "cfff04d2336520ec896d4e6d06a67911990688b358bfb8129b545f7c9888a875"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/PublisherSearchPosterTest.kt",
+      "sha256": "7f249349e497160c710e45616c4ebc6f563367a2154a972628c48cd1264fde38"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/RounderDispatchTest.kt",
+      "sha256": "40738feb1ef7cc5f2121610899b0aaef8ab8e39a5b310a1b2557a328508f71ea"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/RounderInventoryBoundedSnapshotTest.kt",
+      "sha256": "a7ebbe23dffb34b3ed80d34feef10152f5df462c242cc22142aa8bfc1e86beba"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/Rule34PosterEvidenceTest.kt",
+      "sha256": "935edcfb06bdc98d05fe4b583338344aede5012202d82ce1daf80701f7749fff"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/Rule34PosterFreezeTest.kt",
+      "sha256": "03335a59fbb6388974203a2224179476bfe3522d41da27850c601060afb5db8c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SearchDiscoveryPosterMergeTest.kt",
+      "sha256": "386350e8a7f711b56dc6dd2cf88cf716b933ec5ea829312cdfd437dc7f33a49b"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SearchExactnessTest.kt",
+      "sha256": "32a4897eaf42a7b64041cd0660c15abe3f203c74bfd71c7d3165654e1b963e7a"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SearchRankingTest.kt",
+      "sha256": "96d5115ba37a4be1ea29e9c2f3f182e53d569fe1e5bf806c762277c6ad4bdacf"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SelectedPlayerWaitPolicyTest.kt",
+      "sha256": "66b27dfa45d96e3d13555c87d382d04b1dffc00258b4450ce1f19e7898a2d111"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SelectedVideoIframePolicyTest.kt",
+      "sha256": "99c77499a60724667bfb4b7cc99e16ecbcc77ee1a7fb398aa0ea144c36715694"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SelectedVideoRouterTest.kt",
+      "sha256": "55d2b6a5e01014bd15c246edd830f72019a9e0c93a436282da1b45393aeab2e6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SiteBackfillProfilesTest.kt",
+      "sha256": "a2c8a8b5da0cedde54a7beff7537a674fa485ff2c3f9bdd3f7a896d3653dedf3"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SitePreviewImageTest.kt",
+      "sha256": "618b073332b2fde60121d76e18fc6b68c735a0939a21aedca01932683a22dcbd"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SiteRunControlTest.kt",
+      "sha256": "53899671fe60ad5a6813acb571db5199daec4941e37634a5ae7a1cac5b95d528"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SourceIndexTest.kt",
+      "sha256": "735bbeb079624b4d3edd4effe4fc0dd15f5d8e677e2d43d0341671eedd6274a7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SourceRouterVideoSelectionTest.kt",
+      "sha256": "eb7c7305a74fcf5863ddfc7877f99628a82b9c6e8442b4817eaca9e7bd774e2f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/SushiScanChaptersTest.kt",
+      "sha256": "6f6866b55f24c090388c0373d778663b69f83e8554d27b3d6e180f9113be34d7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TagExclusionPolicyTest.kt",
+      "sha256": "9b41d91ae54082b6a78981f4452f27f3a7450f14f4a3113e0fb5698dc1ea3a03"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/ThumbnailCacheRetentionTest.kt",
+      "sha256": "2251ee617bc32c205dce3084a3e589dea0bd236eb1ef80aa05cd43b3bd87e366"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentChooserPaginationTest.kt",
+      "sha256": "ae7295c6829a1ae4256900df29126fdb52fea97fb0298425bef19618f081fc38"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentContentRiskTest.kt",
+      "sha256": "d342beb31f14a360d84565c8e9f3295a48d0d14f89fa93330683666991a4b4af"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentDeferredSelectionTest.kt",
+      "sha256": "caeb81c0c43f7f0a8acdb0a41bd2040f2dd325ba1125f3bd5ca477c0fad3fe31"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentExportPathPolicyTest.kt",
+      "sha256": "1cd1c74f0f816cdbaf44c6803a8bec4f7c6a81737cf782cd35abf5c742f48174"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentMirrorSourceTest.kt",
+      "sha256": "5c6784669db72ac05b01b3c5c81e1a3dbdc2568c31d1a19ff7bc4ceaf4b3203f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentNativeBatteryGateTest.kt",
+      "sha256": "4fca19d5d73231039630bb89cea048e6f2edd3bfd085846badd3d9f5e5d7c266"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentPeerDiagnosticsTest.kt",
+      "sha256": "9d95c29142c52c4eef806ae80de060e12d05a47e55989caf650e1d63a8fd5355"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentPosterIdentityTest.kt",
+      "sha256": "04e8f5edb466e60a33ebd8b9afd2b5ef9dfb146a5febab05b1be1166c013a4d6"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentProviderPlacementTest.kt",
+      "sha256": "805d4678aee3c843bb1f2191fe5fac1303fbfb08d91d9ad3ab081c19f875fbf7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentQuarantineGateTest.kt",
+      "sha256": "cf67e8995d03630251926b798359f934e9e06449f9948815474b620e024d6bef"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentQueueActionsTest.kt",
+      "sha256": "fbe963118429b01391cfef8f7c6a533c55f50b79a8f1b674867371497f4a6147"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentServiceLifetimePolicyTest.kt",
+      "sha256": "d7f4ed9a3d39751fc45518f4e165e2f19b072a4209c2f8e17f21b4e273328695"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentSourceBackfillTest.kt",
+      "sha256": "1859d3a229f72dacacda6ace4cec50bee4c0a21effa52ccd7fcf171ac080809c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/TorrentSyntheticTrackerTest.kt",
+      "sha256": "87d14c6dc6edbb5e131c7693934f522e76388541f5cde0b6ba9db8eb3dc377df"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/UnifiedDownloadTest.kt",
+      "sha256": "14fa246d46136de22ae1252da6e3b6c061afeb8267406c343959968b2d12a61d"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/Verified4khdAlbumsTest.kt",
+      "sha256": "fbd4167a9e15671b578b3ed521acb7ccdc71916a17a924275e78d131445136a5"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/VerifiedSiteCatalogApiTest.kt",
+      "sha256": "f2bf2ce5e09d820d98c0009ac400083cd095ab4f9dc9edaa49d65d745f33b16c"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/VerifiedXChinaProfilesTest.kt",
+      "sha256": "864d2999fc6bb76e411f03255acdeb5231b2d8ed898b2201c8da09b3670082a2"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/VisibleMediaSupportTest.kt",
+      "sha256": "22f60f7ec96a3d3bcba24eb00ef9456428b1b636cbe5fe41cfd3c615a2c61c61"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/WatchPornProfileEvidenceTest.kt",
+      "sha256": "9510ac59d5474fe8ba0fab9a381e8a4a439c76c6d47883a0470e629843b6455e"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/WorkingComicsZipFreezeTest.kt",
+      "sha256": "ff71681f9e845b20846428b1029fbe4e1ee30d800fcacdfe5b07845c2fb13068"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/XFollowingImportPolicyTest.kt",
+      "sha256": "219a8574e46180d78401baf17ba90843b5c81f6d0bed49289af4bed6bf0a227f"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/XProfileUrlPolicyTest.kt",
+      "sha256": "f66d4c4df12d7ce3eb99a4f6918048a7d12450b19719ebaf37d5adb9545f7db7"
+    },
+    {
+      "donor": "downloader",
+      "path": "app/src/test/java/com/azrael/pixivdumpsync/XXXClubTorrentSourceTest.kt",
+      "sha256": "f1ed6ea5434f6d45d68c40a692efb33ed7d25a92184e806ab79879ae8c0af30d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/AndroidManifest.xml",
+      "sha256": "ae270d1a248fe93c4f71bb093afd702bc3faaa10f4e98e01ecee0265cbfaa651"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/assets/first_launch_plan.json",
+      "sha256": "81cf262824a56fcc73baef8369d18d365fccae8e3d62157e270f36af8be3f610"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/assets/fusion_eye_catalog_se0031.json",
+      "sha256": "a2f020a049793245c473eb2ad1e230cf3f7481c2c2ef5d941c64116ed22ca41d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/assets/model_manager_capabilities.json",
+      "sha256": "9dbd6fd7204908c1e617dc23648cbe4fe6772201ea25d8d5ba4ec26a01d2c999"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/assets/storage_support.json",
+      "sha256": "6c7d15d9e9ef3f4a6a5bee40bbd19f916b17642a1b8f75cfb66aec5f0e4416e7"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/MainActivity.kt",
+      "sha256": "a1a1625aab2a428ec669d2f04a5486135fad4cdd3c2124141505447ae2756858"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/AiWorkflowCoordinator.kt",
+      "sha256": "0687b95c48af27305232f6a0807cb139633ee6b36f191cead89bb465aada4679"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/AnimePersonBoxDecoder.kt",
+      "sha256": "de54bb1541e04a1568439217943e43d38f3f0573cefbd6bc6dd3c9eef3404666"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/AnimePersonDetector.kt",
+      "sha256": "1fd2648a2cd67cf172ab5132be6dfddb648ad0b0d7cbccc0c2b68303851d1d6a"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ArtworkDeletionSuggestionPolicy.kt",
+      "sha256": "96aa767aba7a4dd93a4eec3c0462b506088b313486fc7f6e740b09237c2fc15a"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ArtworkPrecisionRatingPolicy.kt",
+      "sha256": "a70679354a6bacf3edf7646a425413b443d6e1b4d7ca7fcf1a3a526c9f678817"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ArtworkPreferenceLearning.kt",
+      "sha256": "bd4b8a869ab0a0bbdbcb8ffdfce61d15f668712ac2323b4ed0c94590c7dbacce"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ArtworkRatingPolicy.kt",
+      "sha256": "3b5eba06386740428ec1569bece589fd1651cced2b8b52a5c97346ee7f639df0"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ArtworkTechnicalScorer.kt",
+      "sha256": "cf4a7460348de22e08781a7823d29ffa00c04c449495690104d2d1134e9bcd9d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ArtworkVisualPreferenceModel.kt",
+      "sha256": "ad1015b87f520f36270a3d2b42d310650a8054114239dd5ea4ce95d604b815ab"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/AsterionArtSheetProvider.kt",
+      "sha256": "8c506e43bd3454b1b69e9c7bd3358ead93fb39f81059ce13a117966c016dd0f3"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/AutomationPathPolicy.kt",
+      "sha256": "a15526ed5db2513763a941672a7f6dd64d208ccf173168efe74d6527664a78b4"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/AutomationStageFailurePolicy.kt",
+      "sha256": "1b2f9865e3666d88a66ce039c9d062b0b245162cb5e51fec9d4e56548506bf9d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/AutomationStartPolicy.kt",
+      "sha256": "b07c1d7e26c5e662952c863d74f636462510389c15bee09bfff8f51e27220b51"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CanonicalAttributeSemantics.kt",
+      "sha256": "034aa4492879ca2aa25ad2fbc07301b57f737c23cde8ec2f212125d103d4fce3"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CanonicalFamilyAdvancement.kt",
+      "sha256": "19c38b0d9eb070b7729b6ec6940c22e132c81977d9da658de3cc872132ed97c3"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CanonicalImageTagCoherence.kt",
+      "sha256": "c769b751bb4a39a41ca2ca2292c4fa8fa8611d60121c73a828903732458648f0"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CanonicalObservationPolicy.kt",
+      "sha256": "fe7d0e9b0b5e622eec902bbe04ee661ad64c6ea5df293b36ccb5ad574ede9252"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CharacterProfileCompleteness.kt",
+      "sha256": "a8f0d88f614c4fa5cab0e2746278cf83a5d90c4feacd08d1cbfd4ce69da3809d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CharacterResolver.kt",
+      "sha256": "e8bfd4c1a072fb599653df8f0d5047d8423bd2e7186e0c2b369b753cd3b8d92e"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CharacterSheetArchiveImporter.kt",
+      "sha256": "d33b5b9a43800359df3a6e6b7d13a584d667dea7dd4f5089df525e23d0f6c212"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/CharacterSubjectEvidencePolicy.kt",
+      "sha256": "f69fa147ec2045a1e088eeb5a435a91b28572d187f5f03ef51cfcd1abda68ed8"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ContentTriagePolicy.kt",
+      "sha256": "51f7d6ae03519e1e9e28db6aa425b164f4a3caaaf0c4f5762c0ad5d2d6797ee6"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/DatabaseHealthChecks.kt",
+      "sha256": "abab1003ca1302ead684e4fb7d1953e42cf298cc9bde57f7ae1c80644f77f20a"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/DurablePreviewSizing.kt",
+      "sha256": "5cb02f07f50dc991c7550f007806b01e42d3c168fd2fa1dda1d7f7b4bd030b00"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ExternalImportPipeline.kt",
+      "sha256": "f1dd138bbd4792f1b930281a29b9c7ea2f25c8cb7adb1b9bea2e1ab587945aa2"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FolderUriUtils.kt",
+      "sha256": "481bfccb94b782fb03524960cb74e11482b8359bed69ccef8da73a1765991d54"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionClassifierTagGate.kt",
+      "sha256": "198994bbffffbd1c70be31764f2e66b7cf031d03fa5d12745bb381ddefa18055"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionDatabaseRepository.kt",
+      "sha256": "0a6c463761142777b154e55bf0d61190758c7cfb69a0bee8db0e9470ce41fbea"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionDatabaseSchema.kt",
+      "sha256": "4c03cce6ff0713aade3e227558680b191063ad013a2ed8f8cdc0c59bbc4177db"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionEyeCatalogRecovery.kt",
+      "sha256": "6dbead69ad921ad6d1e8a934d0b74ce4c3dcf663a1deb69706000fa58e742bac"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionImageWideEvidencePolicy.kt",
+      "sha256": "b19a538a8558feba4c060bd69862f65c58110a9bcc3bbb35df1c813e638fcec5"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionImageWideTagEvidence.kt",
+      "sha256": "e0e1da41f7bffd5d9ab87f95c3edaa6487fde5039cde6201b9890da36317ab4b"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionKnowledgeReader.kt",
+      "sha256": "6bd4d272e679c4961ed616e8ad16d08e626241b22162907af1ed2fc3b1136e14"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionMigrationBackup.kt",
+      "sha256": "b66ac1dbfd7083258fbc5c12a3111877b652e9bbb285e130340bc29143581e02"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionModelBuilder.kt",
+      "sha256": "8702699c55243a5425eb7c0372ee74ce275f4c9ab42d20d866f75bc77c74ed51"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionNsfwRatingPolicy.kt",
+      "sha256": "1db128aff2d1c9b77e59046e2706f1459f6c7cbed1d9b83317fd496211485680"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionReferenceMigration.kt",
+      "sha256": "cf78e89aac2a2f0f27a0bef76144b8a90b5145f8d974e5553c2cf3eb1cac7da3"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionResolutionStore.kt",
+      "sha256": "bf9b42a672f1b769b625cf93a7408ca0f6626e9fe4e3969c0daf9cded6f33393"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionSpeciesInferencePolicy.kt",
+      "sha256": "3016f43d5a9579fea2fd95736eaf98b9d6c63acdd995dfaa17f8e1cc81c9d952"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionSpeciesTraitRules.kt",
+      "sha256": "7e9bccc9a42e0c12fc005270d5be0b5ceedd2b352f64413dee7e4f51b74f0f98"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionTagFamilyOrder.kt",
+      "sha256": "12db3bafaecfe008e46cf11c5df91894703a442e4c6a7f1a0236a9cb32c08e8e"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionTagUpdatePolicy.kt",
+      "sha256": "9fa3808336656879a543f66da6d67ee2989bca83152f343e05d6a28eeeaaca79"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionTaxonomyEngine.kt",
+      "sha256": "583d4c5f0c239405c86cd46774e1a3b102ec08b67e2bf0cccfc157b3a657b824"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionVisualLabelMapper.kt",
+      "sha256": "6becb84dc78288d120c62a9b0de36ae7ff9a68d2051b7e24f46755484ab41d22"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/FusionVisualOnlineHead.kt",
+      "sha256": "4936b1b3af703123bb61b24b63f26b724a31279c127fd33c731a325088f70961"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/IllustrationTagScopePolicy.kt",
+      "sha256": "978a8c0117180a212209f3c5960600dfe791d7c554ab2463b358f64929d076d0"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ImageFingerprinting.kt",
+      "sha256": "ea4e0611d62639c356c0f3efe72fbf3402c394caf43544c539cc2ecc1e51e7ca"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ImageVisualEvidence.kt",
+      "sha256": "041bda33a02985a9d33ef335b3ad89483dca5e622b00df980fb560c6e99f1bbb"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/JunkTriageLearning.kt",
+      "sha256": "f493ce17727b1dab60738374c8ed08044ddb4a3b469aaa6df7f019555649fc32"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/KnowledgeCanonicalBuilder.kt",
+      "sha256": "cd55833dd17a59759582e55bb677d621dccd4852590d9c7e3af75a8bb2b809cc"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/KnowledgeDatabase.kt",
+      "sha256": "3f299b15a2385c85e73fcf469924f479e9a80dbac87342db9d832851c732fd7b"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/KnowledgePackParser.kt",
+      "sha256": "8acaec07cf3e058ab465be46d8f8236eff713fac2556bf8275b07972a3ea70d9"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/KnowledgeRepository.kt",
+      "sha256": "9879d697a1be66aac471bb465e0c8a5f33f7412ec2480614afce495aa075f8b7"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/KnowledgeValidator.kt",
+      "sha256": "770dcbd7b60ab39f3aebb75b70837c86ffe7841e29d7b766c4f51cccd537709f"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/LibraryQuery.kt",
+      "sha256": "b82cd01c64fd5e1e559cace2db93f5728ef31d6e7eeab7b4a5cf06b19d517e18"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/LocalDatabase.kt",
+      "sha256": "4619c1ec0b0b49913ff50ebf66b3d0ab3e4c23720bf6ee2b1ed5484fc3af3626"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/LocalRepository.kt",
+      "sha256": "6ddbe39f25307d206ec7c340065148e8b643c3c95ba9877ad7ac783734fd7fbe"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ManualObservationTarget.kt",
+      "sha256": "f90a1787f4d0927bd45c07c0397864571c58e30eafd166277111a3d63ce71717"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/NativeSubjectEvidencePolicy.kt",
+      "sha256": "b1fcf01a4b9c147c47ab442f87fab355c5402ce1f1bb9cd5b85a3243007b784f"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/NativeTagFeedbackLearning.kt",
+      "sha256": "5191341b82a0aa4676551ec267f82406daf41f4470ee88d4b17dde9ba8403c3f"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/NormalizationEngine.kt",
+      "sha256": "78d0aaef81f43efdbc2e08f0bf7c51639c8b7db7a40cf1f7db30f6eb972c79ec"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/PersistentArtworkThumbnails.kt",
+      "sha256": "0b6addc84c10ece4f853de02b04b9b6ec16cae026be86e6cd6fcde684f60ee26"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/PrimaryFocusRecoveryPolicy.kt",
+      "sha256": "6186237a86aa378a33827744466a9efa979242fbaa94b7b8ed2625625de6b3d2"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ReferenceKnowledgeImporter.kt",
+      "sha256": "aacacae7b65adcab5a63666bfe0a8a84e858e254e7dc6901d11089c51b59717c"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ReviewEventPolicy.kt",
+      "sha256": "0ec5fae814d7fa572dee59cd4133e84e5346d52e8f65d7a806aefe1d07d375bf"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/RoundSyncBridge.kt",
+      "sha256": "5271386522b43bb2be7d537e3428138576b43d865704709972631e7a0fede2ab"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/SafStorageProvider.kt",
+      "sha256": "bbd33aaded178514845c7e2d122825f190e7dcdf6f191ead089d3bfb3557ad4c"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/StandaloneRuntime.kt",
+      "sha256": "79774f622fa2210d32c955a8a13dcbe2100f648b23b93ab81790ee4f8f5006b1"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/StorageProvider.kt",
+      "sha256": "27f9d371b1167942c8ba9bd13add7bb314873814174dc9b9b38870223020a162"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/SubjectProfileCompleteness.kt",
+      "sha256": "2f02c7f0a2b02d36d7846d04a54e50aeca684a7fca1cc79ec0489bf1c5bcfe22"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/SubjectRegionAssociation.kt",
+      "sha256": "c116d66df7037f61677cfe1ee7774e8448d9b02da8775323e299140f1ad21298"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/SubjectTagConsistencyPolicy.kt",
+      "sha256": "4e6eddbf5dc3ee6bb76accad65af2d7f19b9594a2dc6e132338d1eff85212c4a"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/TeraBoxIntegration.kt",
+      "sha256": "4bb43a4e14766020fc99d05c5fc53a6033604d9a6aa94cea78b7e393fc9c4166"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/VisualMediumPolicy.kt",
+      "sha256": "f4b232efa34bef3b008f1cf03ed7979413f762e26c848627bd2386af34a394f9"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/VisualReferenceBuckets.kt",
+      "sha256": "a9cab0cc6a2c3e6243a4096338310d847d4097cf33eb284b813795a1beeb39eb"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/VisualStageCheckpoint.kt",
+      "sha256": "ef12353f37ecdee20c5ea06ef5c12d5cfa08ac498e50c33eb45da53ba014166f"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/AiMemoryReservationPolicy.kt",
+      "sha256": "f2f1cde1758f265995bc5dedfb60ced33dff452701f2583a2f779c6fcca30904"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/AiModelTaskSupport.kt",
+      "sha256": "0215680f4dcc01abaee1fb6adbbfbe688e87567fdadaf61e4d464293c6144c51"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/FaceAlignment.kt",
+      "sha256": "7a777f3f9611b43344ec856fcc4221d7f8262e95109db8ea6a7969aa6cb27c0e"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/FlorenceEncoder.kt",
+      "sha256": "7e1767957ed03549f2f8e4a607ee188fc9286eb17d8c63b9d241e951f3f9793d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/FlorencePostProcessor.kt",
+      "sha256": "270ca5835caad6419152774b50464aacfae2cbbcbc66059c3e62797324b18dc3"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/FlorenceStage2.kt",
+      "sha256": "ff01c6b13a22a02dd2328ef0d6e7d2db2c65143c56817f55a5bafe1ed3fa4202"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/FlorenceVision.kt",
+      "sha256": "d751762d8da5cfce0c263b8da9a713d36500173d3f92565d336327a84a278356"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LandmarkAlignment.kt",
+      "sha256": "9e3c5bc274189e5a770bddf1558dcbbc93b909de60471505e1006754541c6bda"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiContracts.kt",
+      "sha256": "fcae9dd9d6c60b57b99e1c8491e2727f6e6cbddc8bf912f4ea2ba48e03f73fef"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiEnvironment.kt",
+      "sha256": "ee2f014ebc54167be28d6ecfdd4c73c3e49ae131c9cd8d619921bde6811419e7"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiJson.kt",
+      "sha256": "5a1ac6bc26324a1ea9aff28e162ced5d12c370d315bffa78552aee67c298040a"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiManager.kt",
+      "sha256": "c7a6365d1cf66620592232ed3bfa9a3bfda40fcfb5c20ed988a2e9d306c13c64"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiRepository.kt",
+      "sha256": "2563b259b75f0b811531cf04a63d5d7d60dd2a9cc9f7c953a44b8238a9d2f779"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiRuntimePipeline.kt",
+      "sha256": "1dcf85f7f62cfa69f7712e9b6f1c99e55fee7280cec893d4e8c65b3b8ad2a3b4"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiSchema.kt",
+      "sha256": "5c8431ca8ea0bd9ac6a8c9a312571bbe1d87fe57bb63132c64f86a5400258893"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiStateManagers.kt",
+      "sha256": "8b6b020a4aff9bc3591184d72ec1b90cbf49dd73751890fd7d14d0ff12f74d6d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/ModelArtifactInspector.kt",
+      "sha256": "b9991f7b131ab32326f72d0780d6d442f8681ea663c1c5ed58a8f549f6ae7e20"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/ModelInferenceContract.kt",
+      "sha256": "0f621be076950ec9e1b08748601235b44246214f8dca89d1c5783ab27de2e106"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/ModelPackageInspector.kt",
+      "sha256": "a540671af6882db326949ee616bded8f96c53e4274b92801cca5763c6ab5190f"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/NativeRuntimeBackends.kt",
+      "sha256": "1f0e917ef7ed7251a3e12137aaa10da513fcc3225af4041fd86b144900bde923"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/OnnxGraphMetadata.kt",
+      "sha256": "69d361e657263a9efdfda079ac2a7b51572d81873495580db9bdd3c8bb51c05d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/PaddleOcrRuntime.kt",
+      "sha256": "67e505009d344287afb2b3c39ce548de3fbfb3baea5c1ab10455e394d88b6988"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/RuntimeProviderContracts.kt",
+      "sha256": "8223ec49c16a6a230b9e1e1edcb19cd3f271a7dae742d2ea3ced75a19ccd46ec"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/RuntimeProviderPackageManager.kt",
+      "sha256": "fa604fdeceae5de8b56be7a3c5aa21f0cd2b2a09bd70c713565e6fc3916d01a7"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/runtime/ai/ScrfdDetector.kt",
+      "sha256": "0f3efda91d59875890137246a3303aa139028b145751f26fd7abf1129ddadd9e"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/startup/AilmApplication.kt",
+      "sha256": "24ffb0f5d616dc3c57d9c6ec5e6dc281dbee583a258d2cc2dab9e61327841d33"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/startup/AppBootstrap.kt",
+      "sha256": "3c8fb063a02487b39c6dca6320b313c56d43bc45156754d5eeba2af1b241cd49"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/components/AsterionUi.kt",
+      "sha256": "aa0cc5133db438ffe1db19f48810558aa9799a1d2cca28710eaa408ba60bd092"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/components/GalleryGlyph.kt",
+      "sha256": "38a6220bbb0b7dd54a861ee98e7a441df8dad15d7a62812e1ce5af5449a3b4e0"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/navigation/AppDestination.kt",
+      "sha256": "dbb2df03b69c406d937a709e6a7c20eb31374fa57386a37463c407aeff6ea2d5"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/navigation/AppNavHost.kt",
+      "sha256": "4601dfcd0e2303f14291a7a4bbe399911cb055af1009e960e76962bcadf14869"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/screens/ArtworkPreviewSources.kt",
+      "sha256": "9722f76b8be4ee01455732a491c8f537bfb120d2b3e850637db72b8caba39c5e"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/screens/Screens.kt",
+      "sha256": "68c098b78668d3d29dd693f87397c8686af90905e471753ede727918a298082d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/theme/AsterionTheme.kt",
+      "sha256": "68df5d4632a7f70569bedcc0b2eebb63060b03d0050b43aa170c49acf5b35b39"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/ui/viewmodel/AppViewModel.kt",
+      "sha256": "1374d2e4bffc8dd07bd8a35e1d95860554758ed051e0342191b5ecbd1acc2f08"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/workers/ArtworkThumbnailWarmupWorker.kt",
+      "sha256": "7ae1fb2c4bc3786768c7a255f137ccd7fc6f973e03eb9485e694d2102126194d"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/workers/AutomationResourceGate.kt",
+      "sha256": "b41cc8386982cd84b2df030c6a47e6e6340bd94016b695a444490eb13a78fe48"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/java/com/ailm/android/workers/SetupWorkers.kt",
+      "sha256": "72cfdd1bfe46e9a800025c450a1d84f1f4a7ba809ad6787eb270b8e5d55493b7"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/drawable/splash_screen.xml",
+      "sha256": "d18c824bc90891cdbadce7e6f76c28ee4e25e1a30c78e39586bdac3c34b12556"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/drawable-nodpi/asterioncore_icon.png",
+      "sha256": "55557a412381b3f5b97b6cb7959354b3569dd87c3c52c368dfdcdc185833a936"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/drawable-nodpi/asterioncore_logo.png",
+      "sha256": "6d15a7db91d6b0c4efb4409ba833d23340fcb4f951735de772e8a3177b70b41b"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/drawable-nodpi/asterioncore_logo_splash.png",
+      "sha256": "6d15a7db91d6b0c4efb4409ba833d23340fcb4f951735de772e8a3177b70b41b"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/drawable-nodpi/asterioncore_splash.png",
+      "sha256": "ca31b84f0056e60805df64b9bcea5089d2124acff6b9f5d4d899d17c7642d009"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "sha256": "a6b32eb101cbe030cfa408042c971ffd71d861fbbfbc6b965044946a0bb969c1"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+      "sha256": "a6b32eb101cbe030cfa408042c971ffd71d861fbbfbc6b965044946a0bb969c1"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/mipmap-anydpi-v33/ic_launcher.xml",
+      "sha256": "2fd510a29ea6fa0f81a6014e3fb33d0078261fd73b3b140f662293cc85ffb03f"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/mipmap-anydpi-v33/ic_launcher_round.xml",
+      "sha256": "2fd510a29ea6fa0f81a6014e3fb33d0078261fd73b3b140f662293cc85ffb03f"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/mipmap-nodpi/ic_launcher.png",
+      "sha256": "55557a412381b3f5b97b6cb7959354b3569dd87c3c52c368dfdcdc185833a936"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/mipmap-nodpi/ic_launcher_round.png",
+      "sha256": "55557a412381b3f5b97b6cb7959354b3569dd87c3c52c368dfdcdc185833a936"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/values/colors.xml",
+      "sha256": "e2116f6e69e02abe75badc5e522b80826cf17c6ab60cd85ae253d39c3d94de97"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/values/strings.xml",
+      "sha256": "473cc1356432f6e4b0d3ef133e2d77efb643dafe73079b05ed3b7c1b80d1453b"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/values/themes.xml",
+      "sha256": "f0c68c53e2b467adb121c05aac62fc7cb048e4c5587528e1a370a22e352e167c"
+    },
+    {
+      "donor": "core",
+      "path": "fusion/src/main/res/values-v31/themes.xml",
+      "sha256": "869ddc9866d0e55984277e297f612832202304344a1ddc8a58947f19e64e2c15"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/AndroidManifest.xml",
+      "sha256": "ae270d1a248fe93c4f71bb093afd702bc3faaa10f4e98e01ecee0265cbfaa651"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/BookArchive.java",
+      "sha256": "bed193be847b4ad108bfe9728ff994cf316a203554bcd413ebbea4b2aa2dfdab"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgRounderInventoryBridge.java",
+      "sha256": "bcc64c891dee12bc252f530dafa8dd053cdc218f90ff1797bac50d10d72240cf"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgRounderOrganizeJob.java",
+      "sha256": "53723bb6ff3672fd454e1e0072a1752404408540e5abcd83762393163f7d883c"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgRounderOrganizer.java",
+      "sha256": "610434ec6ab943af254b7bd1408e882d786f12c99bd3a42f11f5b9630b7b6662"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgRounderSources.java",
+      "sha256": "e1d54c30ea21646983bac4eb8706a522bcfa36bcd0813b435f429d4a3fea3be8"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgSearchIndex.java",
+      "sha256": "6966a4ab2a8be519a1cffae18149a2038e64ab3a985bf88e6705dcf638338620"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgTeraboxClient.java",
+      "sha256": "d1a394533ceae22c73b9cab5433d1db7c7e4ff3f8506f0ad1066d29c941bbfe8"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgTeraboxSearchIndex.java",
+      "sha256": "9b17ea443caf20a9500aa315ba42b804ba7d7caf7a4bd2443caf7aa268895f9f"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/ReaderLibrary.java",
+      "sha256": "87af362e5739a9769f5a1d67b7f70360fe2bd040d4c796a020fdf60e9ffd03b6"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/RemoteBookSpool.java",
+      "sha256": "65f3b73cca5afc00b786350dc15f015701d76769cc4e68cb3a81f7f98b672123"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/SeekableZip.java",
+      "sha256": "8820c5f172097f750ef98f240e219752db57d9f61def7aee21e0030402652d1b"
+    },
+    {
+      "donor": "rounder",
+      "path": "rounder/src/main/java/com/openlocal/office/core/StreamedText.java",
+      "sha256": "06649ca335934410dcf41ce290ee34cd73c7ea423fa6dcd943be4dfb4c0a4954"
+    }
+  ],
+  "compile": "UNTESTED",
+  "phone": "UNTESTED"
+}

@@ -1,0 +1,106 @@
+package com.asterion.videoflow
+
+import org.junit.Assert.*
+import org.junit.Test
+import java.util.concurrent.ExecutionException
+
+class VideoErrorDetailTest {
+    @Test fun urlDigitsAreNotHttpAuthorizationErrors(){
+        val msg=VideoErrorDetail.summary(IllegalStateException(
+            "Unable to extract https://example.test/item/403?token=secret"))
+        assertEquals(VideoFailurePolicy.Kind.UNSUPPORTED,VideoFailurePolicy.classify(msg))
+        assertFalse(msg.contains("secret"))
+    }
+
+    @Test fun actualResolverTimeoutIsRetryableNotUnsupported(){
+        val msg=VideoErrorDetail.summary(java.util.concurrent.TimeoutException(
+            "Selected publisher did not expose a transferable original within the resolver time budget"))
+        assertEquals(VideoFailurePolicy.Kind.TRANSIENT,VideoFailurePolicy.classify(msg))
+    }
+
+    @Test fun cookieHostRemainsExactAndHttpsOnly(){
+        assertEquals("www.example.test",
+            AuthorizedVideoSession.cookieHost("https://www.example.test/watch"))
+        assertEquals("example.test",
+            AuthorizedVideoSession.cookieHost("https://example.test/watch"))
+        assertNull(AuthorizedVideoSession.cookieHost("http://example.test/watch"))
+        assertNull(AuthorizedVideoSession.cookieHost("https://user@example.test/watch"))
+    }
+
+    @Test fun realOrWrappedWorkerInterruptionIsNotASiteError(){
+        assertTrue(VideoErrorDetail.workerInterrupted(InterruptedException()))
+        assertTrue(VideoErrorDetail.workerInterrupted(
+            ExecutionException(InterruptedException("worker stopped"))))
+        assertTrue(VideoErrorDetail.workerInterrupted(
+            IllegalStateException("Video transfer failed",InterruptedException())))
+        assertTrue(VideoErrorDetail.workerInterrupted(
+            IllegalStateException("java.lang.InterruptedException")))
+        assertFalse(VideoErrorDetail.workerInterrupted(
+            IllegalArgumentException("Unsupported URL")))
+        assertFalse(VideoErrorDetail.workerInterrupted(
+            IllegalStateException("Interrupted transfer because of HTTP 403")))
+    }
+
+    @Test fun unwrapsNestedExceptionsAndRedactsSignedMediaUrls(){
+        val nested=IllegalStateException(
+            "Unable to extract: https://cdn.example/video.mp4?token=secret123")
+        val message=VideoErrorDetail.summary(ExecutionException("worker",nested))
+        assertTrue(message.contains("cannot resolve",true))
+        assertFalse(message.contains("cdn.example"))
+        assertFalse(message.contains("secret123"))
+    }
+
+    @Test fun providerDenialsAreActionableNotUnclassifiedPythonStrings(){
+        val nested=IllegalStateException("HTTP Error 403: Forbidden")
+        val message=VideoErrorDetail.summary(ExecutionException(nested))
+        assertTrue(message.contains("401/403"))
+        assertFalse(message.contains("ExecutionException"))
+        assertEquals(VideoFailurePolicy.Kind.AUTH,
+            VideoFailurePolicy.classify(message))
+    }
+
+    @Test fun helloPornLoopbackDnsIsNotMisreportedAsPythonOrGenericError(){
+        val error=java.net.ConnectException(
+            "Failed to connect to voe.sx/127.0.0.1:443")
+        val detail=VideoErrorDetail.summary(error)
+        assertTrue(detail.contains("network route",true))
+        assertTrue(detail.contains("DNS",true))
+        assertFalse(detail.contains("Python extractor",true))
+        assertEquals(VideoFailurePolicy.Kind.DNS,
+            VideoFailurePolicy.classify(detail))
+        assertEquals(VideoFailurePolicy.Kind.DNS,
+            VideoFailurePolicy.classify(
+                "helloporn.com: Failed to connect to voe.sx/127.0.0.1:443"))
+        assertEquals(VideoFailurePolicy.Kind.UNSUPPORTED,
+            VideoFailurePolicy.classify("Python extractor: Unsupported URL"))
+    }
+
+    @Test fun rateLimitingIsNotMisreportedAsAnAccountProblem(){
+        val msg=VideoErrorDetail.summary(
+            IllegalStateException("HTTP Error 429: Too Many Requests"))
+        assertTrue(msg.contains("rate-limited",true))
+        assertEquals(VideoFailurePolicy.Kind.RATE_LIMIT,VideoFailurePolicy.classify(msg))
+    }
+
+    @Test fun unsupportedPublisherPlayerIsNonRetryableWithoutRepair(){
+        val msg=VideoErrorDetail.summary(
+            IllegalStateException("Unsupported URL: https://video.example/watch/3"))
+        assertTrue(msg.contains("extractor repair required"))
+        assertEquals(VideoFailurePolicy.Kind.UNSUPPORTED,VideoFailurePolicy.classify(msg))
+        assertFalse(msg.contains("video.example"))
+    }
+
+    @Test fun missingVostaOriginalAudioIsActionableWithoutAutomaticRetry(){
+        val reason="VOSTA required: selected episode has no compatible " +
+            "publisher-declared Japanese original-audio rendition"
+        val classification=VideoFailurePolicy.classify(reason)
+        assertEquals(VideoFailurePolicy.Kind.UNSUPPORTED,classification)
+        assertEquals(0,VideoFailurePolicy.maxRetries(classification))
+    }
+
+    @Test fun pythonRuntimeDependencyFailureIsDistinct(){
+        val msg=VideoErrorDetail.summary(
+            ExecutionException(IllegalStateException("ModuleNotFoundError: No module named yt_dlp")))
+        assertTrue(msg.contains("dependency",true))
+    }
+}
