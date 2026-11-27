@@ -47,6 +47,20 @@ import com.ailm.android.runtime.LocalDatabase
 import com.ailm.android.runtime.FusionDatabaseRepository
 import com.azrael.pixivdumpsync.AsterionSearchHub
 import com.azrael.pixivdumpsync.UnifiedDownloadsUi
+import com.azrael.pixivdumpsync.SourceIndex
+import com.azrael.pixivdumpsync.IndexedItem
+import com.azrael.pixivdumpsync.IndexedSource
+import com.azrael.pixivdumpsync.SiteControls
+import com.azrael.pixivdumpsync.AsterionContentSuggestions
+import com.azrael.pixivdumpsync.RemoteImageLoader
+import com.azrael.pixivdumpsync.CloudOriginalRouting
+import com.azrael.pixivdumpsync.TeraBoxRemoteOriginals
+import com.azrael.pixivdumpsync.ChapterQueue
+import com.azrael.pixivdumpsync.ChapterArchives
+import com.azrael.pixivdumpsync.ChapterScraper
+import com.azrael.pixivdumpsync.NovelEpubService
+import com.azrael.pixivdumpsync.NovelEpubParser
+import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import com.asterion.videoflow.NexusWebAcquisition
 import com.openlocal.office.core.FgSearchIndex
@@ -77,7 +91,12 @@ data class NexusUnifiedEntry(
     val web:String?=null,
     val path:String?=null,
     val size:Long=-1,
-    val folder:Boolean=false
+    val folder:Boolean=false,
+    val preview:String?=null,
+    val area:String="",
+    val kind:String="",
+    val origin:String="",
+    val filename:String?=null
 )
 @Composable private fun UnifiedHeading(title:String,subtitle:String){
     Text(title,color=C_TEXT,fontSize=23.sp,fontWeight=FontWeight.SemiBold)
@@ -103,6 +122,16 @@ data class NexusUnifiedEntry(
         colors=CardDefaults.cardColors(containerColor=C_CARD),
         shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,C_BORDER)){
         Column(Modifier.fillMaxWidth().padding(15.dp)){
+            if(!entry.preview.isNullOrBlank()){
+                key(entry.preview,entry.web){
+                    AndroidView(factory={context->android.widget.ImageView(context).apply{
+                        scaleType=android.widget.ImageView.ScaleType.FIT_CENTER
+                        contentDescription=entry.title
+                        RemoteImageLoader.load(context,this,entry.preview,entry.web?:entry.origin)
+                    }},modifier=Modifier.fillMaxWidth().height(170.dp))
+                }
+                Spacer(Modifier.height(9.dp))
+            }
             Row(verticalAlignment=Alignment.CenterVertically){
                 Text(entry.title,color=C_TEXT,fontWeight=FontWeight.Medium,
                     fontSize=14.sp,maxLines=2,overflow=TextOverflow.Ellipsis,
@@ -125,6 +154,8 @@ fun NexusWorkspace(
     onLibraryRefresh:()->Unit
 ){
     when(section){
+        "Modules"->NexusAcquisitionCatalog(false,onLibraryRefresh)
+        "Suggestions"->NexusAcquisitionCatalog(true,onLibraryRefresh)
         "Search"->NexusUnifiedSearch(onOpen,onLibraryRefresh)
         "Transfers"->NexusUnifiedTransfers(onOpen)
         "Cloud"->NexusUnifiedCloud(onOpen,onLibraryRefresh)
@@ -145,6 +176,7 @@ private fun NexusUnifiedSearch(
     val main=remember{Handler(Looper.getMainLooper())}
     var term by remember{mutableStateOf("")}
     var online by remember{mutableStateOf(false)}
+    var onlineMode by remember{mutableStateOf(0)}
     var status by remember{mutableStateOf("No query has been sent online.")}
     var loading by remember{mutableStateOf(false)}
     var hits by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
@@ -232,6 +264,9 @@ private fun NexusUnifiedSearch(
                                     "Indexed image","Gallery",Uri.parse(uri),"image/*"))
                         }
                     }
+                    all.addAll(SourceIndex.items(ctx,null,250).filter{
+                        it.title.contains(query,true)&&!it.queued
+                    }.map{it.nexusEntry()})
                     all
                 }
                 if(token!=generation.get())return@launch
@@ -246,7 +281,7 @@ private fun NexusUnifiedSearch(
                 }
                 if(online){
                     val response=withContext(Dispatchers.IO){
-                        AsterionSearchHub.searchForNexus(ctx as Activity,query,0,0)
+                        AsterionSearchHub.searchForNexus(ctx as Activity,query,onlineMode,0)
                     }
                     if(token==generation.get()){
                         val incoming=mutableListOf<NexusUnifiedEntry>()
@@ -258,7 +293,11 @@ private fun NexusUnifiedSearch(
                                 url.startsWith("magnet:"))
                                 incoming.add(NexusUnifiedEntry(
                                     j.optString("title",url),j.optString("detail",""),
-                                    j.optString("source","Web"),web=url))
+                                    j.optString("source","Web"),web=url,
+                                    preview=j.optString("thumbnail").takeIf{it.isNotBlank()},
+                                    area=when(onlineMode){3->"GAMES";4->"BOOKS";else->"VIDEOS"},
+                                    kind=if(onlineMode==0)"video" else "",
+                                    filename=j.optString("filename").takeIf{it.isNotBlank()}))
                         }
                         hits=hits+incoming
                     }
@@ -281,6 +320,11 @@ private fun NexusUnifiedSearch(
                 modifier=Modifier.weight(1f))
             UnifiedButton(if(loading)"Searching…" else "Search",!loading){execute()}
         }
+        if(online)Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            listOf(0 to "Videos",3 to "Games",4 to "Books").forEach{(mode,label)->
+                FilterChip(selected=onlineMode==mode,onClick={onlineMode=mode},label={Text(label)})
+            }
+        }
         Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.padding(vertical=11.dp))
         LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
             items(hits){item->UnifiedEntryCard(item){
@@ -302,30 +346,146 @@ private fun NexusUnifiedSearch(
             confirmButton={
                 TextButton(onClick={
                     selected=null
-                    val url=chosen.web?:return@TextButton
-                    if(url.startsWith("magnet:")){
-                        status="Use torrent transfer for this candidate";return@TextButton
-                    }
                     scope.launch{
                         loading=true;status="Resolving chosen original"
                         runCatching{withContext(Dispatchers.IO){
-                            NexusWebAcquisition.acquireSelected(ctx,url)
-                        }}.onSuccess{
-                            status=NexusCloudPublication.status(ctx,it)
-                            onLibraryRefresh()
-                        }.onFailure{status="Original unavailable: "+it.message.orEmpty().take(120)}
+                            acquireNexusEntry(ctx as Activity,chosen)
+                        }}.onSuccess{status=it;onLibraryRefresh()}
+                            .onFailure{status="Original unavailable: "+it.message.orEmpty().take(120)}
                         loading=false
                     }
                 }){Text("Acquire original")}
             },
-            dismissButton={
-                TextButton(onClick={
-                    selected=null
-                    runCatching{ctx.startActivity(
-                        Intent(Intent.ACTION_VIEW,Uri.parse(chosen.web)))}
-                }){Text("Visit source")}
-            }
+            dismissButton={TextButton(onClick={selected=null}){Text("Cancel")}}
         )
+    }
+}
+
+
+private fun IndexedItem.nexusEntry()=NexusUnifiedEntry(title,
+    if(queued)"Already submitted to native engine" else kind,source,web=url,
+    preview=preview,area=area,kind=kind,origin=source)
+
+/** Every candidate either reaches an existing original resolver/queue or reports
+ * why it cannot be submitted. No browser launch is used as a download result. */
+private fun acquireNexusEntry(activity:Activity,item:NexusUnifiedEntry):String{
+    val url=requireNotNull(item.web){"No original source selected"}
+    require(url.startsWith("https://")||url.startsWith("magnet:?")){"Only HTTPS or supported torrent originals"}
+    check(NexusCloudPublication.canPublish(activity)){"Connect the same TeraBox browsing and upload account first"}
+    if(url.startsWith("magnet:"))throw IllegalStateException("Select torrent files in the native torrent engine first")
+    if(item.area=="BOOKS"&&NovelEpubParser.supportedSeries(url)){
+        NovelEpubService.enqueue(activity,url,item.title)
+        return "Book archive requested; verification pending"
+    }
+    if(item.area=="COMICS"&&!TeraBoxRemoteOriginals.verifiedPublicFileLink(url)){
+        require(!ChapterScraper.isSingleChapter(url)){"Select the complete comic series, not one chapter"}
+        ChapterQueue(activity).use{it.enqueue(url,item.title)}
+        ChapterArchives.start(activity)
+        return "Complete comic requested; verification pending"
+    }
+    if(item.kind=="video"||item.area=="VIDEOS"){
+        val result=NexusWebAcquisition.acquireSelected(activity,url)
+        return NexusCloudPublication.status(activity,result)
+    }
+    if(TeraBoxRemoteOriginals.verifiedPublicFileLink(url)){
+        CloudOriginalRouting.enqueue(activity,url,item.area,item.filename)
+        return "Remote original requested; verification pending"
+    }
+    throw IllegalStateException("This selected page has no supported verified-original route")
+}
+
+@Composable
+private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Unit){
+    val ctx=LocalContext.current as Activity
+    val scope=rememberCoroutineScope()
+    val modules=listOf("ARTWORK" to "Artwork","VIDEOS" to "Videos","BOOKS" to "Books",
+        "COMICS" to "Comics","GAMES" to "Games","ASSETS" to "Assets",
+        "CREATORS" to "Creators","COSPLAY" to "Gallery sources","X" to "Social sources",
+        "KOIKATSU" to "Character assets")
+    var area by remember{mutableStateOf(if(suggestions)"ALL" else "ARTWORK")}
+    var rows by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
+    var providers by remember{mutableStateOf<List<IndexedSource>>(emptyList())}
+    var message by remember{mutableStateOf("Loading native index")}
+    var busy by remember{mutableStateOf(false)}
+    var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
+    var refresh by remember{mutableIntStateOf(0)}
+    LaunchedEffect(area,refresh){
+        busy=true
+        runCatching{withContext(Dispatchers.IO){
+            if(suggestions){
+                AsterionContentSuggestions.picks(ctx,area).map{
+                    NexusUnifiedEntry(it.title,it.reason,it.source,web=it.url,
+                        preview=it.preview,area=it.area,kind=it.kind,origin=it.source)
+                } to emptyList<IndexedSource>()
+            }else{
+                SourceIndex.items(ctx,area,250).map{it.nexusEntry()} to SourceIndex.status(ctx,area)
+            }
+        }}.onSuccess{(entries,sources)->
+            rows=entries;providers=sources;message=entries.size.toString()+" indexed candidates"
+        }.onFailure{message="Index unavailable: "+it.javaClass.simpleName}
+        busy=false
+    }
+    Column(Modifier.fillMaxSize().padding(horizontal=16.dp,vertical=10.dp)){
+        UnifiedHeading(if(suggestions)"Suggestions" else "Modules","Native source engines")
+        Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            (if(suggestions)listOf("ALL" to "All")+modules else modules).forEach{(id,label)->
+                FilterChip(selected=area==id,onClick={area=id},label={Text(label)})
+            }
+        }
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Text(message,color=C_MUTED,fontSize=12.sp,modifier=Modifier.weight(1f))
+            UnifiedButton("Refresh",!busy){refresh++}
+        }
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
+            if(!suggestions)items(providers,key={it.url}){provider->
+                var live by remember(provider.url,refresh){mutableStateOf(SiteControls.sync(ctx,provider.url))}
+                Card(colors=CardDefaults.cardColors(containerColor=C_CARD)){
+                    Column(Modifier.fillMaxWidth().padding(12.dp)){
+                        Text(provider.name,color=C_TEXT,fontWeight=FontWeight.Medium)
+                        Text(provider.discovered.toString()+" indexed · "+(provider.error?:
+                            if(provider.historyComplete)"History complete" else "History not complete"),color=C_MUTED,fontSize=12.sp)
+                        Row(verticalAlignment=Alignment.CenterVertically){
+                            Text("Live sync",color=C_TEXT,modifier=Modifier.weight(1f))
+                            Switch(checked=live,onCheckedChange={enabled->
+                                scope.launch{
+                                    runCatching{withContext(Dispatchers.IO){
+                                        SiteControls.setSync(ctx,provider.url,enabled)
+                                        SiteControls.applyToEngines(ctx,provider.url)
+                                    }}.onSuccess{live=enabled}
+                                        .onFailure{message="Sync change failed"}
+                                }
+                            })
+                            Spacer(Modifier.width(8.dp))
+                            UnifiedButton("Backfill"){
+                                scope.launch{
+                                    runCatching{withContext(Dispatchers.IO){
+                                        SourceIndex.scanSourceNow(ctx,provider.url,true)
+                                    }}.onSuccess{message="Backfill requested; refresh for actual status"}
+                                        .onFailure{message="Backfill request failed"}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            items(rows){entry->UnifiedEntryCard(entry){selected=entry}}
+            if(rows.isEmpty()&&!busy)item{Text("No indexed candidates",color=C_MUTED)}
+        }
+    }
+    selected?.let{entry->
+        AlertDialog(onDismissRequest={selected=null},title={Text(entry.title)},
+            text={Text("Acquire this selected original using its native route.")},
+            confirmButton={TextButton(onClick={
+                selected=null
+                scope.launch{
+                    busy=true
+                    runCatching{withContext(Dispatchers.IO){acquireNexusEntry(ctx,entry)}}
+                        .onSuccess{message=it;onLibraryRefresh()}
+                        .onFailure{message="Not acquired: "+it.message.orEmpty().take(150)}
+                    busy=false
+                }
+            }){Text("Acquire")}},
+            dismissButton={TextButton(onClick={selected=null}){Text("Cancel")}})
     }
 }
 

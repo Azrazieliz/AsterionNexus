@@ -1159,11 +1159,10 @@ object UnifiedDownloadsUi {
                 com.openlocal.office.core.FgTeraboxClient.mime(row.name))
         }
         val stagedUris=NduCloudQueue(activity).use{it.nexusPublications().map{row->row.uri}.toSet()}
-        return (staged+collect(activity).take(350).map{row->
+        return (staged+collect(activity).filterNot{row->row.saved?.let{it in stagedUris}==true}.take(350).map{row->
             NexusQueueEntry(
                 rowId(row),row.source,row.filename,
-                if(row.saved in stagedUris)row.info+" · see TeraBox publication" else row.info,
-                if(row.saved in stagedUris&&row.state.name=="DONE")"QUEUED" else row.state.name,
+                row.info,row.state.name,
                 row.percent,row.receivedBytes,row.totalBytes,
                 row.actionText?.takeUnless{it=="COOLDOWN"},
                 if(row.hasPrimaryAction && row.actionText!=null &&

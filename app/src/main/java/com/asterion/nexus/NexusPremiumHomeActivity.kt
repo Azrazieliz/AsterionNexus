@@ -263,7 +263,7 @@ private fun NexusHome(
     val contexts=mapOf(
         "Library" to listOf("TeraBox","Gallery","Books","Videos","Assets/Files"),
         "Organising" to listOf("Activity","Taxonomy","Review"),
-        "Downloading" to listOf("Search","Transfers")
+        "Downloading" to listOf("Modules","Search","Suggestions","Transfers")
     )
     var libraryContext by rememberSaveable { mutableStateOf("TeraBox") }
     var organisingContext by rememberSaveable { mutableStateOf("Activity") }
@@ -271,7 +271,7 @@ private fun NexusHome(
     var showMore by remember { mutableStateOf(false) }
     val destination=when(section){
         "Organize","Intelligence","Activity","Taxonomy","Review"->"Organising"
-        "Search","Transfers"->"Downloading"
+        "Modules","Search","Suggestions","Transfers"->"Downloading"
         else->"Library"
     }
     val context=when(destination){
