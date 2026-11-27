@@ -16,6 +16,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,7 +62,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     private var hasMore by mutableStateOf(false)
     private var directDialog by mutableStateOf(false)
     private var category by mutableStateOf("All")
-    private var activeSection by mutableStateOf("Library")
+    private var activeSection by mutableStateOf("Cloud")
     private val batch=80
 
     private val openDocument=registerForActivityResult(
@@ -242,80 +245,86 @@ private fun NexusHome(
     onLibraryRefresh:()->Unit,
     onWorkspaceOpen:(Uri,String,String,Int)->Unit
 ){
-    val configuration=androidx.compose.ui.platform.LocalConfiguration.current
-    val landscape=configuration.screenWidthDp>=720
-    val sections=listOf("Library","Search","Transfers","Cloud","Organize","Intelligence")
+    val destinations=listOf("Library","Organising","Downloading")
+    val contexts=mapOf(
+        "Library" to listOf("TeraBox","Gallery","Books","Videos","Assets/Files"),
+        "Organising" to listOf("Activity","Taxonomy","Review"),
+        "Downloading" to listOf("Search","Transfers")
+    )
+    var libraryContext by rememberSaveable { mutableStateOf("TeraBox") }
+    var organisingContext by rememberSaveable { mutableStateOf("Activity") }
+    var downloadingContext by rememberSaveable { mutableStateOf("Search") }
     var showMore by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxSize().background(CanvasColor).systemBarsPadding()){
-        if(landscape)NavigationRail(containerColor=CanvasColor){
-            Spacer(Modifier.height(20.dp))
-            sections.forEachIndexed{index,name->
-                NavigationRailItem(
-                    selected=section==name,onClick={onRoute(name)},
-                    icon={Text(navGlyph(name),fontSize=22.sp)},
-                    label={Text(name,fontSize=11.sp)}
-                )
+    val destination=when(section){
+        "Organize","Intelligence","Activity","Taxonomy","Review"->"Organising"
+        "Search","Transfers"->"Downloading"
+        else->"Library"
+    }
+    val context=when(destination){
+        "Organising"->organisingContext
+        "Downloading"->downloadingContext
+        else->libraryContext
+    }
+    fun select(target:String,choice:String){
+        when(target){
+            "Library"->{
+                libraryContext=choice
+                if(choice=="TeraBox")onRoute("Cloud")
+                else{
+                    onCategory(when(choice){
+                        "Gallery"->"Images"
+                        "Assets/Files"->"Other"
+                        else->choice
+                    })
+                    onRoute("Library")
+                }
             }
+            "Organising"->{organisingContext=choice;onRoute(choice)}
+            "Downloading"->{downloadingContext=choice;onRoute(choice)}
         }
-        Column(Modifier.fillMaxSize()){
-            // Compact control strip: preserve maximum vertical area for real media.
+    }
+    Column(Modifier.fillMaxSize().background(CanvasColor).systemBarsPadding()){
             Column(Modifier.padding(horizontal=14.dp).padding(top=5.dp)){
-                Row(modifier=Modifier.fillMaxWidth(),
-                    verticalAlignment=Alignment.CenterVertically){
-                    Text("Nexus",color=IvoryColor,fontSize=22.sp,
-                        fontWeight=FontWeight.SemiBold,letterSpacing=(-0.5f).sp,
-                        modifier=Modifier.weight(1f))
-                    TextButton(onClick=onImport,modifier=Modifier.heightIn(min=48.dp)){
-                        Text("Import",color=SilverColor,fontSize=13.sp)
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                    Text(destination,color=IvoryColor,fontSize=20.sp,
+                        fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
+                    if(destination=="Library")TextButton(onClick=onImport){Text("Import")}
+                    if(destination=="Downloading"&&context=="Search")
+                        TextButton(onClick=onAcquire){Text("Direct URL")}
+                    Box{
+                        TextButton(onClick={showMore=true}){Text("⋮",fontSize=22.sp)}
+                        DropdownMenu(expanded=showMore,onDismissRequest={showMore=false}){
+                            DropdownMenuItem(text={Text("Runtime diagnostics")},onClick={
+                                showMore=false;onRoute("Intelligence")
+                            })
+                        }
                     }
-                    Spacer(Modifier.width(6.dp))
-                    Button(onClick=onAcquire,
-                        colors=ButtonDefaults.buttonColors(containerColor=SilverColor),
-                        shape=RoundedCornerShape(11.dp),
-                        modifier=Modifier.heightIn(min=48.dp)){
-                        Text("Acquire",color=CanvasColor,fontSize=13.sp)
+                }
+                val choices=contexts.getValue(destination)
+                Row(Modifier.fillMaxWidth().pointerInput(destination,context){
+                    var dx=0f
+                    detectHorizontalDragGestures(onDragStart={dx=0f},onDragEnd={
+                        val index=choices.indexOf(context)
+                        val next=index+if(dx<0)1 else -1
+                        if(kotlin.math.abs(dx)>64f&&next in choices.indices)
+                            select(destination,choices[next])
+                    }){change,amount->change.consume();dx+=amount}
+                }.horizontalScroll(rememberScrollState()).padding(vertical=4.dp),
+                    horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                    choices.forEach{choice->
+                        FilterChip(selected=context==choice,onClick={select(destination,choice)},
+                            label={Text(choice,fontSize=12.sp)},
+                            colors=FilterChipDefaults.filterChipColors(
+                                selectedContainerColor=SilverColor,selectedLabelColor=CanvasColor,
+                                containerColor=PaneColor,labelColor=MutedColor))
                     }
                 }
                 if(section=="Library"){
-                    OutlinedTextField(
-                        value=query,onValueChange=onQuery,singleLine=true,
-                        placeholder={Text("Search library",fontSize=14.sp)},
-                        leadingIcon={Text("⌕",fontSize=19.sp,color=SilverColor)},
-                        modifier=Modifier.fillMaxWidth().padding(top=4.dp),
-                        shape=RoundedCornerShape(13.dp),
-                        colors=OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor=SilverColor,
-                            unfocusedBorderColor=BorderColor,
-                            focusedTextColor=IvoryColor,
-                            unfocusedTextColor=IvoryColor,
-                            focusedPlaceholderColor=MutedColor,
-                            unfocusedPlaceholderColor=MutedColor,
-                            cursorColor=SilverColor)
-                    )
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
-                        .padding(vertical=7.dp),
-                        horizontalArrangement=Arrangement.spacedBy(7.dp)){
-                        listOf("All","Images","Videos","Books","Audio","Other").forEach{kind->
-                            FilterChip(selected=category==kind,onClick={onCategory(kind)},
-                                label={Text(kind,fontSize=12.sp)},
-                                colors=FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor=SilverColor,
-                                    selectedLabelColor=CanvasColor,
-                                    containerColor=PaneColor,labelColor=MutedColor),
-                                border=FilterChipDefaults.filterChipBorder(
-                                    enabled=true,selected=category==kind,
-                                    borderColor=BorderColor,selectedBorderColor=SilverColor))
-                        }
-                    }
-                    if(status.contains("failed",true)||
-                       status.contains("unavailable",true)||
-                       status.contains("Indexed ",true)||
-                       status.contains("Verified ",true)){
-                        Text(status,color=MutedColor,fontSize=12.sp,
-                            modifier=Modifier.padding(bottom=5.dp).semantics{
-                                contentDescription=status
-                            })
-                    }
+                    OutlinedTextField(value=query,onValueChange=onQuery,singleLine=true,
+                        placeholder={Text("Search "+context.lowercase(),fontSize=14.sp)},
+                        modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))
+                    if(status.contains("failed",true)||status.contains("unavailable",true))
+                        Text(status,color=MutedColor,fontSize=12.sp)
                 }
             }
             if(section=="Library"){
@@ -379,51 +388,26 @@ private fun NexusHome(
                         onLibraryRefresh=onLibraryRefresh)
                 }
             }
-            if(!landscape)NavigationBar(containerColor=PaneColor){
-                listOf("Library","Search","Transfers","More").forEach{name->
-                    NavigationBarItem(
-                        selected=section==name||(name=="More"&&
-                            section in listOf("Cloud","Organize","Intelligence")),
-                        onClick={
-                            if(name=="More")showMore=true else onRoute(name)
-                        },
-                        icon={Text(navGlyph(name),fontSize=20.sp)},
-                        label={Text(
-                            if(name=="Search")"Discover" else name,fontSize=11.sp)},
-                        colors=NavigationBarItemDefaults.colors(
-                            selectedIconColor=SilverColor,selectedTextColor=SilverColor,
-                            unselectedIconColor=MutedColor,unselectedTextColor=MutedColor,
-                            indicatorColor=CanvasColor)
-                    )
-                }
-            }
-            if(showMore){
-                ModalBottomSheet(onDismissRequest={showMore=false},
-                    containerColor=PaneColor,
-                    contentColor=IvoryColor){
-                    Column(Modifier.fillMaxWidth().padding(bottom=24.dp,
-                        start=18.dp,end=18.dp)){
-                        Text("Workspace",color=IvoryColor,fontSize=18.sp,
-                            fontWeight=FontWeight.SemiBold,
-                            modifier=Modifier.padding(bottom=10.dp))
-                        listOf("Cloud","Organize","Intelligence").forEach{name->
-                            TextButton(
-                                onClick={showMore=false;onRoute(name)},
-                                modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),
-                                contentPadding=PaddingValues(horizontal=12.dp)){
-                                Row(Modifier.fillMaxWidth(),
-                                    verticalAlignment=Alignment.CenterVertically){
-                                    Text(navGlyph(name),color=SilverColor,
-                                        fontSize=21.sp,
-                                        modifier=Modifier.width(42.dp))
-                                    Text(name,color=IvoryColor,fontSize=16.sp)
-                                }
-                            }
-                        }
+            Surface(modifier=Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=6.dp),
+                shape=RoundedCornerShape(24.dp),color=PaneColor,
+                border=BorderStroke(1.dp,BorderColor)){
+                NavigationBar(containerColor=Color.Transparent,windowInsets=WindowInsets(0,0,0,0)){
+                    destinations.forEach{name->
+                        NavigationBarItem(selected=destination==name,onClick={
+                            select(name,when(name){
+                                "Library"->libraryContext
+                                "Organising"->organisingContext
+                                else->downloadingContext
+                            })
+                        },icon={Text(navGlyph(name),fontSize=20.sp)},
+                            label={Text(name,fontSize=11.sp)},
+                            colors=NavigationBarItemDefaults.colors(
+                                selectedIconColor=SilverColor,selectedTextColor=SilverColor,
+                                unselectedIconColor=MutedColor,unselectedTextColor=MutedColor,
+                                indicatorColor=CanvasColor))
                     }
                 }
             }
-        }
     }
 }
 
@@ -432,7 +416,8 @@ private fun navGlyph(name:String)=when(name){
     "Search"->"⌕"
     "Transfers"->"⇵"
     "Cloud"->"◫"
-    "Organize"->"▤"
+    "Organising"->"▤"
+    "Downloading"->"⇵"
     "More"->"☰"
     else->"◇"
 }
