@@ -26,8 +26,15 @@ public final class NexusFileOpen {
             resolved.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")){
             intent=new Intent(activity,NexusReaderActivity.class);
         }else{
-            intent=new Intent(Intent.ACTION_VIEW);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            final Intent external=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,resolved);
+            external.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            NexusFileDetails.showWithOpen(activity,uri,resolved,title,()->{
+                try{activity.startActivity(external);}
+                catch(android.content.ActivityNotFoundException error){
+                    new android.app.AlertDialog.Builder(activity).setMessage("No compatible viewer installed for "+resolved).setPositiveButton("Close",null).show();
+                }
+            });
+            return;
         }
         intent.setDataAndType(uri,resolved);
         intent.putExtra("title",title);

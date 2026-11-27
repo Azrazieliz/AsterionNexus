@@ -18,7 +18,7 @@ public final class NexusRounderPlaybackActivity extends Activity {
         String label=getIntent().getStringExtra("title");
         boolean video=getIntent().getType()==null||!getIntent().getType().startsWith("audio/");
         player=new FgMediaPlayer(this,uri,label==null?"Media":label,
-            video,()->finish(),null);
+            video,()->finish(),null,()->NexusFileDetails.show(this,uri,getIntent().getType(),label==null?"Media":label));
         long position=getIntent().getLongExtra("nexus_position_ms",0L);
         if(position>0)player.seekToPosition(position);
         setContentView(player.getView());

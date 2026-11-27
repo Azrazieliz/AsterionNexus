@@ -80,7 +80,11 @@ public final class NexusReaderActivity extends Activity {
         heading=text(getIntent().getStringExtra("title")==null?
             "Reader":getIntent().getStringExtra("title"),16);
         heading.setSingleLine(true);heading.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        view.addView(heading,new LinearLayout.LayoutParams(-1,dp(45)));
+        LinearLayout metadataHeading=new LinearLayout(this);
+        metadataHeading.setGravity(Gravity.CENTER_VERTICAL);
+        metadataHeading.addView(heading,new LinearLayout.LayoutParams(0,dp(45),1));
+        metadataHeading.addView(button("Details",()->NexusFileDetails.show(this,source,type,heading.getText().toString())),new LinearLayout.LayoutParams(-2,-2));
+        view.addView(metadataHeading,new LinearLayout.LayoutParams(-1,-2));
         position=text("Opening",12);position.setTextColor(ACCENT);
         view.addView(position,new LinearLayout.LayoutParams(-1,dp(28)));
         web=new WebView(this);

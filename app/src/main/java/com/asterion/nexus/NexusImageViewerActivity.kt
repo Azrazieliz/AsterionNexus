@@ -67,6 +67,9 @@ class NexusImageViewerActivity : ComponentActivity() {
                     Text(title,color=NexusVisual.text,fontSize=15.sp,
                         maxLines=1,overflow=TextOverflow.Ellipsis,
                         modifier=Modifier.weight(1f))
+                    TextButton(onClick={NexusFileDetails.show(this@NexusImageViewerActivity,source,intent.type?:"image/*",title)}){
+                        Text("Details",color=NexusVisual.silver,fontSize=12.sp)
+                    }
                     Text((scale*100f).toInt().toString()+"%",
                         color=NexusVisual.muted,fontSize=12.sp,
                         modifier=Modifier.padding(horizontal=10.dp))

@@ -4294,6 +4294,23 @@ object StandaloneRuntime {
         return if (ArtworkVisualPreferenceModel.valid(values)) values else emptyList()
     }
 
+    /** Nexus must reuse Core's manual artwork rating, not duplicate it. */
+    fun nexusArtworkId(uri:String,sha256:String?):Int?{
+        ensureInitialized()
+        val db=database.readableDatabase
+        fun unique(sql:String,args:Array<String>):Int?=db.rawQuery(sql,args).use{cursor->
+            if(!cursor.moveToFirst())null else {
+                val id=cursor.getInt(0)
+                check(!cursor.moveToNext()){ "Multiple Core identities require review" }
+                id
+            }
+        }
+        val direct=unique("SELECT image_id FROM images WHERE uri=? LIMIT 2",arrayOf(uri))
+        if(direct!=null)return direct
+        if(sha256==null||!sha256.matches(Regex("[0-9a-f]{64}")))return null
+        return unique("SELECT f.image_id FROM fusion_image_fingerprints f JOIN images i ON f.image_id=i.image_id WHERE f.sha256=? AND f.source_size_bytes=i.size_bytes LIMIT 2",arrayOf(sha256))
+    }
+
     /** High-precision quality score, never confused with RT classification. */
     fun artworkRating(imageId: Int): Map<String, Any> {
         ensureInitialized()

@@ -722,7 +722,7 @@ private fun NexusUnifiedCloud(
                 }
                 items(sourceRows){entry->
                     NexusCloudContentTile(entry,null,"","",0,onDetails={
-                        entry.uri?.let{onOpen(it,entry.mime,entry.title,-1)}
+                        entry.uri?.let{NexusFileDetails.show(ctx as Activity,it,entry.mime,entry.title)}
                     },onOpen={
                         val tree=selectedTree;val uri=entry.uri
                         if(uri!=null&&tree!=null){
@@ -786,16 +786,22 @@ private fun NexusUnifiedCloud(
     selected?.let{entry->
         AlertDialog(onDismissRequest={selected=null},
             title={Text(entry.title)},
-            text={Text("Stream without saving locally, or explicitly create a verified offline copy.")},
+            text={Text("Open, view metadata or create a verified offline copy.")},
             confirmButton={
                 TextButton(onClick={
                     selected=null
                     val path=entry.path?:return@TextButton
                     onOpen(FgTeraboxDocumentsProvider.uriFor(path,entry.size),
                         entry.mime,entry.title,-1)
-                }){Text("Stream")}
+                }){Text("Open")}
             },
             dismissButton={
+                TextButton(onClick={
+                    selected=null
+                    val path=entry.path?:return@TextButton
+                    if(accountScope==cloud.metadataScope())NexusFileDetails.show(ctx as Activity,
+                        FgTeraboxDocumentsProvider.uriFor(path,entry.size),entry.mime,entry.title)
+                }){Text("Details")}
                 TextButton(onClick={
                     selected=null
                     val path=entry.path?:return@TextButton

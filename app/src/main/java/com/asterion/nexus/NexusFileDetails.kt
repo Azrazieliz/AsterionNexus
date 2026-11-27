@@ -1,0 +1,154 @@
+package com.asterion.nexus
+
+import android.app.Activity
+import android.app.AlertDialog
+import android.net.Uri
+import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
+import com.ailm.android.runtime.StandaloneRuntime
+import java.security.MessageDigest
+import java.util.concurrent.Executors
+
+/** Opened-file metadata only. Core's existing manual preference remains
+ * authoritative for mapped artwork. Other verified contents use a SHA identity
+ * independent of display name or storage location, never a path-based rating.
+ */
+object NexusFileDetails {
+    private val worker=Executors.newSingleThreadExecutor()
+    private data class Target(val sha:String?,val coreId:Int?)
+    private data class Scores(val manual:Int,val pending:Int?)
+    private fun identify(activity:Activity,uri:Uri,mime:String):Target {
+        val registry=NexusRegistry(activity)
+        val sha=if(uri.authority==activity.packageName+".library"&&
+            uri.pathSegments.size==2&&uri.pathSegments[0]=="original"){
+            val item=registry.find(uri.lastPathSegment)
+                ?:throw IllegalStateException("Verified original unavailable")
+            item.sha256
+        }else if(uri.authority in setOf("com.android.externalstorage.documents",
+                "com.android.providers.media.documents","media")){
+            // Local authorized content only: no whole-cloud-file downloads for ratings.
+            val digest=MessageDigest.getInstance("SHA-256")
+            activity.contentResolver.openInputStream(uri)?.use{input->
+                val buf=ByteArray(131072)
+                var total=0L
+                while(true){
+                    val n=input.read(buf)
+                    if(n<0)break
+                    if(n==0)continue
+                    total+=n
+                    check(total<=256L*1024L*1024L){"Use a verified offline copy for this large file"}
+                    digest.update(buf,0,n)
+                }
+                check(total>0){"Empty original"}
+            }?:throw IllegalStateException("File cannot be read")
+            digest.digest().joinToString(""){ "%02x".format(it.toInt() and 255) }
+        }else null
+        val core=if(mime.startsWith("image/")){
+            StandaloneRuntime.initialize(activity.applicationContext)
+            StandaloneRuntime.nexusArtworkId(uri.toString(),sha)
+        }else null
+        return Target(sha,core)
+    }
+    private fun read(activity:Activity,target:Target):Scores{
+        val local=target.sha?.let{NexusRegistry(activity).fileRating(it)}?:-1
+        val core=target.coreId?:return Scores(local,null)
+        val rating=(StandaloneRuntime.artworkRating(core)["manual_score"] as? Number)?.toInt()?:-1
+        return Scores(rating,local.takeIf{it>=0})
+    }
+    private fun write(activity:Activity,target:Target,score:Int){
+        check(score in -1..100)
+        val registry=NexusRegistry(activity)
+        if(target.coreId!=null){
+            check(StandaloneRuntime.setArtworkRating(target.coreId,score)){"Core rating update failed"}
+            // Resolve previously stored generic artwork rating only after the
+            // owner's explicit save and successful native Core write.
+            target.sha?.let{registry.setFileRating(it,-1)}
+        }else{
+            registry.setFileRating(target.sha?:throw IllegalStateException("No verified content identity"),score)
+        }
+    }
+    @JvmStatic fun show(activity:Activity,uri:Uri,mime:String?,title:String?){
+        showInternal(activity,uri,mime,title,null)
+    }
+    @JvmStatic fun showWithOpen(activity:Activity,uri:Uri,mime:String?,title:String?,open:Runnable){
+        showInternal(activity,uri,mime,title,open)
+    }
+    private fun showInternal(activity:Activity,uri:Uri,mime:String?,title:String?,open:Runnable?){
+        val type=mime?:activity.contentResolver.getType(uri)?:"application/octet-stream"
+        val body=LinearLayout(activity).apply{
+            orientation=LinearLayout.VERTICAL
+            val pad=(20*resources.displayMetrics.density).toInt()
+            setPadding(pad,pad,pad,pad)
+        }
+        val info=TextView(activity).apply{text=type}
+        val status=TextView(activity).apply{text="Reading file metadata…"}
+        val slider=SeekBar(activity).apply{max=100;progress=50;isEnabled=false}
+        body.addView(info);body.addView(status);body.addView(slider)
+        var target:Target?=null
+        var selected:Int?=null
+        var saving=false
+        val builder=AlertDialog.Builder(activity).setTitle(title?:"File details")
+            .setView(body).setPositiveButton("Save rating",null)
+            .setNegativeButton("Close",null)
+            .setNeutralButton(if(open==null)"Clear rating" else "Open file",null)
+        val dialog=builder.create()
+        dialog.setOnShowListener{
+            val save=dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val neutral=dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            save.isEnabled=false;neutral.isEnabled=open!=null
+            fun commit(value:Int){
+                val identity=target?:return
+                if(saving)return
+                saving=true;save.isEnabled=false;neutral.isEnabled=false;slider.isEnabled=false
+                status.text="Saving rating…"
+                worker.execute{
+                    val result=runCatching{write(activity,identity,value)}
+                    activity.runOnUiThread{
+                        if(!dialog.isShowing||activity.isFinishing)return@runOnUiThread
+                        saving=false;slider.isEnabled=true;neutral.isEnabled=true
+                        result.onSuccess{
+                            selected=null;status.text=if(value<0)"Unrated" else "Rating: "+value+"/100"
+                        }.onFailure{
+                            status.text="Rating not saved: "+it.message.orEmpty().take(100)
+                            save.isEnabled=selected!=null
+                        }
+                    }
+                }
+            }
+            slider.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+                override fun onStartTrackingTouch(bar:SeekBar){}
+                override fun onStopTrackingTouch(bar:SeekBar){}
+                override fun onProgressChanged(bar:SeekBar,value:Int,fromUser:Boolean){
+                    if(fromUser&&!saving){
+                        selected=value;status.text="Rating: "+value+"/100";save.isEnabled=target!=null
+                    }
+                }
+            })
+            save.setOnClickListener{selected?.let(::commit)}
+            neutral.setOnClickListener{if(open!=null){dialog.dismiss();open.run()}else commit(-1)}
+            worker.execute{
+                val result=runCatching{
+                    val identity=identify(activity,uri,type)
+                    check(identity.sha!=null||identity.coreId!=null){"Verified stable identity unavailable; open a verified offline original"}
+                    identity to read(activity,identity)
+                }
+                activity.runOnUiThread{
+                    if(!dialog.isShowing||activity.isFinishing)return@runOnUiThread
+                    result.onSuccess{(identity,scores)->
+                        target=identity
+                        slider.progress=if(scores.manual>=0)scores.manual else scores.pending?:50
+                        slider.isEnabled=true;neutral.isEnabled=true
+                        status.text=when{
+                            scores.pending!=null->"Core rating: "+(if(scores.manual>=0)scores.manual.toString() else "unrated")+
+                                "; saved content rating: "+scores.pending+". Select and save to reconcile."
+                            scores.manual>=0->"Rating: "+scores.manual+"/100"
+                            else->"Unrated"
+                        }
+                    }.onFailure{status.text="Rating unavailable: "+it.message.orEmpty().take(130)}
+                }
+            }
+        }
+        dialog.show()
+    }
+}

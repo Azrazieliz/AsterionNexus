@@ -15,7 +15,7 @@ public final class NexusRegistry {
     private static final String DB_NAME="nexus_registry_v1.sqlite";
 
     private static final class Database extends SQLiteOpenHelper {
-        Database(Context app){super(app,DB_NAME,null,1);setWriteAheadLoggingEnabled(true);}
+        Database(Context app){super(app,DB_NAME,null,2);setWriteAheadLoggingEnabled(true);}
         @Override public void onConfigure(SQLiteDatabase db){
             super.onConfigure(db);db.setForeignKeyConstraintsEnabled(true);
         }
@@ -25,9 +25,14 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX idx_nexus_library_names ON locations(display_name COLLATE NOCASE)");
             db.execSQL("CREATE INDEX idx_nexus_library_sources ON locations(source_kind,account_key)");
             db.execSQL("CREATE TABLE jobs(job_key TEXT PRIMARY KEY,stage TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,error_code TEXT)");
+            createFileRatings(db);
+        }
+        private void createFileRatings(SQLiteDatabase db){
+            db.execSQL("CREATE TABLE IF NOT EXISTS file_ratings(sha256 TEXT PRIMARY KEY CHECK(length(sha256)=64),score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),updated_at INTEGER NOT NULL)");
         }
         @Override public void onUpgrade(SQLiteDatabase db,int old,int current){
-            throw new IllegalStateException("No destructive Nexus registry migration");
+            if(old==1&&current==2){createFileRatings(db);return;}
+            throw new IllegalStateException("Unsupported Nexus registry migration");
         }
     }
     public static final class Item {
@@ -157,6 +162,30 @@ public final class NexusRegistry {
     private static Item item(Cursor c){
         return new Item(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),
                 c.getString(4),c.getString(5),c.getLong(6));
+    }
+    private static void requireRatingIdentity(String sha){
+        if(sha==null||!sha.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("Verified content identity required");
+    }
+    public int fileRating(String sha){
+        requireRatingIdentity(sha);
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery(
+            "SELECT score FROM file_ratings WHERE sha256=?",new String[]{sha})){
+            return c.moveToFirst()?c.getInt(0):-1;
+        }finally{helper.close();}
+    }
+    public void setFileRating(String sha,int score){
+        requireRatingIdentity(sha);
+        if(score < -1 || score > 100)throw new IllegalArgumentException("Invalid manual rating");
+        Database helper=new Database(app);
+        try{
+            SQLiteDatabase db=helper.getWritableDatabase();
+            if(score==-1){db.delete("file_ratings","sha256=?",new String[]{sha});return;}
+            ContentValues row=new ContentValues();
+            row.put("sha256",sha);row.put("score",score);row.put("updated_at",System.currentTimeMillis());
+            if(db.insertWithOnConflict("file_ratings",null,row,SQLiteDatabase.CONFLICT_REPLACE)<0)
+                throw new IllegalStateException("File rating was not stored");
+        }finally{helper.close();}
     }
     public File original(Item item) throws IOException{
         if(item==null||!item.sha256.matches("[0-9a-f]{64}"))

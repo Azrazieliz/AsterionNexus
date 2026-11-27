@@ -78,6 +78,9 @@ def check():
     assert "nexus_position_ms" in router and "openAt(" in router
     assert "NexusCloudContentTile(" in workspace and "cloud.openThumbnail(entry.path,folder,page)" in workspace
     assert "accountScope==cloud.metadataScope()" in workspace
+    assert "NexusFileDetails.show(" in viewer and "file_ratings" in registry
+    assert "if(old==1&&current==2)" in registry
+    assert "score BETWEEN 0 AND 100" in registry and "if(score==-1)" in registry
     taxonomy_revision_regression()
     print("PASS: one Nexus launcher; approved navigation; native transfer routes; real cover flow; taxonomy revision SQL fixture")
 
