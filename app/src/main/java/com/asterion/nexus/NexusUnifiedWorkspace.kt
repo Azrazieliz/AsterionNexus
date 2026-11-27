@@ -68,8 +68,7 @@ data class NexusUnifiedEntry(
 )
 @Composable private fun UnifiedHeading(title:String,subtitle:String){
     Text(title,color=C_TEXT,fontSize=23.sp,fontWeight=FontWeight.SemiBold)
-    Text(subtitle,color=C_MUTED,fontSize=12.sp,
-        modifier=Modifier.padding(top=6.dp,bottom=15.dp))
+    Spacer(Modifier.height(8.dp))
 }
 @Composable private fun UnifiedField(value:String,change:(String)->Unit,hint:String,secret:Boolean=false){
     OutlinedTextField(value=value,onValueChange=change,label={Text(hint)},singleLine=true,
@@ -116,7 +115,9 @@ fun NexusWorkspace(
         "Search"->NexusUnifiedSearch(onOpen,onLibraryRefresh)
         "Transfers"->NexusUnifiedTransfers(onOpen)
         "Cloud"->NexusUnifiedCloud(onOpen,onLibraryRefresh)
-        "Organize"->NexusUnifiedOrganize()
+        "Organize","Activity"->NexusUnifiedOrganize("Scanning")
+        "Taxonomy"->NexusUnifiedOrganize("Fusion")
+        "Review"->NexusUnifiedOrganize("Reviews")
         "Intelligence"->NexusUnifiedIntelligence()
     }
 }
@@ -275,8 +276,8 @@ private fun NexusUnifiedSearch(
                     if(!item.folder)
                         onOpen(FgTeraboxDocumentsProvider.uriFor(item.path,item.size),
                             item.mime,item.title,item.chapter)
-                    else status="Open cloud folders from the Cloud tab"
-                }else if(item.folder)status="Open authorized folders from Cloud"
+                    else status="Open cloud folders from Library / TeraBox"
+                }else if(item.folder)status="Open authorized folders from Library / TeraBox"
                 else if(item.uri!=null)onOpen(item.uri,item.mime,item.title,item.chapter)
             }}
         }
@@ -692,11 +693,11 @@ private fun NexusUnifiedCloud(
 }
 
 @Composable
-private fun NexusUnifiedOrganize(){
+private fun NexusUnifiedOrganize(initialPage:String){
     val ctx=LocalContext.current
     val scope=rememberCoroutineScope()
-    var page by remember{mutableStateOf("Fusion")}
-    var status by remember{mutableStateOf("Owner-controlled organization")}
+    var page by remember(initialPage){mutableStateOf(initialPage)}
+    var status by remember(initialPage){mutableStateOf("Loading…")}
     var rows by remember{mutableStateOf<List<String>>(emptyList())}
     var tag by remember{mutableStateOf("")}
     var family by remember{mutableStateOf("")}
@@ -748,6 +749,7 @@ private fun NexusUnifiedOrganize(){
     fun run(label:String,task:()->List<String>){
         scope.launch{
             status=label
+            rows=emptyList()
             runCatching{withContext(Dispatchers.IO){task()}}
                 .onSuccess{rows=it;status=it.size.toString()+" entries"}
                 .onFailure{status="Unavailable: "+it.message.orEmpty().take(140)}
@@ -776,9 +778,8 @@ private fun NexusUnifiedOrganize(){
         }
     }
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
-        UnifiedHeading("Organize","Knowledge, tags, reviews and indexing in one workspace")
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-            listOf("Fusion","Tags","Reviews","Scanning").forEach{label->
+        if(initialPage=="Fusion")Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+            listOf("Fusion","Tags").forEach{label->
                 FilterChip(selected=page==label,onClick={page=label},
                     label={Text(label,fontSize=12.sp)})
             }
@@ -812,7 +813,7 @@ private fun NexusUnifiedOrganize(){
         if(page=="Scanning"){
             UnifiedButton("Scan authorized source"){
                 val options=NexusSourceRegistry(ctx).roots()
-                if(options.isEmpty())status="Connect a source folder in Cloud first"
+                if(options.isEmpty())status="Connect a source folder in Library / TeraBox first"
                 else android.app.AlertDialog.Builder(ctx)
                     .setTitle("Choose granted image source")
                     .setItems(options.map{it.lastPathSegment}.toTypedArray()){_,index->
