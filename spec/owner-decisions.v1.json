@@ -1,8 +1,8 @@
 {
   "version": "asterion.nexus.owner-decisions.v1",
-  "decided_at": "2026-11-26",
+  "decided_at": "2026-11-27",
   "status": "OWNER_APPROVED_SPECIFICATION_ONLY",
-  "source_of_authority": "User-confirmed Nexus three-way merger and interactive architecture decisions through 2026-11-26; no implementation acceptance implied.",
+  "source_of_authority": "Owner-confirmed three-way merger and decisions through 2026-11-27; docs/16-APPROVED-EXPERIENCE-AND-ORGANISATION.md controls later refinements; no implementation acceptance implied.",
   "product": {
     "repo": "Azrazieliz/AsterionNexus",
     "merge_components": [
@@ -36,7 +36,45 @@
     "advanced_actions": "always_visible_or_immediately_accessible",
     "readers_and_players": "specialized_gestures_and_controls",
     "donor_ui_reuse_as_final": false,
-    "device_owner_acceptance_required": true
+    "device_owner_acceptance_required": true,
+    "palette": "charcoal_and_silver",
+    "library_density": "image_first_large_previews",
+    "primary_navigation": [
+      "Library",
+      "Organising",
+      "Downloading"
+    ],
+    "submenus": {
+      "Library": [
+        "Gallery",
+        "Books",
+        "Videos",
+        "Collections",
+        "Assets/Files"
+      ],
+      "Organising": [
+        "Activity",
+        "Taxonomy",
+        "Review",
+        "Asterion Bridges"
+      ],
+      "Downloading": [
+        "Modules",
+        "Search",
+        "Suggestions",
+        "Transfers"
+      ]
+    },
+    "category_tiles": "only_replace_applicable_folder_or_element_lists",
+    "content_first": true,
+    "swipe": "horizontal_context_submenus_and_focused_content_with_system_gesture_priority",
+    "book_collection_cover_flow": "selected_preview_85_to_95_percent_available_area",
+    "centered_video_preview": "muted_autoplay_single_visible_preview",
+    "video_open": "actual_fullscreen_playback",
+    "rating_placement": "opened_file_metadata_only_not_review_or_module",
+    "no_duplicate_commands_actions_or_module_directories": true,
+    "canonical_action_registry": true,
+    "settings": "contextual_or_overflow"
   },
   "migration": {
     "downloader": [
@@ -69,7 +107,11 @@
     "offline_storage": "adaptive_previews_cache_and_explicit_user_pinned_files",
     "cloud_verified_local_cleanup": "offer_owner_confirmation_only",
     "exact_duplicates": "automatically_merge_logical_identity_with_reversible_history_no_silent_byte_deletion",
-    "generated_outputs": "independent_content_items_with_optional_relations"
+    "generated_outputs": "independent_content_items_with_optional_relations",
+    "library_primary": "TeraBox",
+    "default_permanent_destination_all_media": "TeraBox",
+    "local_storage": "metadata_indexes_models_previews_temporary_processing_explicit_pins",
+    "existing_authorized_content_reorganizable": true
   },
   "search": {
     "execution": "simultaneous_federation",
@@ -81,7 +123,10 @@
     "no_private_query_leakage": true,
     "source_onboarding": "native_adapter_if_needed_control_shared_browser_where_useful",
     "authorized_site_sessions": true,
-    "interactive_auth_actions_surface_to_owner": true
+    "interactive_auth_actions_surface_to_owner": true,
+    "online_result_tap": "download_exact_selected_original_without_browser_redirect_or_link",
+    "existing_library_result_tap": "open_existing_item",
+    "preview_required": true
   },
   "acquisition": {
     "same_exact_original_mirror_fallback": true,
@@ -90,7 +135,11 @@
     "torrent_publication": "verify_pieces_essential_security_scan_then_publish",
     "torrent_auto_stop_seeding": true,
     "source_sync_and_backfill_independent": true,
-    "provider_failures_to_repair_in_nexus": true
+    "provider_failures_to_repair_in_nexus": true,
+    "media_type_separated_modules": true,
+    "preserve_all_donor_systems": true,
+    "sync_backfill_independent_cursors": true,
+    "complete_comic_title_single_cbz": true
   },
   "fusion": {
     "source": "latest_verified_core",
@@ -101,7 +150,23 @@
     "character_identity_until_knowledge": "unverified",
     "below_25_quality": "review_discard_suggestions_only",
     "models": "few_shared_specialists_plus_bounded_heads",
-    "core_stability_and_consistency_required": true
+    "core_stability_and_consistency_required": true,
+    "review_scope": "automation_uncertainty_or_confirmation",
+    "rating_scope": "subjective_preference_file_metadata",
+    "rating_scale": "0_to_100",
+    "rating_separate_from_review": true,
+    "review_and_rating_automatic_learning": true,
+    "preference_consumers": [
+      "downloading",
+      "suggestions",
+      "review_candidates",
+      "authorized_specialist_apps"
+    ],
+    "preserve_core_path_policy": true,
+    "core_regressions": [
+      "fusion_taxonomy_revision_missing_on_owner_device",
+      "review_rating_checking_state_and_queue_truth"
+    ]
   },
   "books": {
     "translation_sources": [
@@ -116,7 +181,8 @@
     "ocr_scope": "books_and_comics_only",
     "full_private_index_of_all_imported_books": true,
     "external_book_text_search_egress": false,
-    "source_preservation": true
+    "source_preservation": true,
+    "comic_output": "one_complete_title_cbz"
   },
   "editing": {
     "automatic_video_editing_selected_collections": true,
@@ -132,7 +198,9 @@
     "uncertain_segments": "preserve_and_offer_review",
     "unique_narrative_content": "never_remove",
     "export_as_independent_item": true,
-    "source_originals_untouched": true
+    "source_originals_untouched": true,
+    "assembled_output": "Series Name.mp4",
+    "film_output": "Film Title.mp4"
   },
   "broader_capabilities": [
     "fusion_visual_semantic_search",
@@ -143,7 +211,11 @@
     "advanced_video_audio_analysis_and_metadata",
     "local_image_video_conversion_and_derivative_generation",
     "unified_creator_series_follow_backfill",
-    "direct_cross_app_assets_and_control_orchestrated_creative_workflows"
+    "direct_cross_app_assets_and_control_orchestrated_creative_workflows",
+    "adaptive_real_collection_covers",
+    "continue_reading_and_playback",
+    "related_content_canonical_relationships",
+    "one_background_activity_indicator"
   ],
   "integrations": {
     "control": "independent_signed_capability_diagnostics_bridge",
@@ -195,5 +267,38 @@
     "native_cjk_model_ocr_quality",
     "episodic_real_media_fixtures",
     "partner_api_availability"
-  ]
+  ],
+  "organisation": {
+    "automatic_for_confident_authorized_content": true,
+    "legacy_migration_non_destructive": true,
+    "filename_patterns": {
+      "artwork": "Character - Series Number.extension",
+      "multi_character_artwork": "Character A - Character B - Primary Series Number.extension",
+      "original_character": "Original Character Number.extension",
+      "scenery": "Scenery Number.extension",
+      "cosplay": "Character - Cosplayer Number.extension",
+      "comic": "Comic Title.cbz",
+      "series": "Series Name.mp4",
+      "film": "Film Title.mp4",
+      "character_model": "Character (Transformation) Number.extension",
+      "object_model": "Object Number.extension"
+    },
+    "artwork_routing": {
+      "single_character": "series/character",
+      "same_series_multiple": "series",
+      "cross_series": "most_prominent_character_series/character",
+      "original_character": "Original Characters",
+      "scenery": "Scenery",
+      "unidentified_group": "Unidentified Groups"
+    },
+    "character_model_metadata": [
+      "character_id",
+      "series",
+      "transformation_if_known"
+    ],
+    "other_type_rules": "preserve_existing_owner_rules_else_configurable_not_new_fixed_templates",
+    "preserve_dependency_sensitive_paths": true,
+    "verified_reversible_moves": true,
+    "never_invent_identity": true
+  }
 }

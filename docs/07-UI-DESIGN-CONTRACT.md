@@ -21,17 +21,19 @@ A premium **media-centered Android application** where the content occupies most
 - On SM-S948B Android 17, verify portrait 1080x2340 and landscape, split-screen/IME, font scale, density, low-power conditions, full-screen video and media reader; do not infer from emulator-only screenshots.
 - Fluid scroll and media transitions, predictable backstack, fast visible result feedback; do not block frame/render thread with cloud/network/AI work. Use progressive real thumbnails from source, bound image memory and de-duplicate loaded requests.
 - Never hide a critical failure. Present concise exact stage and action: retry, authorize, open settings, review, resume; avoid leaking secrets or raw unredacted network traces.
-- Search returns progressive results from local/cloud/web with per-source truth, filters and no invented or merged-away distinct results.
-- Selection actions stay consistent: tap opens, long-press selects/batch actions; destructive or risk-bearing actions show honest impact and confirmation; reversible actions show undo/recovery.
+- Search returns progressive results from local/cloud/web with per-source truth, filters and no invented or merged-away distinct results. Online discovery taps acquire exact selected content rather than redirect; existing library results open files.
+- Selection actions stay consistent: tap opens existing content or starts acquisition on online discovery results, long-press selects/batch actions; destructive or risk-bearing actions show honest impact and confirmation; reversible actions show undo/recovery.
 
-## Screen model (target, not a mandated tab count)
+## Screen model (contexts, not independent navigation destinations)
+
+**2026-11-27 controlling navigation:** exactly three permanent entries, Library / Organising / Downloading. See [16](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md) for approved submenus, charcoal/silver, content-first adaptive media previews, tile restrictions, swipe arbitration and canonical command deduplication. Cloud belongs inside Library, Transfers inside Downloading, taxonomy/review/bridges inside Organising, and rating belongs on opened-file metadata only.
 
 | Context | Primary UI | Persistent useful actions |
 |---|---|---|
 | Adaptive Library | Actual local/cloud content previews, folders, collections, recent reading, projects and smart relationships | Search, switch account/location, filter/sort, source/add, select, contextual actions |
 | Discover / Acquire | Federated results, selected provider/creator/album, real original previews and source status | Search, subscribe, sync, independent backfill, selected download, inspect jobs |
 | Transfers | Actual active/completed/failed job ledger, exact bytes and sources | Pause, resume, cancel, retry, inspect failure and destination |
-| Fusion / Organize | Gallery, canonical tags and per-character view, owner quality/rating, review queue, organization preview | Correct tag, add tag, evaluate, review, organize, undo and backup |
+| Fusion / Organising | Automatic activity, canonical tags and per-character view, uncertainty/confirmation review, bridges | Correct tag, add tag, review, undo and backup; owner rating is available from the opened file, not here as a module |
 | Reader | Real page/document/EPUB/comic view | Gesture-aware mode, bookmarks, chapter navigation, zoom, edition and translation status |
 | Media player | Native-aspect immersive playback | Seek, tracks, subtitles, speed, play next/replay/shuffle, orientation/lock, editing |
 | Video assembly/editor | Series/episode selection, proposed segment timeline, preview and render receipts | Edit keep/cut boundaries, review uncertainty, assemble, resume, open output |
@@ -44,7 +46,7 @@ These are **contexts**, not nine mandated navigation tabs. Build prototyped flow
 - Internal design tokens, reusable composable primitives, media tiles, source chips, bottom sheets, error/empty/loading states, typography and motion rules. One clear icon system (original licensed assets), not mismatched default icons or copied visual patterns.
 - Native implementation can use Kotlin/Compose or an equivalent tested shell; do not replace accepted Rounder media rendering with an inferior rewritten generic viewer merely for framework purity.
 - Draw UI from real feature state with stable IDs and lifecycle awareness. "Progress" is actual byte/step evidence, not a spinning indicator attached to a dead engine.
-- Theme supports high-quality dark first (owner can refine exact palette), correct color contrast and legibility; no arbitrary neon, gratuitous shadows or ornamental boxes.
+- Theme uses owner-approved charcoal and silver, correct color contrast and legibility; no arbitrary neon, gratuitous shadows or ornamental boxes.
 
 ## Premium acceptance checklist
 

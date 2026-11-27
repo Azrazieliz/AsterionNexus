@@ -12,13 +12,14 @@ Implement Asterion Nexus as an actual three-way **Core + Downloader + Rounder** 
 
 Read:
 - `spec/owner-decisions.v1.json` (do not reopen decisions already approved);
+- `docs/16-APPROVED-EXPERIENCE-AND-ORGANISATION.md` (2026-11-27 controlling UI, navigation, rating, organization, naming, TeraBox, acquisition and regression rules);
 - `docs/00-AUTHORITY-AND-DECISIONS.md` (supersession/behavior);
 - `docs/01-MERGE-FIRST-ARCHITECTURE.md` (source adaptation/ownership);
 - `docs/13-SOURCE-ADAPTATION-MAP.md` (existing file-level implementation anchors);
 - `docs/14-DELIVERY-ROADMAP.md` (fast critical path and evidence gates);
 - `docs/09-EXECUTION-AND-ACCEPTANCE.md` and `spec/acceptance-cases.v1.json` (actual acceptance, not source-only completion).
 
-Do **not** propose another architectural rewrite, start a new Nexus repository or ask whether it should be three-way. Do not wait for a revised specification; all requested features are already captured. The actual Android source has **not been merged yet**, and as of the handoff the Nexus repository contained specification documents, schemas, synthetic fixtures and spec CI only.
+Do **not** propose another architectural rewrite, start a new Nexus repository or ask whether it should be three-way. Do not wait for a revised specification; all requested features are already captured. The initial 2026-11-26 handoff predated native source integration. Inspect current branches/PRs/CI before resuming; actual harmonization source exists on development branches, and is not certified or merged by this specification update. Do not restart the merge or assume an old candidate matches the new design.
 
 ## Start executing in this order
 
@@ -41,7 +42,7 @@ Do **not** propose another architectural rewrite, start a new Nexus repository o
 - Rounder = owner-accepted non-3D functions, **UI poor**. Do not waste time restarting standalone Rounder defect hunts.
 - Downloader = provider acceptance, cosplay, search, torrents **not accepted**, despite many CI/source patches. Fix root causes in Nexus; request real source evidence as needed.
 - Core = mostly correct, advanced past older audit; full applicable family tagging, stability/consistency remain; **character recognition untested because Character Knowledge not yet ready**.
-- All default actions reversible; irreversible operations require confirmation. TeraBox-first multiple isolated accounts and adaptive offline cache/pins. Migrate the **selected metadata/history** from each app, never bulk-move files or copy credentials to Git.
+- All default actions reversible; irreversible operations require confirmation. TeraBox is the primary Library and default permanent destination for every media type, with multiple isolated accounts and adaptive cache/pins. Authorised content may be automatically organised; migration itself remains non-destructive. Migrate the **selected metadata/history** from each app, never bulk-move files or copy credentials to Git.
 - Control's latest independent AI architecture must be respected without duplicating its engines. Nexus remains usable without Control and can call authorized specialist apps directly.
 - Passing source tests, compiling, producing APK, signing, installing, executing on phone, verifying bytes and owner acceptance are **distinct levels**. Update acceptance ledger ONLY with actual proof.
 - No fabricated success, no endlessly repeated failed builds, no placeholder UI, no long status narration instead of implementation. Make actual source modifications, test, correct and verify as much as available tools allow.

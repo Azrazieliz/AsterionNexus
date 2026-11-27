@@ -76,3 +76,7 @@ One input can simultaneously search local titles/tags/visual evidence/books, eac
 ## Definition of done: acquisition
 
 Provide trace for one exact selected source item showing source identity -> original resolution -> all expected bytes -> local or cloud readback -> searchable library item -> playback/open, then restart application and reopen the item. Repeat for each required failing provider with representative authorized sources; accept source-access blockers only with actual network/auth evidence, not inflated success claims. Validate cosplay album counts and a complete torrent separately. Require real phone evidence, not a generic JVM/CI green status.
+
+## 2026-11-27 interaction contract
+
+Online discovery results are genuine previews; tapping starts acquisition of the exact selected original/collection in Nexus, not a browser redirect/link. Existing library results open existing items. Downloading has type-separated modules and one canonical transfer ledger. Preserve independent sync/backfill, following/subscriptions, all native adapters and specialist commands; share implementation and state where equivalent. Complete comics are acquired as a single title CBZ. Default permanent destination for all media is verified TeraBox. See [16](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md).

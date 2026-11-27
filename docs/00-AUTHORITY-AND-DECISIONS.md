@@ -1,6 +1,6 @@
 # Nexus authority, product requirements and owner decisions
 
-**Version:** 2026-11-26. **Authority:** owner decisions in the Nexus conversations culminating 2026-11-26. **Status:** CANONICAL REQUIREMENTS, NOT IMPLEMENTATION CERTIFICATION.
+**Version:** 2026-11-27. **Authority:** owner decisions through 2026-11-27; later refinements are normative in [16 — Approved experience and organisation](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md). **Status:** CANONICAL REQUIREMENTS, NOT IMPLEMENTATION CERTIFICATION.
 
 ## Supersession
 
@@ -13,7 +13,7 @@
 
 ## Approved navigation and product experience
 
-- Interface language **English**.
+- Interface language **English**. Charcoal/silver, image-first large previews, exactly three permanent destinations: Library, Organising, Downloading. Category/module tiles replace appropriate folder/element lists only. Rating is opened-file metadata, not a Review or Ratings module. One canonical action/module registry; no duplicate controls or directory trees. See 16.
 - Launch into an **adaptive intelligent library**; one cohesive contextual workspace, not three products, a welcome dashboard, promotional home or developer console.
 - Adaptive gallery, folder and document layouts; each reader and media player has **specialized gestures/controls**.
 - **New distinctive premium Asterion visual system**; advanced actions **always accessible/visible as useful controls**, without clutter or meaningless debug widgets. The user rejected the UIs of all three donor applications. Design an entirely coherent production experience while retaining functional engines.
@@ -21,7 +21,7 @@
 
 ## Approved data/storage decisions
 
-- **TeraBox-first**, designed for other cloud providers later; **multiple isolated accounts**.
+- **TeraBox is the primary Library and default permanent destination for all acquired media**, with multiple isolated accounts; designed for other cloud providers later. Authorised existing content may be automatically reorganised; migration itself remains non-destructive.
 - Offline: **adaptive previews/cache** and explicitly chosen files saved for offline use. Do not mirror entire libraries onto the phone.
 - Following **actual remote checksum/size/existence verification**, offer owner-confirmed cleanup of local copies. Do **not** auto-delete the local original.
 - **Auto-merge exact duplicates** with reversible identity/location history; never conflate near-duplicates or revisions. Destructive/irreversible changes always require confirmation; reversible actions may be autonomous.
@@ -36,7 +36,8 @@
 - Source onboarding: native site adapters when needed; reuse Control's shared browser/session infrastructure where useful, with a Nexus-owned acquisition adapter and independent degradation path.
 - Site logins: owner-authorized sessions; surface genuinely required owner interactions.
 - If the exact selected media is unavailable, automatically try **authorized mirrors of the SAME item**. Never substitute a similar, wrong or advertisement file.
-- Cosplay: **creator -> albums -> originals**, with genuine complete-gallery intake and verified counts.
+- Online discovery preview tap acquires the selected exact original/complete collection, never a browser redirect or link. Existing library search opens existing items. Preserve distinct modules by media type, source following, independent live sync/backfill and all donor systems.
+- Cosplay: **creator -> albums -> originals**, with genuine complete-gallery intake and verified counts. Filename: Character - Cosplayer Number.extension.
 - Torrent: actual metadata/transfer, piece verification, independent safety checks and safe publishing; **stop seeding upon verified completion**. Control can supply deeper inspection but is not required for Nexus baseline operation.
 
 ## Approved Fusion behavior
@@ -45,7 +46,7 @@
 - Missing family coverage prioritizes native learning and review, not fabricated tags; immediate **bounded correction learning plus periodically held-out-validated model-head training**.
 - Confident results may organize automatically; uncertain items await review; retain reversibility and correction lineage.
 - Until actual Character Knowledge is available and validated, do general tagging and mark identity **unverified**. Never fabricate recognition acceptance.
-- Artwork scored below 25/100: review/discard **suggestions only**, no automatic delete.
+- Review handles uncertain automation decisions; subjective per-file 0–100 ratings are opened-file metadata, not a review module. Both learn automatically from separate signals. Artwork scored below 25/100: review/discard **suggestions only**, no automatic delete.
 - Few shared specialist models plus bounded task-specific heads; load according to measured phone resources; prohibit proliferating unverified competing AI backends.
 
 ## Approved books and media
@@ -53,6 +54,7 @@
 - **Automatic offline phone-native quality translation** for every verified supported CJK book/comic: Japanese, Korean, simplified/traditional Chinese -> English; preserve source; OCR only for books/comics where needed.
 - **Full private searchable text indexing of ALL imported books** is explicitly approved and **supersedes** the old 2026-11-11 prohibition. Index must remain locally private, access-controlled, recoverable and kept out of public web search and repo. Unsupported languages must be honestly reported. Translation/OCR engines must remain inside Nexus at runtime without Control, PC or external API dependency.
 - Advanced media analysis, image/video conversion and derivative generation, file repair, corruption detection/recovery, archive inspection/extraction, semantic visual search, smart collections, content recommendations and a unified creator/series follow/backfill dashboard are **in scope**.
+- Each newly acquired complete comic title is one ordered CBZ. Preserve the established Core naming/routing convention and the additional media-specific naming rules in 16.
 - **Automatic Episode Assembly** on selected video collections is mandatory: intelligently order parts, retain the first opening, retain the last ending, remove intervening OP/ED, and **automatically remove redundant recaps and next-episode previews when reliably detected**; preserve uncertain content; produce a verified continuous original-preserving output. See `06-MEDIA-EDITING-EPISODE-ASSEMBLY.md`.
 
 ## Approved integration and rollout
