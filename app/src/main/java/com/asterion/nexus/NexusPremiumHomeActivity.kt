@@ -17,6 +17,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.*
@@ -273,7 +275,7 @@ private fun NexusHome(
                 else{
                     onCategory(when(choice){
                         "Gallery"->"Images"
-                        "Assets/Files"->"Other"
+                        "Assets/Files"->"Assets"
                         else->choice
                     })
                     onRoute("Library")
@@ -341,7 +343,9 @@ private fun NexusHome(
                 val hero=visible.firstOrNull{
                     it.mime.startsWith("image/")||it.mime.startsWith("video/")
                 }
-                LazyVerticalGrid(
+                if(category=="Books"&&visible.isNotEmpty()){
+                    NexusBookCoverFlow(visible,onOpen,hasMore,loading,onMore)
+                }else LazyVerticalGrid(
                     columns=GridCells.Fixed(columns),
                     modifier=Modifier.fillMaxSize(),
                     contentPadding=PaddingValues(start=3.dp,end=3.dp,top=3.dp,bottom=18.dp),
@@ -431,9 +435,49 @@ private fun categoryMatch(mime:String,category:String):Boolean{
         "Videos"->m.startsWith("video/")
         "Books"->book
         "Audio"->m.startsWith("audio/")
+        "Assets"->!m.startsWith("image/")&&!m.startsWith("video/")&&!book
         "Other"->!m.startsWith("image/")&&!m.startsWith("video/")&&
             !m.startsWith("audio/")&&!book
         else->true
+    }
+}
+
+@Composable
+private fun NexusBookCoverFlow(
+    items:List<NexusRegistry.Item>,onOpen:(NexusRegistry.Item)->Unit,
+    hasMore:Boolean,loading:Boolean,onMore:()->Unit
+){
+    val pager=rememberPagerState(pageCount={items.size})
+    LaunchedEffect(pager.settledPage,items.size,hasMore,loading){
+        if(hasMore&&!loading&&pager.settledPage>=items.lastIndex-2)onMore()
+    }
+    Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally){
+        HorizontalPager(state=pager,contentPadding=PaddingValues(horizontal=18.dp),
+            pageSpacing=8.dp,modifier=Modifier.weight(1f).fillMaxWidth(),
+            key={items[it].locationId}){index->
+            val item=items[index]
+            val ctx=LocalContext.current
+            val preview by produceState<Bitmap?>(null,item.sha256){
+                value=withContext(Dispatchers.IO){NexusContentThumbnail.load(ctx,item)}
+            }
+            Box(Modifier.fillMaxSize().padding(vertical=6.dp)
+                .clip(RoundedCornerShape(8.dp)).background(NexusVisual.imageBackdrop)
+                .clickable{onOpen(item)}.semantics{contentDescription="Open "+item.displayName},
+                contentAlignment=Alignment.Center){
+                if(preview!=null)Image(preview!!.asImageBitmap(),
+                    contentDescription=item.displayName,modifier=Modifier.fillMaxSize(),
+                    contentScale=ContentScale.Fit)
+                else Column(horizontalAlignment=Alignment.CenterHorizontally,
+                    modifier=Modifier.padding(24.dp)){
+                    Text(item.displayName,color=IvoryColor,fontSize=20.sp)
+                    Text("Cover unavailable",color=MutedColor,fontSize=12.sp)
+                }
+            }
+        }
+        Text(items.getOrNull(pager.currentPage)?.displayName.orEmpty(),color=IvoryColor,
+            fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+            modifier=Modifier.padding(horizontal=16.dp,vertical=5.dp))
+        Text((pager.currentPage+1).toString()+" / "+items.size,color=MutedColor,fontSize=11.sp)
     }
 }
 
@@ -555,7 +599,8 @@ private object NexusContentThumbnail {
         override fun sizeOf(key:String,value:Bitmap)=value.byteCount
     }
     @Synchronized fun load(context:android.content.Context,item:NexusRegistry.Item):Bitmap?{
-        if(!item.mime.startsWith("image/")&&!item.mime.startsWith("video/"))return null
+        if(!item.mime.startsWith("image/")&&!item.mime.startsWith("video/")&&
+            !item.mime.contains("pdf")&&!item.mime.contains("comic")&&!item.mime.contains("epub"))return null
         cache.get(item.sha256)?.let{return it}
         return runCatching{
             val file=NexusRegistry(context).original(item)
@@ -565,12 +610,36 @@ private object NexusContentThumbnail {
                 val down=max(1,max(opts.outWidth/640,opts.outHeight/840))
                 BitmapFactory.decodeFile(file.path,
                     BitmapFactory.Options().apply{inSampleSize=down})
-            }else{
+            }else if(item.mime.startsWith("video/")){
                 MediaMetadataRetriever().use{retriever->
                     retriever.setDataSource(file.path)
                     retriever.getFrameAtTime(900000L,MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                 }
-            }
+            }else if(item.mime.contains("pdf")){
+                val fd=android.os.ParcelFileDescriptor.open(file,android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                android.graphics.pdf.PdfRenderer(fd).use{renderer->
+                    if(renderer.pageCount==0)null else renderer.openPage(0).use{page->
+                        val scale=minOf(640f/page.width,840f/page.height)
+                        Bitmap.createBitmap(max(1,(page.width*scale).toInt()),
+                            max(1,(page.height*scale).toInt()),Bitmap.Config.ARGB_8888).also{bitmap->
+                            bitmap.eraseColor(android.graphics.Color.WHITE)
+                            page.render(bitmap,null,null,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        }
+                    }
+                }
+            }else if(item.mime.contains("comic")){
+                java.util.zip.ZipFile(file).use{zip->
+                    val entry=zip.entries().asSequence().filter{!it.isDirectory&&it.size in 1..16777216L&&
+                        it.name.substringAfterLast('.').lowercase() in setOf("jpg","jpeg","png","webp")}
+                        .minWithOrNull(compareBy<java.util.zip.ZipEntry>{it.name.replace(Regex("\\d+")){m->m.value.padStart(16,'0')}})
+                    entry?.let{chosen->
+                        val opts=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+                        zip.getInputStream(chosen).use{BitmapFactory.decodeStream(it,null,opts)}
+                        val sample=max(1,max(opts.outWidth/640,opts.outHeight/840))
+                        zip.getInputStream(chosen).use{BitmapFactory.decodeStream(it,null,BitmapFactory.Options().apply{inSampleSize=sample})}
+                    }
+                }
+            }else null
             if(image!=null){
                 val result=if(image.width>640||image.height>840){
                     val ratio=minOf(640f/image.width,840f/image.height)
