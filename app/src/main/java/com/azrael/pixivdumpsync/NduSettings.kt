@@ -108,6 +108,12 @@ object NduSettings {
                     .setRandomizedEncryptionRequired(true).build())
             }.generateKey()
     }
+    internal class Session(val token:String,val scope:String)
+    @Synchronized internal fun session(ctx:Context):Session?{
+        val token=cookie(ctx)?:return null
+        val scope=accountScope(ctx)
+        return if(scope.isBlank())null else Session(token,scope)
+    }
     @Synchronized fun save(ctx: Context, input: String) {
         val cookie = parseNdus(input)
         val previous=this.cookie(ctx)

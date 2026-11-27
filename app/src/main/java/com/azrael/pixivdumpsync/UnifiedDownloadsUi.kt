@@ -1144,8 +1144,21 @@ object UnifiedDownloadsUi {
         val savedUri:String?,val mime:String
     )
     @JvmStatic
-    fun snapshotForNexus(activity:Activity):List<NexusQueueEntry> =
-        collect(activity).take(350).map{row->
+    fun snapshotForNexus(activity:Activity):List<NexusQueueEntry> {
+        val aligned=com.asterion.nexus.NexusCloudPublication.canPublish(activity)
+        val staged=NduCloudQueue(activity).use{it.nexusPublications()}.map{row->
+            val complete=row.state=="VERIFIED"&&row.size>0&&!row.path.isNullOrBlank()
+            val state=if(complete)"DONE" else if(row.error!=null)"FAILED" else "QUEUED"
+            NexusQueueEntry("nexus-publication:"+row.uri,"TeraBox",row.name,
+                if(complete)"Remote receipt verified" else row.error?:"Verified local bytes; remote publication pending",
+                state,if(complete)100 else null,if(complete)row.size else 0L,row.size,
+                if(complete)null else "Retry publication",if(complete)null else {
+                    NduCloudQueue(activity).use{it.retryNexus(row.uri)}
+                    NduCloudScheduler.requestImmediate(activity);Unit
+                },null,if(complete&&aligned)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriFor(row.path,row.size).toString() else null,
+                com.openlocal.office.core.FgTeraboxClient.mime(row.name))
+        }
+        return (staged+collect(activity).take(350).map{row->
             NexusQueueEntry(
                 rowId(row),row.source,row.filename,row.info,row.state.name,
                 row.percent,row.receivedBytes,row.totalBytes,
@@ -1154,7 +1167,8 @@ object UnifiedDownloadsUi {
                     row.actionText!="COOLDOWN")row.action else null,
                 row.onRemove,row.saved,row.mime
             )
-        }
+        }).distinctBy{it.key}.take(500)
+    }
 
     fun render(a:Activity,parent:LinearLayout,refresh:()->Unit){
         val surface=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL}

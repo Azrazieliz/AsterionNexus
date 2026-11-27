@@ -46,6 +46,7 @@ object NexusDirectAcquisition {
             }
             registry.job(url, "VERIFIED", result.length, null)
             registry.job(url, "INDEXED", result.length, null)
+            com.asterion.nexus.NexusCloudPublication.enqueueIfConnected(context,result)
             return result
         } catch (problem: Exception) {
             registry.job(url, "FAILED", 0L, "ACQUISITION_ERROR")

@@ -137,6 +137,7 @@ class NduCloudQueue(context: Context) :
         }
         return rows
     }
+    fun hasAnyPublication(uri:String):Boolean=readableDatabase.rawQuery("SELECT 1 FROM jobs WHERE content_uri=? LIMIT 1",arrayOf(uri)).use{it.moveToFirst()}
     fun retryNexus(uri:String){
         writableDatabase.execSQL("UPDATE jobs SET retry_after=0,last_error=NULL WHERE content_uri=? AND account_scope=? AND account_scope<>'' AND state IN ('PENDING','VERIFY_PENDING')",
             arrayOf(uri,NduSettings.accountScope(app)))

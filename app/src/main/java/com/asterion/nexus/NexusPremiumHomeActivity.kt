@@ -215,7 +215,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
             try{
                 val result=NexusDirectAcquisition.acquire(applicationContext,url)
                 runOnUiThread{
-                    error="Verified and indexed "+result.displayName
+                    error=NexusCloudPublication.status(applicationContext,result)
                     loadPage(reset=true)
                 }
             }catch(e:Exception){

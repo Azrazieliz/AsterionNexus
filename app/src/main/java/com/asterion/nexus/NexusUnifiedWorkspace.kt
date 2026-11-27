@@ -311,7 +311,7 @@ private fun NexusUnifiedSearch(
                         runCatching{withContext(Dispatchers.IO){
                             NexusWebAcquisition.acquireSelected(ctx,url)
                         }}.onSuccess{
-                            status="Verified original: "+it.displayName
+                            status=NexusCloudPublication.status(ctx,it)
                             onLibraryRefresh()
                         }.onFailure{status="Original unavailable: "+it.message.orEmpty().take(120)}
                         loading=false
@@ -558,7 +558,7 @@ private fun NexusUnifiedCloud(
     var connected by remember{mutableStateOf(cloud.configured())}
     var accountScope by remember{mutableStateOf(cloud.metadataScope())}
     var mediaFilter by remember{mutableStateOf("All")}
-    var showSources by remember{mutableStateOf(!cloud.configured())}
+    var showSources by remember{mutableStateOf(!cloud.configured()||!NexusCloudPublication.canPublish(ctx))}
     var status by remember{mutableStateOf("Source bytes stay in their original location")}
     var folder by remember{mutableStateOf("/")}
     var page by remember{mutableIntStateOf(1)}
@@ -663,16 +663,20 @@ private fun NexusUnifiedCloud(
                 fontSize=16.sp,modifier=Modifier.weight(1f))
             TextButton(onClick={showSources=!showSources}){Text("Sources")}
         }
-        if(!connected){
+        if(!connected||(showSources&&!NexusCloudPublication.canPublish(ctx))){
             UnifiedField(cookie,{cookie=it},"TeraBox session (ndus)",true)
             UnifiedButton("Connect",cookie.trim().length>=12){
                 val token=cookie.trim();cookie=""
-                if(cloud.setCookie(token)){
-                    rows=emptyList();selected=null;folder="/";page=1
-                    accountScope=cloud.metadataScope();connected=true;showSources=false
-                    status="TeraBox connected"
+                scope.launch{
+                    status="Connecting to TeraBox"
+                    runCatching{withContext(Dispatchers.IO){NexusCloudPublication.connect(ctx,cloud,token)}}
+                        .onSuccess{
+                            rows=emptyList();selected=null;folder="/";page=1
+                            accountScope=cloud.metadataScope();connected=true;showSources=false
+                            status="TeraBox connected"
+                            refresh()
+                        }.onFailure{status="TeraBox connection failed: "+it.javaClass.simpleName}
                 }
-                else status="Connection token rejected"
             }
         }else{
             Row(verticalAlignment=Alignment.CenterVertically){

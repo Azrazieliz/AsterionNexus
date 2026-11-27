@@ -150,6 +150,16 @@ public final class NexusRegistry {
         }finally{helper.close();}
         return found;
     }
+    public List<Item> acquiredPage(int offset,int limit){
+        if(offset<0||limit<1||limit>200)throw new IllegalArgumentException("Invalid staged page");
+        ArrayList<Item> rows=new ArrayList<>();Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery(
+            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.source_kind=\'downloader-direct\' ORDER BY l.id LIMIT ? OFFSET ?",
+            new String[]{Integer.toString(limit),Integer.toString(offset)})){
+            while(c.moveToNext())rows.add(item(c));
+        }finally{helper.close();}
+        return rows;
+    }
     public Item find(String sha){
         if(sha==null||!sha.matches("[0-9a-f]{64}"))return null;
         Database helper=new Database(app);

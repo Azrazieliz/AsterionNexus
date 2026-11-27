@@ -20,11 +20,11 @@ object NduUploadEngine {
             return Result(0,0,0,"Another direct upload is active")
         try {
             val begin=SystemClock.elapsedRealtime()
-            val cookie=NduSettings.cookie(context)
+            val session=NduSettings.session(context)
                 ?: return Result(0,0,0,"NDUS unavailable")
-            val accountScope=NduSettings.accountScope(context)
-            if(accountScope.isBlank())return Result(0,0,0,"Cloud account identity unavailable")
-            fun cancelled()=stop()||NduSettings.currentAccountScope(context)!=accountScope
+            val cookie=session.token
+            val accountScope=session.scope
+            fun cancelled()=stop()||!NduSettings.enabled(context)||NduSettings.currentAccountScope(context)!=accountScope
             NduCloudQueue(context).use { queue ->
                 var uploaded=0
                 var reverified=0
@@ -48,7 +48,12 @@ object NduUploadEngine {
                             report("Uploading "+job.category+" / "+job.name)
                             val uri=Uri.parse(job.uri)
                             val path=NduSettings.destination(context,job.category)
-                            val proof=if(job.state=="VERIFY_PENDING"){
+                            val nexus=uri.authority==context.packageName+".library"
+                            val proof=if(nexus){
+                                com.asterion.nexus.NexusCloudPublication.publish(context,client,uri,job.name,path,::cancelled){done,total->
+                                    report("TeraBox "+(if(total>0)done*100/total else 0)+"% / "+job.name)
+                                }
+                            }else if(job.state=="VERIFY_PENDING"){
                                 report("Checking existing TeraBox copy / "+job.name)
                                 client.verifyExisting(context,uri,job.name,path,::cancelled)
                             }else{
@@ -65,7 +70,7 @@ object NduUploadEngine {
                             }
                             // Persist the exact remote identity BEFORE Rounder reconciliation.
                             queue.completed(job,proof)
-                            if(!nexusOnly)RounderOutbox(context).use{it.ack(uri,proof)}
+                            if(!nexus)RounderOutbox(context).use{it.ack(uri,proof)}
                             if(job.state=="VERIFY_PENDING")reverified++ else uploaded++
                         } catch(t:Throwable) {
                             if(cancelled() || t is InterruptedException) break
