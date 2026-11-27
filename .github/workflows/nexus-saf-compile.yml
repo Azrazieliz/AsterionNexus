@@ -50,9 +50,9 @@ jobs:
         run: bash scripts/restore_downloader_wheel.sh
       - name: Compile native three-way Android source
         run: gradle --no-daemon --max-workers=2 :fusion:compileDebugKotlin :rounder:compileDebugJavaWithJavac :app:compileDebugKotlin --stacktrace
-      - name: Run inherited Downloader regression suite
+      - name: Run inherited Core and Downloader regression suites
         if: success()
-        run: gradle --no-daemon --max-workers=2 :app:testDebugUnitTest --stacktrace
+        run: gradle --no-daemon --max-workers=2 :fusion:testDebugUnitTest :app:testDebugUnitTest --stacktrace
       - name: Assemble isolated debug APK
         if: success()
         run: gradle --no-daemon --max-workers=2 :app:assembleDebug --stacktrace
