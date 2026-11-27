@@ -12,6 +12,19 @@ import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -452,6 +465,86 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
     }
 }
 
+private val cloudPreviewSlots=java.util.concurrent.Semaphore(3,true)
+
+private fun decodeCloudPreview(input:java.io.InputStream):Bitmap?{
+    val data=java.io.ByteArrayOutputStream()
+    val buffer=ByteArray(16384)
+    while(true){
+        val count=input.read(buffer)
+        if(count<0)break
+        if(count==0)continue
+        if(data.size()+count>4*1024*1024)return null
+        data.write(buffer,0,count)
+    }
+    val bytes=data.toByteArray()
+    val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+    BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
+    if(bounds.outWidth<=0||bounds.outHeight<=0)return null
+    var sample=1
+    while(bounds.outWidth/sample>800||bounds.outHeight/sample>1000)sample*=2
+    return BitmapFactory.decodeByteArray(bytes,0,bytes.size,
+        BitmapFactory.Options().apply{inSampleSize=sample})
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NexusCloudContentTile(
+    entry:NexusUnifiedEntry,cloud:FgTeraboxClient?,accountScope:String,folder:String,page:Int,
+    onOpen:()->Unit,onDetails:()->Unit
+){
+    val ctx=LocalContext.current
+    val mime=entry.mime
+    val visual=mime.startsWith("image/")||mime.startsWith("video/")||
+        mime.startsWith("audio/")||mime.contains("pdf")||mime.contains("epub")||mime.contains("comic")
+    val preview by produceState<Bitmap?>(null,accountScope,entry.path,entry.uri,entry.size){
+        value=null
+        if(!entry.folder&&visual)value=withContext(Dispatchers.IO){
+            cloudPreviewSlots.acquire()
+            try{
+                runCatching{
+                    if(entry.path!=null&&cloud!=null){
+                        if(accountScope!=cloud.metadataScope())null
+                        else cloud.openThumbnail(entry.path,folder,page).use{input->
+                            val bitmap=decodeCloudPreview(input)
+                            if(accountScope==cloud.metadataScope())bitmap else null
+                        }
+                    }else if(entry.uri!=null){
+                        ctx.contentResolver.loadThumbnail(entry.uri,android.util.Size(640,840),null)
+                    }else null
+                }.getOrNull()
+            }finally{cloudPreviewSlots.release()}
+        }
+    }
+    val ratio=if(entry.folder)1.9f else preview?.let{
+        (it.width.toFloat()/it.height.coerceAtLeast(1)).coerceIn(.68f,1.8f)
+    }?:if(visual).85f else 2f
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(7.dp))
+        .background(if(entry.folder)C_CARD else NexusVisual.imageBackdrop)
+        .combinedClickable(onClick=onOpen,onLongClick=if(entry.folder)null else onDetails)){
+        Box(Modifier.fillMaxWidth().aspectRatio(ratio),contentAlignment=Alignment.Center){
+            if(preview!=null)Image(preview!!.asImageBitmap(),entry.title,
+                Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+            else Text(when{
+                entry.folder->"▱"
+                mime.startsWith("video/")->"▶"
+                mime.startsWith("audio/")->"♫"
+                mime.startsWith("image/")->"Image"
+                mime.contains("pdf")->"PDF"
+                mime.contains("epub")->"EPUB"
+                mime.contains("comic")->"CBZ"
+                else->"File"
+            },fontSize=if(entry.folder)30.sp else 15.sp,color=C_SILVER)
+            if(preview!=null&&mime.startsWith("video/"))Text("▶",color=Color.White,
+                fontSize=24.sp,modifier=Modifier.align(Alignment.BottomEnd)
+                    .padding(8.dp).background(Color.Black.copy(alpha=.6f),RoundedCornerShape(7.dp))
+                    .padding(horizontal=10.dp,vertical=4.dp))
+        }
+        Text(entry.title,color=C_TEXT,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis,
+            modifier=Modifier.padding(horizontal=8.dp,vertical=6.dp))
+    }
+}
+
 @Composable
 private fun NexusUnifiedCloud(
     onOpen:(Uri,String,String,Int)->Unit,
@@ -463,6 +556,9 @@ private fun NexusUnifiedCloud(
     val registry=remember(ctx){NexusSourceRegistry(ctx)}
     var cookie by remember{mutableStateOf("")}
     var connected by remember{mutableStateOf(cloud.configured())}
+    var accountScope by remember{mutableStateOf(cloud.metadataScope())}
+    var mediaFilter by remember{mutableStateOf("All")}
+    var showSources by remember{mutableStateOf(!cloud.configured())}
     var status by remember{mutableStateOf("Source bytes stay in their original location")}
     var folder by remember{mutableStateOf("/")}
     var page by remember{mutableIntStateOf(1)}
@@ -486,7 +582,7 @@ private fun NexusUnifiedCloud(
     }
     fun refresh(){
         if(!connected)return
-        val path=folder;val current=page
+        val path=folder;val current=page;val requestedScope=accountScope
         scope.launch{
             status="Reading "+path
             runCatching{withContext(Dispatchers.IO){
@@ -505,7 +601,8 @@ private fun NexusUnifiedCloud(
                 }
                 found
             }}.onSuccess{
-                if(path==folder&&current==page){rows=it;status=it.size.toString()+" files"}
+                if(path==folder&&current==page&&requestedScope==accountScope&&
+                    requestedScope==cloud.metadataScope()){rows=it;status=it.size.toString()+" files"}
             }.onFailure{status="Cloud unavailable: "+it.message.orEmpty().take(120)}
         }
     }
@@ -561,13 +658,20 @@ private fun NexusUnifiedCloud(
     }
     LaunchedEffect(connected,folder,page){if(connected)refresh()}
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
-        UnifiedHeading("Cloud & sources",
-            "Browse TeraBox and authorized Android folders without duplicating libraries")
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+            Text(if(selectedTree==null)"TeraBox" else "Device folders",color=C_TEXT,
+                fontSize=16.sp,modifier=Modifier.weight(1f))
+            TextButton(onClick={showSources=!showSources}){Text("Sources")}
+        }
         if(!connected){
             UnifiedField(cookie,{cookie=it},"TeraBox session (ndus)",true)
             UnifiedButton("Connect",cookie.trim().length>=12){
                 val token=cookie.trim();cookie=""
-                if(cloud.setCookie(token)){connected=true;status="TeraBox session encrypted"}
+                if(cloud.setCookie(token)){
+                    rows=emptyList();selected=null;folder="/";page=1
+                    accountScope=cloud.metadataScope();connected=true;showSources=false
+                    status="TeraBox connected"
+                }
                 else status="Connection token rejected"
             }
         }else{
@@ -581,16 +685,24 @@ private fun NexusUnifiedCloud(
                 UnifiedButton("Reload"){refresh()}
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top=14.dp),
+        if(showSources)Row(Modifier.fillMaxWidth().padding(top=6.dp),
             verticalAlignment=Alignment.CenterVertically){
             Text("Authorized folders",color=C_TEXT,fontSize=15.sp,
                 modifier=Modifier.weight(1f))
             UnifiedButton("Add source"){picker.launch(null)}
         }
         Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.padding(vertical=10.dp))
-        LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
+        if(selectedTree==null)Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement=Arrangement.spacedBy(5.dp)){
+            listOf("All","Gallery","Videos","Books","Audio","Files").forEach{kind->
+                FilterChip(selected=mediaFilter==kind,onClick={mediaFilter=kind},label={Text(kind,fontSize=11.sp)})
+            }
+        }
+        LazyVerticalGrid(columns=GridCells.Adaptive(146.dp),
+            modifier=Modifier.weight(1f).fillMaxWidth(),
+            horizontalArrangement=Arrangement.spacedBy(5.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
             if(selectedTree!=null&&currentDocument!=null){
-                item{
+                item(span={GridItemSpan(maxLineSpan)}){
                     Row(horizontalArrangement=Arrangement.spacedBy(9.dp)){
                         UnifiedButton("Back"){
                             val tree=selectedTree
@@ -609,7 +721,9 @@ private fun NexusUnifiedCloud(
                     }
                 }
                 items(sourceRows){entry->
-                    UnifiedEntryCard(entry){
+                    NexusCloudContentTile(entry,null,"","",0,onDetails={
+                        entry.uri?.let{onOpen(it,entry.mime,entry.title,-1)}
+                    },onOpen={
                         val tree=selectedTree;val uri=entry.uri
                         if(uri!=null&&tree!=null){
                             if(entry.folder){
@@ -621,16 +735,16 @@ private fun NexusUnifiedCloud(
                                 }
                             }else onOpen(uri,entry.mime,entry.title,-1)
                         }
-                    }
+                    })
                 }
-                if(sourceRows.size>=80)item{
+                if(sourceRows.size>=80)item(span={GridItemSpan(maxLineSpan)}){
                     UnifiedButton("More folder items"){
                         val tree=selectedTree;val doc=currentDocument
                         if(tree!=null&&doc!=null)browseTree(tree,doc,sourceOffset+80)
                     }
                 }
             }else{
-                items(sourceRoots){tree->
+                if(showSources)items(sourceRoots){tree->
                     UnifiedEntryCard(NexusUnifiedEntry(
                         tree.lastPathSegment?:"Connected source",
                         tree.authority.orEmpty(),"Folder")){
@@ -640,19 +754,30 @@ private fun NexusUnifiedCloud(
                         else status="Source grant is unavailable"
                     }
                 }
-                item{Text("Streamed files",color=C_TEXT,fontSize=16.sp,
-                    modifier=Modifier.padding(top=15.dp))}
-                items(rows){entry->
-                    UnifiedEntryCard(entry){
+                val visibleRows=rows.filter{entry->
+                    val m=entry.mime
+                    val book=m.contains("pdf")||m.contains("epub")||m.contains("comic")||m.contains("wordprocessingml")
+                    entry.folder||when(mediaFilter){
+                        "Gallery"->m.startsWith("image/")
+                        "Videos"->m.startsWith("video/")
+                        "Books"->book
+                        "Audio"->m.startsWith("audio/")
+                        "Files"->!book&&!m.startsWith("image/")&&!m.startsWith("video/")&&!m.startsWith("audio/")
+                        else->true
+                    }
+                }
+                items(visibleRows,key={accountScope+":"+it.path}){entry->
+                    NexusCloudContentTile(entry,cloud,accountScope,folder,page,onDetails={selected=entry},onOpen={
                         when{
                             entry.path!=null&&entry.folder->{folder=entry.path;page=1}
-                            entry.path!=null->selected=entry
+                            entry.path!=null&&accountScope==cloud.metadataScope()->
+                                onOpen(FgTeraboxDocumentsProvider.uriFor(entry.path,entry.size),entry.mime,entry.title,-1)
                             entry.uri!=null&&!entry.folder->onOpen(entry.uri,entry.mime,entry.title,-1)
                             else->status="Select the folder in the authorized source list"
                         }
-                    }
+                    })
                 }
-                if(connected&&rows.size>=FgTeraboxClient.pageSize())item{
+                if(connected&&rows.size>=FgTeraboxClient.pageSize())item(span={GridItemSpan(maxLineSpan)}){
                     UnifiedButton("Next cloud page"){page++}
                 }
             }

@@ -76,6 +76,8 @@ def check():
     assert "VerticalPager(state=pager" in shell and "setVolume(0f,0f)" in shell
     assert "!pager.isScrollInProgress" in shell and "previewEnabled=false" in shell
     assert "nexus_position_ms" in router and "openAt(" in router
+    assert "NexusCloudContentTile(" in workspace and "cloud.openThumbnail(entry.path,folder,page)" in workspace
+    assert "accountScope==cloud.metadataScope()" in workspace
     taxonomy_revision_regression()
     print("PASS: one Nexus launcher; approved navigation; native transfer routes; real cover flow; taxonomy revision SQL fixture")
 

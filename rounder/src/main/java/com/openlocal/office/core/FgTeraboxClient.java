@@ -90,6 +90,7 @@ public final class FgTeraboxClient {
             byte[] ciphertext=cipher.doFinal(token.getBytes(StandardCharsets.UTF_8));
             fgWriteJsToken="";fgWriteJsTokenTime=0L;
             synchronized(hotPages){hotPages.clear();}
+            linkCache.clear();thumbUrls.clear();
             prefs.edit().putString("preview_scope",java.util.UUID.randomUUID().toString())
                 .putString("ndus",Base64.encodeToString(ciphertext,Base64.NO_WRAP))
                 .putString("iv",Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP))
