@@ -1152,10 +1152,10 @@ object UnifiedDownloadsUi {
             NexusQueueEntry("nexus-publication:"+row.uri,"TeraBox",row.name,
                 if(complete)"Remote receipt verified" else row.error?:"Verified local bytes; remote publication pending",
                 state,if(complete)100 else null,if(complete)row.size else 0L,row.size,
-                if(complete)null else "Retry publication",if(complete)null else {
+                if(complete)null else "Retry publication",if(complete)null else ({
                     NduCloudQueue(activity).use{it.retryNexus(row.uri)}
                     NduCloudScheduler.requestImmediate(activity);Unit
-                },null,if(complete&&aligned)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriFor(row.path,row.size).toString() else null,
+                }),null,if(complete&&aligned)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriFor(row.path,row.size).toString() else null,
                 com.openlocal.office.core.FgTeraboxClient.mime(row.name))
         }
         val stagedUris=NduCloudQueue(activity).use{it.nexusPublications().map{row->row.uri}.toSet()}
