@@ -590,6 +590,9 @@ fun ScreenScaffold(
 
         AppDestination.ReviewQueue -> ReviewQueueScreen(
             items = state.reviewQueue,
+            queueLoaded = state.reviewQueueLoaded,
+            queueLoading = state.reviewQueueLoading,
+            queueError = state.reviewQueueError,
             lowRatingSuggestions = state.lowRatingSuggestions,
             lowRatingLoading = state.lowRatingLoading,
             lowRatingHasMore = state.lowRatingHasMore,
@@ -3232,6 +3235,9 @@ private fun CanonicalTagPicker(
 @Composable
 private fun ReviewQueueScreen(
     items: List<Map<String, Any>>,
+    queueLoaded: Boolean,
+    queueLoading: Boolean,
+    queueError: String?,
     lowRatingSuggestions: List<Map<String, Any>>,
     lowRatingLoading: Boolean,
     lowRatingHasMore: Boolean,
@@ -3289,9 +3295,8 @@ private fun ReviewQueueScreen(
     var lowRatingThreshold by rememberSaveable { mutableStateOf(25f) }
     LaunchedEffect(Unit) {
         onRefreshQueue()
-        // Display available suggestions when Review opens. The backend
-        // abstains immediately until enough manual examples exist.
-        onFindLowRated(lowRatingThreshold.toInt(), true)
+        // Preference-derived suggestions are an explicit separate operation.
+        // Do not race queue initialization with another rating scan.
     }
     val context = LocalContext.current
     var openImageError by rememberSaveable { mutableStateOf("") }
@@ -3303,8 +3308,10 @@ private fun ReviewQueueScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Review Queue", style = MaterialTheme.typography.headlineMedium)
-        Text("Resolve items in sequence, or apply an action to the remaining queue.", style = MaterialTheme.typography.bodyMedium)
+        if(queueError!=null){
+            Text(queueError,color=MaterialTheme.colorScheme.error)
+            TextButton(onClick=onRefreshQueue,enabled=!queueLoading){Text("Retry")}
+        }
 
         TextButton(onClick = { onUndo("last") }, enabled = !busy) { Text("Undo last Review decision") }
         if (pageStarts.isNotEmpty()) TextButton(onClick = {
@@ -3317,6 +3324,8 @@ private fun ReviewQueueScreen(
         } else if (pageError.isNotBlank() && pageStarts.isNotEmpty()) {
             Text(pageError)
             TextButton(onClick = { pageRetry++ }) { Text("Retry") }
+        } else if (visibleItems.isEmpty() && (!queueLoaded || queueLoading || queueError!=null)) {
+            if(queueLoading||queueError==null)Text("Reading saved Review notices…")
         } else if (visibleItems.isEmpty()) {
             AsterionEmptyState(
                 title = if (pageStarts.isEmpty()) "Review queue is clear" else "No older pending reviews",
@@ -3895,14 +3904,7 @@ private fun ReviewQueueScreen(
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { onNavigate(AppDestination.Dashboard) }) {
-                Text("Dashboard")
-            }
-            Button(onClick = { onNavigate(AppDestination.LibraryBrowser) }) {
-                Text("Library")
-            }
-        }
+        TextButton(onClick = { onNavigate(AppDestination.LibraryBrowser) }) { Text("Gallery") }
     }
 }
 

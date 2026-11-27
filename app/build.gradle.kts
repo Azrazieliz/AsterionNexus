@@ -1,4 +1,5 @@
 import java.security.MessageDigest
+import java.util.zip.ZipFile
 
 plugins {
     id("com.android.application")
@@ -305,7 +306,7 @@ val requireCoreReleaseModel = tasks.register("requireCoreReleaseModel") {
         require(bundle.isFile && bundle.length() > 10_000_000L) {
             "Core model missing: run scripts/prepare_bundled_wd_vit_v3.py and its inference test"
         }
-        java.util.zip.ZipFile(bundle).use { zip ->
+        ZipFile(bundle).use { zip ->
             val model = zip.getEntry("model.onnx")
             val metadata = zip.getEntry("metadata.json")
             require(model != null && model.size > 10_000_000L && metadata != null) {

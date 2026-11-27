@@ -80,6 +80,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
+        if(intent?.action==com.ailm.android.MainActivity.ACTION_OPEN_AUTOMATION)activeSection="Activity"
         window.statusBarColor=0xff0e1013.toInt()
         window.navigationBarColor=0xff0e1013.toInt()
         WindowCompat.setDecorFitsSystemWindows(window,false)
@@ -141,6 +142,12 @@ class NexusPremiumHomeActivity : ComponentActivity() {
                 com.ailm.android.runtime.StandaloneRuntime.beginDeferredBundledModelSetup()
             }
         }
+    }
+
+    override fun onNewIntent(intent:Intent){
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if(intent.action==com.ailm.android.MainActivity.ACTION_OPEN_AUTOMATION)activeSection="Activity"
     }
 
     override fun onResume(){
@@ -273,7 +280,7 @@ private fun NexusHome(
 ){
     val destinations=listOf("Library","Organising","Downloading")
     val contexts=mapOf(
-        "Library" to listOf("TeraBox","Gallery","Books","Videos","Assets/Files"),
+        "Library" to listOf("TeraBox","Gallery","Books","Videos","Collections","Assets/Files"),
         "Organising" to listOf("Activity","Taxonomy","Review"),
         "Downloading" to listOf("Modules","Search","Suggestions","Transfers")
     )
@@ -296,6 +303,8 @@ private fun NexusHome(
             "Library"->{
                 libraryContext=choice
                 if(choice=="TeraBox")onRoute("Cloud")
+                else if(choice=="Gallery")onRoute("CoreGallery")
+                else if(choice=="Collections")onRoute("Collections")
                 else{
                     onCategory(when(choice){
                         "Gallery"->"Images"
@@ -415,7 +424,15 @@ private fun NexusHome(
             } else {
                 Box(Modifier.weight(1f).fillMaxWidth()){
                     NexusWorkspace(section=section,onOpen=onWorkspaceOpen,
-                        onLibraryRefresh=onLibraryRefresh)
+                        onLibraryRefresh=onLibraryRefresh,onCoreRoute={target->
+                            when(target){
+                                "CoreGallery"->select("Library","Gallery")
+                                "Collections"->select("Library","Collections")
+                                "Cloud"->select("Library","TeraBox")
+                                "Activity","Taxonomy","Review"->select("Organising",target)
+                                "Intelligence"->onRoute("Intelligence")
+                            }
+                        })
                 }
             }
             Surface(modifier=Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=6.dp),

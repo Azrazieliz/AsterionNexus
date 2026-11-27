@@ -151,7 +151,8 @@ data class NexusUnifiedEntry(
 fun NexusWorkspace(
     section:String,
     onOpen:(Uri,String,String,Int)->Unit,
-    onLibraryRefresh:()->Unit
+    onLibraryRefresh:()->Unit,
+    onCoreRoute:(String)->Unit
 ){
     when(section){
         "Modules"->NexusAcquisitionCatalog(false,onLibraryRefresh)
@@ -159,10 +160,8 @@ fun NexusWorkspace(
         "Search"->NexusUnifiedSearch(onOpen,onLibraryRefresh)
         "Transfers"->NexusUnifiedTransfers(onOpen)
         "Cloud"->NexusUnifiedCloud(onOpen,onLibraryRefresh)
-        "Organize","Activity"->NexusUnifiedOrganize("Scanning")
-        "Taxonomy"->NexusUnifiedOrganize("Fusion")
-        "Review"->NexusUnifiedOrganize("Reviews")
-        "Intelligence"->NexusUnifiedIntelligence()
+        "CoreGallery","Collections","Organize","Activity","Taxonomy","Review","Intelligence"->
+            com.ailm.android.ui.screens.NexusCorePane(section,onCoreRoute)
     }
 }
 

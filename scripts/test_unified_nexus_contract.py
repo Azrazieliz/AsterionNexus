@@ -37,7 +37,7 @@ def check():
     assert "startActivity(Intent(this,NexusSearchActivity::class.java))" not in shell
     assert "startActivity(Intent(this,NexusCloudActivity::class.java))" not in shell
     assert "startActivity(Intent(this,NexusCoreActivity::class.java))" not in shell
-    for route in ["NexusUnifiedSearch(", "NexusUnifiedTransfers(", "NexusUnifiedCloud(", "NexusUnifiedOrganize(", "NexusUnifiedIntelligence("]:
+    for route in ["NexusUnifiedSearch(", "NexusUnifiedTransfers(", "NexusUnifiedCloud(", "NexusCorePane("]:
         assert route in workspace, "Missing unified view "+route
     gradle=(ROOT/"app/build.gradle.kts").read_text(encoding="utf-8")
     assert 'applicationId = "com.asterion.nexus"' in gradle
