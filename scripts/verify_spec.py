@@ -49,6 +49,24 @@ def check_approved_decisions() -> None:
     require(ui["no_slogans_anywhere"] and ui["highest_achievable_premium_quality"], "Premium/no slogans")
     require(ui["visual"] == "new_distinctive_premium_asterion", "Distinctive UI")
     require(ui["donor_ui_reuse_as_final"] is False, "No imported legacy final UI")
+    require(ui["primary_navigation"] == ["Library", "Organising", "Downloading"], "Exactly three main destinations")
+    require(ui["palette"] == "charcoal_and_silver" and ui["content_first"], "Owner visual direction")
+    require(ui["category_tiles"] == "only_replace_applicable_folder_or_element_lists", "Tile layout scope")
+    require(ui["rating_placement"] == "opened_file_metadata_only_not_review_or_module", "Rating metadata placement")
+    require(all("Rating" not in tab for tabs in ui["submenus"].values() for tab in tabs), "No ratings module")
+    require(ui["no_duplicate_commands_actions_or_module_directories"] and ui["canonical_action_registry"], "No duplicate commands")
+    require(ui["centered_video_preview"] == "muted_autoplay_single_visible_preview" and ui["video_open"] == "actual_fullscreen_playback", "Preview and player")
+    require(d["cloud"]["default_permanent_destination_all_media"] == "TeraBox", "TeraBox permanent library")
+    require(d["search"]["online_result_tap"] == "download_exact_selected_original_without_browser_redirect_or_link", "No discovery redirect")
+    require(d["acquisition"]["source_sync_and_backfill_independent"] and d["acquisition"]["sync_backfill_independent_cursors"], "Independent sync/backfill")
+    require(d["fusion"]["rating_separate_from_review"] and d["fusion"]["review_and_rating_automatic_learning"], "Separate learning")
+    require(d["organisation"]["filename_patterns"]["cosplay"] == "Character - Cosplayer Number.extension", "Cosplay naming")
+    require(d["organisation"]["filename_patterns"]["comic"] == "Comic Title.cbz", "Complete comic naming")
+    require(d["books"]["comic_output"] == "one_complete_title_cbz", "One CBZ per complete title")
+    require(d["organisation"]["filename_patterns"]["series"] == "Series Name.mp4", "Assembly output name")
+    require(d["organisation"]["filename_patterns"]["character_model"] == "Character (Transformation) Number.extension", "3D character naming")
+    require(d["organisation"]["preserve_dependency_sensitive_paths"], "Preserve asset dependency paths")
+    require((ROOT / "docs/16-APPROVED-EXPERIENCE-AND-ORGANISATION.md").is_file(), "Missing latest authority")
     require(d["cloud"]["multiple_isolated_accounts"], "Multi TeraBox")
     require(d["cloud"]["exact_duplicates"].startswith("automatically_merge"), "Exact reversible duplicates")
     require(not d["migration"]["bulk_move_original_files"], "Never bulk move original files")
@@ -123,6 +141,8 @@ def check_acceptance_is_not_faked() -> None:
     for key in ("ACQ-001", "ACQ-002", "ACQ-003", "FUS-001", "CLOUD-001",
                 "UI-001", "TXT-001", "IDX-001", "VID-001", "CTRL-001", "DATA-001", "REL-001"):
         require(key in keys, f"Missing required acceptance: {key}")
+    for key in ("UI-027", "UI-028", "ACQ-027", "ACQ-028", "CLOUD-027", "ORG-027", "BOOK-027", "FUS-027", "FUS-028"):
+        require(key in keys, f"Missing November 27 owner acceptance: {key}")
     for case in cases:
         require(case["status"] == "SPECIFIED" and case["actual_evidence"] == [],
                 f"Unsubstantiated implemented/pass claim: {case['id']}")

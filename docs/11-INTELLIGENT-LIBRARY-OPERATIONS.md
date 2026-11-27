@@ -66,3 +66,7 @@ The owner explicitly approved a wider platform **beyond** three-way merger. Thes
 ## Independent acceptance
 
 Each operation must have a real sample and expected result; verify all output bytes/receipts, background interruption, indexing semantics, owner corrections and no original modification. Distinguish `NEW_CAPABILITY_SPECIFIED`, `SOURCE_PRESENT`, `WORKING_ON_PHONE` and `OWNER_ACCEPTED`. No visual mock, proof-of-concept for only one file, or HTML-only test certifies universal media support.
+
+## 2026-11-27 refinement
+
+Use actual representative collection covers, continue reading/playback, canonical related-content exploration and one background activity indicator. Rating is subjective per-file metadata and feeds automatic preference learning and authorized recommendations; Review is correctness/automation confirmation and uses a separate learning objective. No standalone rating module or duplicate action/queue implementation. See [16](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md).

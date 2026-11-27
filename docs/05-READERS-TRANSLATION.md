@@ -53,3 +53,7 @@ All imported books, including untranslated, source and translated editions, are 
 ## Acceptance gates
 
 Use representative real files from each major format, including large cloud EPUB, comic with vertical CJK text, multi-chapter Japanese source, mixed CJK/English, unknown encoding, text-layer PDF, raster PDF, progressive archive read, seekable cloud video, GIF and supported Office formats. Demonstrate genuinely private full-text search with exact chapter offsets and NO egress during local search. Validate translated output readability/typesetting against original page structure and names. Confirm offline translation with all external networks disabled, and restart/resume interrupted jobs without duplicate output.
+
+## 2026-11-27 complete comic acquisition
+
+Acquire the entire comic title in one verified ordered CBZ named Comic Title.cbz, not separate chapter archives. Preserve existing chapter/page mapping, reading progress, native modes, original content and offline OCR/translation. See [16](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md).

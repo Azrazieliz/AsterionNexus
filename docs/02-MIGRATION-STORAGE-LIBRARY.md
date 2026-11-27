@@ -55,3 +55,7 @@ For exact verified byte-identical files, automatically consolidate duplicate **l
 ## Recovery and repair
 
 Periodic non-destructive integrity verification, corrupt-file detection, archive structure checks, missing range repair if exact trustworthy bytes can be obtained, safe fallback to another verified copy, incident reports and manual escalation when content is unrecoverable. No silent corrupted-file "repair" that changes meaning or metadata without an independent new output and validated diff. All file moves/copies/uploads use staging and postcondition verification, then bounded cleanup.
+
+## 2026-11-27 clarification
+
+TeraBox is the Library itself and default permanent storage for **all** downloaded media. Existing authorized files can be automatically reorganised under approved owner patterns; this does not authorize an indiscriminate migration or silent deletion. Use one canonical content identity, account/location records and job ledger. Maintain temporary processing/cache and explicit pins locally. See [16](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md) for verified publication, naming and routing.
