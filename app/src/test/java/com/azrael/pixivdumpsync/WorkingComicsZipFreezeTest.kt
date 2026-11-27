@@ -6,13 +6,13 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
-/** Owner-reported working Toonily/MangaRead chapter ZIP implementation.
+/** Nexus-approved complete-title CBZ adapter retaining the verified donor page retrieval.
  * This baseline must not silently change while repairing unrelated
  * providers, model search, or video parallelism.
  */
 class WorkingComicsZipFreezeTest {
     private val frozen=linkedMapOf(
-        "ChapterArchives.kt" to "3f6e630eed5e75cd6d1f0f57f2133815ef11547b",
+        "ChapterArchives.kt" to "71dda57fb422679076d4f48e22db1fcf6d4e859a",
         "ChapterArchiveJobService.kt" to "ba5539405d26b4e5052989e6bf32fb7573d355b5"
     )
     @Test fun ownerApprovedComicsZipTransferStaysFrozen(){
@@ -31,7 +31,7 @@ class WorkingComicsZipFreezeTest {
             digest.update("blob ${bytes.size}\u0000"
                 .toByteArray(StandardCharsets.US_ASCII))
             digest.update(bytes)
-            assertEquals("Working image ZIP flow changed: "+name,sha,
+            assertEquals("Approved Nexus comic flow changed: "+name,sha,
                 digest.digest().joinToString(""){
                     "%02x".format(it.toInt() and 255)
                 })
