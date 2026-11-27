@@ -9,6 +9,9 @@ import com.openlocal.office.core.FgTeraboxClient;
 public final class NexusFileOpen {
     private NexusFileOpen(){}
     public static void open(Activity activity,Uri uri,String mime,String title){
+        openAt(activity,uri,mime,title,0L);
+    }
+    public static void openAt(Activity activity,Uri uri,String mime,String title,long positionMs){
         if(uri==null)throw new IllegalArgumentException("File location missing");
         String resolved=mime==null||mime.isBlank()?
             FgTeraboxClient.mime(title==null?"":title):mime;
@@ -28,6 +31,7 @@ public final class NexusFileOpen {
         }
         intent.setDataAndType(uri,resolved);
         intent.putExtra("title",title);
+        if(positionMs>0)intent.putExtra("nexus_position_ms",positionMs);
         activity.startActivity(intent);
     }
 }

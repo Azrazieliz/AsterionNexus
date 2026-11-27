@@ -73,6 +73,9 @@ def check():
     assert 'NexusImageViewerActivity' in [attr(x,"name").split(".")[-1] for x in application.findall("activity")], "Integrated viewer not registered"
     assert 'boundedImage(source)' in viewer and 'rememberTransformableState' in viewer, "Safe integrated image viewer missing"
     assert 'case "Books":' in registry and 'case "Other":' in registry
+    assert "VerticalPager(state=pager" in shell and "setVolume(0f,0f)" in shell
+    assert "!pager.isScrollInProgress" in shell and "previewEnabled=false" in shell
+    assert "nexus_position_ms" in router and "openAt(" in router
     taxonomy_revision_regression()
     print("PASS: one Nexus launcher; approved navigation; native transfer routes; real cover flow; taxonomy revision SQL fixture")
 

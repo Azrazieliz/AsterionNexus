@@ -573,6 +573,10 @@ public final class FgMediaPlayer implements AutoCloseable {
         }
     }
     public View getView(){return root;}
+    /** Restore the selected Nexus preview position in the existing player. */
+    public void seekToPosition(long positionMs){
+        if(!closed&&positionMs>0)player.seekTo(positionMs);
+    }
     private static final class VideoTransport extends View{
         private final int role;
         private final float dp;

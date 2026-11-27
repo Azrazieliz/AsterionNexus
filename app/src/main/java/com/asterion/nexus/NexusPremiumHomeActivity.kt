@@ -18,6 +18,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -65,6 +67,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     private var directDialog by mutableStateOf(false)
     private var category by mutableStateOf("All")
     private var activeSection by mutableStateOf("Cloud")
+    private var previewEnabled by mutableStateOf(false)
     private val batch=80
 
     private val openDocument=registerForActivityResult(
@@ -100,6 +103,11 @@ class NexusPremiumHomeActivity : ComponentActivity() {
                         }.onFailure{error="Cannot open file: "+it.javaClass.simpleName}
                     },
                     onRoute={activeSection=it},
+                    previewEnabled=previewEnabled,
+                    onOpenAt={item,position->
+                        runCatching{NexusFileOpen.openAt(this,NexusLibraryProvider.uriFor(this,item.sha256),
+                            item.mime,item.displayName,position)}.onFailure{error="Cannot open video: "+it.javaClass.simpleName}
+                    },
                     onLibraryRefresh={loadPage(reset=true)},
                     onWorkspaceOpen={uri,mime,title,chapter->
                         runCatching{
@@ -125,8 +133,11 @@ class NexusPremiumHomeActivity : ComponentActivity() {
 
     override fun onResume(){
         super.onResume()
+        previewEnabled=true
         if(records.isNotEmpty())loadPage(reset=true)
     }
+
+    override fun onPause(){previewEnabled=false;super.onPause()}
 
     /** Debounce library index queries: one SQLite lookup after typing, not every keypress. */
     private fun onQueryChanged(value:String){
@@ -244,6 +255,7 @@ private fun NexusHome(
     category:String,onCategory:(String)->Unit,loading:Boolean,hasMore:Boolean,status:String,
     onMore:()->Unit,onImport:()->Unit,onAcquire:()->Unit,
     onOpen:(NexusRegistry.Item)->Unit,onRoute:(String)->Unit,
+    previewEnabled:Boolean,onOpenAt:(NexusRegistry.Item,Long)->Unit,
     onLibraryRefresh:()->Unit,
     onWorkspaceOpen:(Uri,String,String,Int)->Unit
 ){
@@ -343,7 +355,9 @@ private fun NexusHome(
                 val hero=visible.firstOrNull{
                     it.mime.startsWith("image/")||it.mime.startsWith("video/")
                 }
-                if(category=="Books"&&visible.isNotEmpty()){
+                if(category=="Videos"&&visible.isNotEmpty()){
+                    NexusVideoFeed(visible,previewEnabled,onOpenAt,hasMore,loading,onMore)
+                }else if(category=="Books"&&visible.isNotEmpty()){
                     NexusBookCoverFlow(visible,onOpen,hasMore,loading,onMore)
                 }else LazyVerticalGrid(
                     columns=GridCells.Fixed(columns),
@@ -439,6 +453,71 @@ private fun categoryMatch(mime:String,category:String):Boolean{
         "Other"->!m.startsWith("image/")&&!m.startsWith("video/")&&
             !m.startsWith("audio/")&&!book
         else->true
+    }
+}
+
+@Composable
+private fun NexusVideoFeed(
+    items:List<NexusRegistry.Item>,enabled:Boolean,onOpen:(NexusRegistry.Item,Long)->Unit,
+    hasMore:Boolean,loading:Boolean,onMore:()->Unit
+){
+    val pager=rememberPagerState(pageCount={items.size})
+    LaunchedEffect(pager.settledPage,items.size,hasMore,loading){
+        if(hasMore&&!loading&&pager.settledPage>=items.lastIndex-2)onMore()
+    }
+    VerticalPager(state=pager,modifier=Modifier.fillMaxSize(),pageSpacing=6.dp,
+        key={items[it].locationId}){index->
+        val item=items[index]
+        val context=LocalContext.current
+        val accessibility=context.getSystemService(android.content.Context.ACCESSIBILITY_SERVICE)
+            as? android.view.accessibility.AccessibilityManager
+        val active=enabled&&!pager.isScrollInProgress&&index==pager.settledPage&&
+            android.animation.ValueAnimator.areAnimatorsEnabled()&&
+            accessibility?.isTouchExplorationEnabled!=true
+        val poster by produceState<Bitmap?>(null,item.sha256){
+            value=withContext(Dispatchers.IO){NexusContentThumbnail.load(context,item)}
+        }
+        var preview by remember(item.locationId){mutableStateOf<android.widget.VideoView?>(null)}
+        var ready by remember(item.locationId,active){mutableStateOf(false)}
+        var failed by remember(item.locationId,active){mutableStateOf(false)}
+        val uri=remember(item.sha256){NexusLibraryProvider.uriFor(context,item.sha256)}
+        Box(Modifier.fillMaxSize().background(NexusVisual.imageBackdrop)){
+            if(poster!=null)Image(poster!!.asImageBitmap(),contentDescription=null,
+                modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+            if(active&&!failed){
+                AndroidView(factory={ctx->
+                    android.widget.VideoView(ctx).apply{
+                        preview=this
+                        setOnPreparedListener{media->
+                            media.setVolume(0f,0f)
+                            media.isLooping=true
+                            ready=true
+                            start()
+                        }
+                        setOnErrorListener{_,_,_->failed=true;true}
+                        setVideoURI(uri)
+                    }
+                },modifier=Modifier.fillMaxSize(),
+                    onRelease={view->view.stopPlayback();if(preview===view)preview=null},
+                    onReset=null,update={})
+            }
+            Box(Modifier.fillMaxSize().clickable{
+                val position=runCatching{preview?.currentPosition?.toLong()?:0L}.getOrDefault(0L)
+                preview?.pause()
+                onOpen(item,position)
+            }.semantics{contentDescription="Play "+item.displayName})
+            Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .background(Color.Black.copy(alpha=0.74f)).padding(16.dp),
+                verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1f)){
+                    Text(item.displayName,color=Color.White,fontSize=15.sp,maxLines=2,
+                        overflow=TextOverflow.Ellipsis)
+                    Text(if(ready&&!failed)"Muted preview" else "Open video",
+                        color=SilverColor,fontSize=11.sp)
+                }
+                Text("▶",color=Color.White,fontSize=24.sp)
+            }
+        }
     }
 }
 
