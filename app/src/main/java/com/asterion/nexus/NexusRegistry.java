@@ -126,6 +126,8 @@ public final class NexusRegistry {
             case "Videos":restriction=" AND o.mime LIKE 'video/%'";break;
             case "Audio":restriction=" AND o.mime LIKE 'audio/%'";break;
             case "Books":restriction=" AND "+book;break;
+            case "Assets":restriction=" AND NOT (o.mime LIKE 'image/%' OR "+
+                    "o.mime LIKE 'video/%' OR "+book+")";break;
             case "Other":restriction=" AND NOT (o.mime LIKE 'image/%' OR "+
                     "o.mime LIKE 'video/%' OR o.mime LIKE 'audio/%' OR "+
                     book+")";break;
