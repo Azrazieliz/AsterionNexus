@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
 import com.asterion.videoflow.NexusDirectAcquisition
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -129,6 +131,16 @@ class NexusPremiumHomeActivity : ComponentActivity() {
             }
         }
         loadPage(reset=true)
+        // Reuse Core's once-per-process bootstrap and deferred native model installation.
+        // Do not block the first Library frame or automatically start media automation.
+        com.ailm.android.startup.AppBootstrap.initializeApplication(applicationContext)
+        lifecycleScope.launch {
+            com.ailm.android.startup.AppBootstrap.awaitInitialization()
+            if(com.ailm.android.startup.AppBootstrap.isRuntimeInitialized()){
+                kotlinx.coroutines.delay(8000)
+                com.ailm.android.runtime.StandaloneRuntime.beginDeferredBundledModelSetup()
+            }
+        }
     }
 
     override fun onResume(){

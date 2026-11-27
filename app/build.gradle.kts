@@ -295,3 +295,40 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
         }
     }
 }
+
+/** A signed production candidate must carry the genuine Core model package.
+ * Debug source checks may run without fetching large model weights. */
+val requireCoreReleaseModel = tasks.register("requireCoreReleaseModel") {
+    val bundle = rootProject.file("fusion/src/main/assets/bundled_wd_vit_v3.zip")
+    inputs.file(bundle).optional()
+    doLast {
+        require(bundle.isFile && bundle.length() > 10_000_000L) {
+            "Core model missing: run scripts/prepare_bundled_wd_vit_v3.py and its inference test"
+        }
+        java.util.zip.ZipFile(bundle).use { zip ->
+            val model = zip.getEntry("model.onnx")
+            val metadata = zip.getEntry("metadata.json")
+            require(model != null && model.size > 10_000_000L && metadata != null) {
+                "Invalid inherited Core model bundle"
+            }
+            val digest = MessageDigest.getInstance("SHA-256")
+            zip.getInputStream(model).use { input ->
+                val buffer = ByteArray(1024 * 1024)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    digest.update(buffer, 0, count)
+                }
+            }
+            val sha = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+            val descriptor = zip.getInputStream(metadata).bufferedReader().use { it.readText() }
+            require(descriptor.contains("\"model_id\":\"asterion-wd-vit-tagger-v3\"") &&
+                descriptor.contains("\"upstream_model_sha256\":\"35f23693620b668f4d53fd3c62bf65e40af739bc52c7eb0fbc49258b58d065b6\"") &&
+                descriptor.contains("\"packaged_model_sha256\":\"$sha\"") &&
+                descriptor.contains("fusion_wd_features")) {
+                "Core model descriptor or graph checksum mismatch"
+            }
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(requireCoreReleaseModel) }

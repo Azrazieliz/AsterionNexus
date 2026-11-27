@@ -1,0 +1,42 @@
+name: Nexus inherited Core model packaging and inference
+on:
+  push:
+    branches: [work/nexus-harmonization-20261126]
+    paths:
+      - 'scripts/prepare_bundled_wd_vit_v3.py'
+      - 'scripts/fusion_wd_training.py'
+      - 'scripts/test_*wd*.py'
+      - 'scripts/requirements-core-model.txt'
+      - '.github/workflows/nexus-core-model.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install inherited pinned inference dependencies
+        run: python -m pip install -r scripts/requirements-core-model.txt
+      - name: Build exact upstream model and native feature contract
+        run: python scripts/prepare_bundled_wd_vit_v3.py
+      - name: Execute native model and validate reviewed head-training contract
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          python scripts/test_bundled_wd_vit_v3.py
+          python scripts/test_fusion_wd_training.py
+          python scripts/test_fusion_wd_graph.py
+      - name: Publish verified bundle and inference evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexus-Core-WDViT-verified-bundle
+          path: |
+            fusion/src/main/assets/bundled_wd_vit_v3.zip
+            model_inference_smoke.json
+          if-no-files-found: error
+          retention-days: 7

@@ -161,6 +161,15 @@ def main():
     if not (JAVA/"bin/java.exe").is_file():raise RuntimeError("Original Windows JDK missing")
     sha=ensure_worktree()
     restore_wheel()
+    # Model packaging is part of the final build, not a device-side download.
+    # All temporary assets and the isolated Python environment stay on D:.
+    model_python=BUILD_HOME/"core-model-python"/"Scripts"/"python.exe"
+    if not model_python.is_file():
+        cmd(sys.executable,"-m","venv",model_python.parent.parent,env=env,timeout=300)
+    env["PIP_CACHE_DIR"]=str(BUILD_HOME/"pip-cache")
+    cmd(model_python,"-m","pip","install","-r",ROOT/"scripts/requirements-core-model.txt",env=env,timeout=1800)
+    cmd(model_python,ROOT/"scripts/prepare_bundled_wd_vit_v3.py",cwd=ROOT,env=env,timeout=2400,capture=False)
+    cmd(model_python,ROOT/"scripts/test_bundled_wd_vit_v3.py",cwd=ROOT,env=env,timeout=1200,capture=False)
     args=(GRADLE_DIST/"bin/gradle.bat","--gradle-user-home",GRADLE_HOME,"--no-daemon","--max-workers=2",
         ":app:testDebugUnitTest",":app:assembleRelease","--stacktrace")
     print("NEXUS_BUILD_COMMIT="+sha,flush=True)

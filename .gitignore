@@ -41,3 +41,7 @@ __pycache__/
 *.cbz
 *.cbr
 *.torrent
+
+# Reproducible, verified Core model build output; never commit weights to Git.
+/fusion/src/main/assets/bundled_wd_vit_v3.zip
+/model_inference_smoke.json

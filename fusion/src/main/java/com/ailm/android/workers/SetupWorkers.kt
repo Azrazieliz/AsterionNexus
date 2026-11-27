@@ -42,7 +42,7 @@ class AutomationNotificationReceiver : BroadcastReceiver() {
         const val PAUSED_NOTIFICATION_ID = 4208
 
         fun openAutomation(context: Context): PendingIntent = PendingIntent.getActivity(
-            context, 42070, Intent(context, MainActivity::class.java)
+            context, 42070, Intent().setClassName(context.packageName, "com.asterion.nexus.NexusPremiumHomeActivity")
                 .setAction(MainActivity.ACTION_OPEN_AUTOMATION)
                 .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
