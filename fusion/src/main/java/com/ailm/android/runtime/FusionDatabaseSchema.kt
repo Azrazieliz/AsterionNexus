@@ -71,6 +71,8 @@ object FusionDatabaseSchema {
     fun ensureArtifacts(db: SQLiteDatabase) {
         createFusionTables(db, ifNotExists = true)
         createCharacterSheetTable(db)
+        // Existing databases must receive the revision row and triggers too.
+        createTaxonomyRevision(db)
         createFusionIndexes(db, ifNotExists = true)
         createImmutableIdTriggers(db, ifNotExists = true)
         createLegacyImageSyncTriggers(db, ifNotExists = true)
