@@ -248,6 +248,7 @@ object StandaloneRuntime {
                             // Restore each stored canonical JSON before migrating
                             // Knowledge to Fusion. A formerly destructive schema
                             // upgrade must not strand 10 of 15 saved sources.
+                            seedBundledReferenceKnowledge()
                             restoreInstalledReferenceKnowledge()
                             val migration = FusionReferenceMigration(database, knowledgeDatabase).reconcile()
                             check(migration["ok"] == true) {
@@ -5871,6 +5872,39 @@ object StandaloneRuntime {
      * differ. All sources are imported together so cross-pack parent/category
      * references can resolve regardless of original import order.
      */
+    /** Read actual owner reference source documents from the APK only for
+     * an empty Knowledge installation. Existing owner sources are authoritative.
+     * This runs after Core's migration backup and before native reconciliation. */
+    private fun seedBundledReferenceKnowledge() {
+        val installed = knowledgeDatabase.importedDocumentHashes()
+        val directory = knowledgePackDirectory()
+        if (installed.isNotEmpty() || directory.listFiles().orEmpty().any {
+                it.isFile && !it.name.startsWith(".") && it.extension.equals("json", true)
+            }) return
+        val root = "nexus_reference_knowledge"
+        val names = appContext.assets.list(root).orEmpty().filter {
+            it.matches(Regex("[A-Za-z0-9._-]+[.]json"))
+        }.sorted()
+        val documents = linkedMapOf<String, String>()
+        for (name in names) {
+            val raw = appContext.assets.open("$root/$name").bufferedReader(Charsets.UTF_8).use {
+                it.readText()
+            }
+            require(ReferenceKnowledgeParser.looksLikeReferenceDocument(name, raw)) {
+                "Invalid bundled canonical source: $name"
+            }
+            documents[name] = raw
+        }
+        if (documents.isEmpty()) return
+        val parsed = ReferenceKnowledgeParser.parseDocuments(documents)
+        if ("series_1623_entries.json" in documents) {
+            require(parsed.series.size >= 1623) { "Incomplete historical series catalog" }
+        }
+        for ((filename, raw) in documents) {
+            persistReferenceKnowledgeArtifact(filename, raw)
+        }
+    }
+
     private fun restoreInstalledReferenceKnowledge(): Map<String, Any> {
         val documents = linkedMapOf<String, String>()
         for (file in knowledgePackDirectory().listFiles().orEmpty()

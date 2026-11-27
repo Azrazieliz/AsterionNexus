@@ -5,6 +5,7 @@ Checks the production manifest and Kotlin entrypoints; CI Android compilation
 and on-device acceptance remain separate mandatory gates.
 """
 import pathlib
+import json
 import re
 import sqlite3
 import xml.etree.ElementTree as ET
@@ -65,8 +66,23 @@ def check():
     assert '"Audio"->m.startsWith("audio/")' in shell
     assert 'case "Assets":' in registry and '"Assets/Files"->"Assets"' in shell
     assert 'HorizontalPager(state=pager' in shell and 'PdfRenderer(fd)' in shell and 'ZipFile(file)' in shell
-    assert '"Review"->NexusUnifiedOrganize("Reviews")' in workspace
-    assert '"Taxonomy"->NexusUnifiedOrganize("Fusion")' in workspace
+    pane=(ROOT/"fusion/src/main/java/com/ailm/android/ui/screens/NexusCorePane.kt").read_text(encoding="utf-8")
+    assert '"Review"->AppDestination.ReviewQueue' in pane
+    assert '"Taxonomy"->AppDestination.Tags' in pane
+    assert '"CoreGallery"->AppDestination.LibraryBrowser' in pane
+    assert 'ScreenScaffold(destination=screen' in pane
+    assert 'AppNavHost(' not in pane
+    assert 'NexusCorePane(section,onCoreRoute)' in workspace
+    core=(ROOT/"fusion/src/main/java/com/ailm/android/ui/screens/Screens.kt").read_text(encoding="utf-8")
+    assert '(!queueLoaded || queueLoading || queueError!=null)' in core
+    source=ROOT/"fusion/src/main/assets/nexus_reference_knowledge/series_1623_entries.json"
+    records=json.loads(source.read_text(encoding="utf-8"))
+    assert len(records)==1623
+    assert len({x["series_code"] for x in records})==1623
+    assert all(x["canonical_name"] and isinstance(x["aliases"],list) for x in records)
+    runtime=(ROOT/"fusion/src/main/java/com/ailm/android/runtime/StandaloneRuntime.kt").read_text(encoding="utf-8")
+    assert "seedBundledReferenceKnowledge()" in runtime
+    assert "if (installed.isNotEmpty()" in runtime
     viewer=(APP/"java/com/asterion/nexus/NexusImageViewerActivity.kt").read_text(encoding="utf-8")
     router=(APP/"java/com/asterion/nexus/NexusFileOpen.java").read_text(encoding="utf-8")
     assert 'NexusImageViewerActivity.class' in router, "Pictures must open inside Nexus"
