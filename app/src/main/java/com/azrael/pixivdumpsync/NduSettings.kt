@@ -19,6 +19,18 @@ object NduSettings {
     private const val KUROHA_DIR = "kuroha_dir"
     private const val KYORA_DIR = "kyora_dir"
     private const val DOMAIN = "domain"
+    private const val ACCOUNT_SCOPE = "account_scope"
+
+    /** Opaque account binding, not a credential-derived identifier. */
+    fun currentAccountScope(ctx:Context):String=ctx.getSharedPreferences(PREF,0).getString(ACCOUNT_SCOPE,"").orEmpty()
+    @Synchronized fun accountScope(ctx:Context):String {
+        if(cookie(ctx)==null)return ""
+        val old=currentAccountScope(ctx)
+        if(old.isNotBlank())return old
+        val scope=java.util.UUID.randomUUID().toString()
+        check(ctx.getSharedPreferences(PREF,0).edit().putString(ACCOUNT_SCOPE,scope).commit()){"Account scope not saved"}
+        return scope
+    }
 
     fun enabled(ctx: Context) = ctx.getSharedPreferences(PREF,0).getBoolean(ENABLE,false)
     private const val CLOUD_ONLY = "cloud_only"
@@ -96,13 +108,16 @@ object NduSettings {
                     .setRandomizedEncryptionRequired(true).build())
             }.generateKey()
     }
-    fun save(ctx: Context, input: String) {
+    @Synchronized fun save(ctx: Context, input: String) {
         val cookie = parseNdus(input)
+        val previous=this.cookie(ctx)
+        val scope=if(previous==cookie)accountScope(ctx) else java.util.UUID.randomUUID().toString()
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE,key())
         val a=Base64.encodeToString(cipher.iv,Base64.NO_WRAP)
         val b=Base64.encodeToString(cipher.doFinal(cookie.toByteArray()),Base64.NO_WRAP)
-        ctx.getSharedPreferences(PREF,0).edit().putString(SECRET,"$a:$b").apply()
+        check(ctx.getSharedPreferences(PREF,0).edit().putString(SECRET,"$a:$b")
+            .putString(ACCOUNT_SCOPE,scope).commit()){"Encrypted session not saved"}
     }
     fun parseNdus(input: String): String {
         val cleaned=input.trim()
@@ -128,9 +143,9 @@ object NduSettings {
             String(cipher.doFinal(Base64.decode(parts[1],Base64.NO_WRAP)))
         }.getOrNull()
     }
-    fun clear(ctx: Context) {
+    @Synchronized fun clear(ctx: Context) {
         NduCloudScheduler.configure(ctx,false)
-        ctx.getSharedPreferences(PREF,0).edit().remove(SECRET)
+        ctx.getSharedPreferences(PREF,0).edit().remove(SECRET).remove(ACCOUNT_SCOPE)
             .putBoolean(ENABLE,false).apply()
     }
     fun configured(ctx: Context) = enabled(ctx) && cookie(ctx)!=null

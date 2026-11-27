@@ -13,7 +13,7 @@ object NduUploadEngine {
 
     fun drain(context:Context, maximum:Int, durationMs:Long,
               stop:()->Boolean={false}, report:(String)->Unit={},
-              manual:Boolean=false):Result {
+              manual:Boolean=false,nexusOnly:Boolean=false):Result {
         if(!manual && !AppPower.enabled(context)) return Result(0,0,0,"Downloader paused")
         if(!NduSettings.configured(context)) return Result(0,0,0,"NDUS not configured")
         if(!inProgress.compareAndSet(false,true))
@@ -22,6 +22,9 @@ object NduUploadEngine {
             val begin=SystemClock.elapsedRealtime()
             val cookie=NduSettings.cookie(context)
                 ?: return Result(0,0,0,"NDUS unavailable")
+            val accountScope=NduSettings.accountScope(context)
+            if(accountScope.isBlank())return Result(0,0,0,"Cloud account identity unavailable")
+            fun cancelled()=stop()||NduSettings.currentAccountScope(context)!=accountScope
             NduCloudQueue(context).use { queue ->
                 var uploaded=0
                 var reverified=0
@@ -34,12 +37,12 @@ object NduUploadEngine {
                     return Result(0,0,queue.status().pending,
                         e.message ?: "NDUS session invalid")
                 }
-                while (attempted<maximum && !stop() &&
+                while (attempted<maximum && !cancelled() &&
                     SystemClock.elapsedRealtime()-begin<durationMs) {
-                    val jobs=queue.nextBatch(minOf(30,maximum-attempted))
+                    val jobs=queue.nextBatch(minOf(30,maximum-attempted),nexusOnly)
                     if(jobs.isEmpty()) break
                     for(job in jobs) {
-                        if(stop() || SystemClock.elapsedRealtime()-begin>=durationMs) break
+                        if(cancelled() || job.accountScope!=accountScope || SystemClock.elapsedRealtime()-begin>=durationMs) break
                         attempted++
                         try {
                             report("Uploading "+job.category+" / "+job.name)
@@ -47,9 +50,9 @@ object NduUploadEngine {
                             val path=NduSettings.destination(context,job.category)
                             val proof=if(job.state=="VERIFY_PENDING"){
                                 report("Checking existing TeraBox copy / "+job.name)
-                                client.verifyExisting(context,uri,job.name,path,stop)
+                                client.verifyExisting(context,uri,job.name,path,::cancelled)
                             }else{
-                                client.upload(context,uri,job.name,path,cancelled=stop){
+                                client.upload(context,uri,job.name,path,cancelled=::cancelled){
                                     done,total ->
                                     val percent=if(total>0)done*100/total else 0
                                     report("TeraBox "+percent+"% / "+job.name)
@@ -62,10 +65,10 @@ object NduUploadEngine {
                             }
                             // Persist the exact remote identity BEFORE Rounder reconciliation.
                             queue.completed(job,proof)
-                            RounderOutbox(context).use{it.ack(uri,proof)}
+                            if(!nexusOnly)RounderOutbox(context).use{it.ack(uri,proof)}
                             if(job.state=="VERIFY_PENDING")reverified++ else uploaded++
                         } catch(t:Throwable) {
-                            if(stop() || t is InterruptedException) break
+                            if(cancelled() || t is InterruptedException) break
                             queue.failed(job,t.message ?: t.javaClass.simpleName)
                         }
                     }

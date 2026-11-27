@@ -68,9 +68,10 @@ class NduCloudJobService : JobService() {
                     // original. Retry from the existing encrypted ledger.
                     nextRemoteDue=120_000L
                 }
-                // Local test mode must never drain cloud upload queues.
-                // On cloud-only mode, remote original imports own receipts;
-                // an earlier local-staged uploader is not run in this job.
+                // Staged Nexus originals use the existing persistent uploader only.
+                val staged=NduUploadEngine.drain(this,8,8*60_000L,
+                    stop={Thread.currentThread().isInterrupted||!AppPower.enabled(this)},nexusOnly=true)
+                if(staged.pending>0)nextRemoteDue=minOf(nextRemoteDue?:120_000L,120_000L)
             } finally {
                 if(!Thread.currentThread().isInterrupted &&
                     AppPower.enabled(this))nextRemoteDue?.let{
