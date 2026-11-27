@@ -28,8 +28,10 @@ def check():
     assert len(application.findall("activity"))>1, "Native readers/workers must stay registered"
     shell=(APP/"java/com/asterion/nexus/NexusPremiumHomeActivity.kt").read_text()
     workspace=(APP/"java/com/asterion/nexus/NexusUnifiedWorkspace.kt").read_text()
-    expected=['"Library"','"Search"','"Transfers"','"Cloud"','"Organize"','"Intelligence"']
-    assert all(x in shell for x in expected), "Missing integrated navigation"
+    assert 'val destinations=listOf("Library","Organising","Downloading")' in shell, "Exactly three permanent destinations required"
+    assert 'activeSection by mutableStateOf("Cloud")' in shell, "Library must start with TeraBox"
+    assert 'detectHorizontalDragGestures' in shell, "Missing contextual swipe navigation"
+    assert all(x in shell for x in ['"Gallery"','"Books"','"Videos"','"Assets/Files"','"Activity"','"Taxonomy"','"Review"','"Search"','"Transfers"'])
     assert 'NexusWorkspace(section=section' in shell, "Section routing must stay in the same Activity"
     assert "startActivity(Intent(this,NexusSearchActivity::class.java))" not in shell
     assert "startActivity(Intent(this,NexusCloudActivity::class.java))" not in shell
@@ -53,14 +55,17 @@ def check():
     assert "NexusVisual.silver" in workspace and "NexusVisual.silver" in shell
     assert 'NexusUnifiedTransfers(' in workspace, "Native transfer queue must remain in the single workspace"
     assert 'span={item->' in shell and 'GridItemSpan(maxLineSpan)' in shell, "Featured original gallery tile missing"
-    assert 'listOf("Library","Search","Transfers","More")' in shell, "Compact four-item navigation missing"
-    assert 'ModalBottomSheet(' in shell and 'onRoute(name)' in shell, "Source workflows must remain reachable"
+    assert 'destinations.forEach' in shell, "Permanent navigation must be generated from one registry"
+    assert 'select(name,when(name)' in shell and 'onRoute("Cloud")' in shell, "Source workflows must remain reachable"
     assert 'val ratio=thumbnail?.let{' in shell, "Media tiles must preserve original aspect ratio"
     registry=(APP/"java/com/asterion/nexus/NexusRegistry.java").read_text()
     assert 'searchPage(String query,int offset,int limit,String category)' in registry
     assert 'val chosenCategory=category' in shell and 'loadPage(reset=true)' in shell
     assert '"Audio"->m.startsWith("audio/")' in shell
-    assert 'listOf("All","Images","Videos","Books","Audio","Other")' in shell
+    assert 'case "Assets":' in registry and '"Assets/Files"->"Assets"' in shell
+    assert 'HorizontalPager(state=pager' in shell and 'PdfRenderer(fd)' in shell and 'ZipFile(file)' in shell
+    assert '"Review"->NexusUnifiedOrganize("Reviews")' in workspace
+    assert '"Taxonomy"->NexusUnifiedOrganize("Fusion")' in workspace
     viewer=(APP/"java/com/asterion/nexus/NexusImageViewerActivity.kt").read_text()
     router=(APP/"java/com/asterion/nexus/NexusFileOpen.java").read_text()
     assert 'NexusImageViewerActivity.class' in router, "Pictures must open inside Nexus"
