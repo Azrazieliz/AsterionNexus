@@ -310,6 +310,9 @@ object NexusCollectionActions{
                     else NativeAlertDialog.Builder(activity).setTitle("Add to collection").setItems(rows.map{it.name}.toTypedArray()){_,index->
                         worker.execute{
                             val added=runCatching{
+                                if(uri.authority==com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY){
+                                    check(sha!=null&&NexusCloudIdentity.known(activity,uri)==sha){"Cloud identity changed"}
+                                }
                                 if(core!=null)LocalDatabase(activity.applicationContext).use{FusionSmartCollections(it).add(rows[index].id,core)}
                                 else NexusRegistry(activity).addCollectionMember(rows[index].id,sha!!)
                             }
