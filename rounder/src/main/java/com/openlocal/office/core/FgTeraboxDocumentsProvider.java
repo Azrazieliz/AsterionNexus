@@ -138,6 +138,20 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
         if(split<0)throw new IOException("Invalid scoped document");
         return documentId.substring(start,split);
     }
+    public static final class ScopedFile {
+        public final String scope,path;
+        public final long size;
+        ScopedFile(String scope,String path,long size){this.scope=scope;this.path=path;this.size=size;}
+    }
+    public static ScopedFile scopedFile(Uri uri)throws IOException{
+        if(uri==null||!AUTHORITY.equals(uri.getAuthority()))throw new IOException("Not a TeraBox document");
+        String id=DocumentsContract.getDocumentId(uri);
+        if(!id.startsWith("tb3:"))throw new IOException("An explicitly scoped file is required");
+        String scope=scopeOf(id);
+        long size=sizeHint(uri);
+        if(scope==null||!scope.matches("[0-9a-f-]{36}")||size<=0)throw new IOException("Missing scoped file identity");
+        return new ScopedFile(scope,path(id),size);
+    }
     public static FgTeraboxClient clientForUri(Context context,Uri uri)throws IOException{
         String scope=scopeOf(DocumentsContract.getDocumentId(uri));
         return scope==null?legacyClient(context):FgTeraboxClient.forScope(context,scope);
