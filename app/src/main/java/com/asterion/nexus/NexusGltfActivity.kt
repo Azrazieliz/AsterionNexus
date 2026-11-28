@@ -133,7 +133,7 @@ class NexusGltfActivity : Activity() {
                     override fun onStartTrackingTouch(bar:SeekBar) {}
                     override fun onStopTrackingTouch(bar:SeekBar) {}
                     override fun onProgressChanged(bar:SeekBar,value:Int,fromUser:Boolean) {
-                        if(fromUser&&!updatingSeek){elapsed=animator.getAnimationDuration(animation)*value/1000f;previous=0}
+                        if(fromUser&&!updatingSeek){elapsed=animator.getAnimationDuration(this@NexusGltfActivity.animation)*value/1000f;previous=0}
                     }
                 })
             }
