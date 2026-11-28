@@ -187,15 +187,34 @@ class LegacyCatalogMigration(private val context:Context) {
                     if(value==null)archived++ else if(snapshot(db,name,table,keys)!=null)existing++ else {
                         inserted++
                         if(name=="media"||name=="galleries")held++
-                        if(apply){
-                            db.insertOrThrow(name,null,value)
-                            applied=snapshot(db,name,table,keys)?:error("Catalog insert was not visible")
-                        }
+                        // Preview executes the same constrained inserts in a
+                        // transaction that is rolled back, so its counts match.
+                        db.insertOrThrow(name,null,value)
+                        applied=snapshot(db,name,table,keys)?:error("Catalog insert was not visible")
                     }
-                    if(apply)db.insertOrThrow("legacy_catalog_rows",null,ContentValues().apply{
+                    db.insertOrThrow("legacy_catalog_rows",null,ContentValues().apply{
                         put("digest",staged.digest);put("table_name",name);put("row_key",rowKey)
                         put("payload_json",row.toString());put("applied_json",applied)
                     })
+                }
+                // Check references only for rows actually created by this import.
+                // Reject the whole transaction if an imported parent is missing.
+                for((name,sql) in listOf(
+                    "galleries" to "SELECT 1 FROM entities WHERE source=? AND entity_id=?",
+                    "media" to "SELECT 1 FROM galleries WHERE source=? AND gallery_id=? AND entity_id=?",
+                    "identity_aliases" to "SELECT 1 FROM entities WHERE source=? AND entity_id=?"
+                )){
+                    db.rawQuery("SELECT applied_json FROM legacy_catalog_rows WHERE digest=? AND table_name=? AND applied_json IS NOT NULL",arrayOf(staged.digest,name)).use{c->
+                        while(c.moveToNext()){
+                            val row=JSONObject(c.getString(0))
+                            val args=when(name){
+                                "media"->arrayOf(row.getString("source"),row.getString("gallery_id"),row.getString("entity_id"))
+                                "identity_aliases"->arrayOf(row.getString("source"),row.getString("source_entity_id"))
+                                else->arrayOf(row.getString("source"),row.getString("entity_id"))
+                            }
+                            check(db.rawQuery(sql,args).use{it.moveToFirst()}){"Missing imported catalog relationship"}
+                        }
+                    }
                 }
                 val report=Report(staged.digest,counts,inserted,existing,held,archived,false)
                 if(apply){
