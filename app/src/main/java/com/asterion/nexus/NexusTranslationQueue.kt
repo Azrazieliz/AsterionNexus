@@ -54,7 +54,7 @@ class NexusTranslationQueue(context:Context){
         val language=language(sample)
         val state=when{
             language==null->"language_review"
-            mime !in setOf("text/plain","application/epub+zip")->"blocked_layout"
+            mime !in setOf("text/plain","application/epub+zip")&&!NexusRasterEdition.supports(mime)->"blocked_layout"
             else->"queued"
         }
         val helper=DB(app)
@@ -86,7 +86,14 @@ class NexusTranslationQueue(context:Context){
     }
     fun retry(sha:String){
         val helper=DB(app)
-        try{helper.writableDatabase.execSQL("UPDATE jobs SET state='queued',error=NULL,updated=? WHERE sha=? AND state IN ('blocked_engine','failed','paused')",arrayOf(System.currentTimeMillis(),sha))}
+        try{
+            val db=helper.writableDatabase
+            db.rawQuery("SELECT mime,language FROM jobs WHERE sha=? AND state='blocked_layout'",arrayOf(sha)).use{c->
+                if(c.moveToFirst()&&c.getString(1)!="und"&&NexusRasterEdition.supports(c.getString(0)))
+                    db.execSQL("UPDATE jobs SET state='queued',error=NULL,updated=? WHERE sha=? AND state='blocked_layout'",arrayOf(System.currentTimeMillis(),sha))
+            }
+            db.execSQL("UPDATE jobs SET state='queued',error=NULL,updated=? WHERE sha=? AND state IN ('blocked_engine','failed','paused')",arrayOf(System.currentTimeMillis(),sha))
+        }
         finally{helper.close()}
         schedule()
     }
@@ -242,14 +249,15 @@ class NexusTranslationQueue(context:Context){
             val output=when(job.mime){
                 "text/plain"->txt(source,work,job,engine,shouldStop)
                 "application/epub+zip"->epub(source,work,job,engine,shouldStop)
-                else->error("Unsupported layout adapter")
+                else->if(NexusRasterEdition.supports(job.mime))NexusRasterEdition.step(app,item,work,job.next,job.language,engine.identity,shouldStop,{translated(it,engine,shouldStop)},{next,total->update(job.sha,"running",next=next,total=total,model=engine.identity)}) else error("Unsupported layout adapter")
             }
             if(output!=null){
                 checkStop(shouldStop)
                 require(registry.verifyOriginal(item)&&output.length()>0){"Source or edition integrity failure"}
                 val ext=if(job.mime=="text/plain")".txt" else ".epub"
-                val title=item.displayName.substringBeforeLast('.')+" — English draft"+ext
-                val edition=output.inputStream().use{registry.ingest(it,title,job.mime,"nexus-translation","device",
+                val title=item.displayName.substringBeforeLast('.')+(if(NexusRasterEdition.supports(job.mime))" — English annotated draft" else " — English draft")+ext
+                val outputMime=if(job.mime=="text/plain")"text/plain" else "application/epub+zip"
+                val edition=output.inputStream().use{registry.ingest(it,title,outputMime,"nexus-translation","device",
                     item.sha256+":"+engine.identity+":draft-v1",output.length(),null)}
                 require(registry.verifyOriginal(edition))
                 registry.linkDerivative(edition.sha256,item.sha256,"translated_from",engine.identity)
