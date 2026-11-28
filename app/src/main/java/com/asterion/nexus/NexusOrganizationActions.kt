@@ -37,18 +37,44 @@ object NexusOrganizationActions{
     private fun account(a:Activity,scope:String,label:String){
         run(a,"Load organization settings",{NexusAutomaticOrganization.sources(a,scope)}){sources->
             val options=sources.map{it.name+" · "+if(it.enabled)"Enabled" else "Paused"}.toMutableList()
-            options.add("Run enabled sources now");options.add("Move history and rollback");options.add("Last cycle status")
+            options.add("Run enabled sources now");options.add("Move history and rollback");options.add("Last cycle status");options.add("Artwork identity routing · "+if(NexusArtworkOrganization.settings(a,scope).enabled)"Enabled" else "Paused")
             AlertDialog.Builder(a).setTitle(label)
                 .setItems(options.toTypedArray()){_,i->
                     when(i){
                         sources.size->cycle(a,scope,label)
                         sources.size+1->NexusCloudActions.history(a)
                         sources.size+2->AlertDialog.Builder(a).setTitle("Last organization cycle").setMessage(NexusAutomaticOrganization.lastStatus(a,scope)).setPositiveButton("Close",null).show()
+                        sources.size+3->artwork(a,scope,label)
                         else->edit(a,scope,label,sources[i])
                     }
                 }
                 .setNegativeButton("Close",null).show()
         }
+    }
+    private fun artwork(a:Activity,scope:String,label:String){
+        val config=NexusArtworkOrganization.settings(a,scope)
+        val layout=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL;val p=(18*resources.displayMetrics.density).toInt();setPadding(p,p,p,p)}
+        layout.addView(TextView(a).apply{text="Use Core's verified character and content routing. Only artwork analyzed by Core inside this ingress folder is eligible. The destination root must already exist; canonical subfolders may be created. No overwrite or deletion."})
+        val source=EditText(a).apply{hint="Existing artwork ingress folder";setText(config.source);setSingleLine()}
+        val destination=EditText(a).apply{hint="Existing organized artwork root";setText(config.destination);setSingleLine()}
+        layout.addView(source);layout.addView(destination)
+        val d=AlertDialog.Builder(a).setTitle("Artwork identity routing").setView(layout)
+            .setNegativeButton("Cancel",null)
+            .setNeutralButton("Pause"){_,_->run(a,"Pause artwork routing",{NexusArtworkOrganization.configure(a,scope,config.source,config.destination,false)}){account(a,scope,label)}}
+            .setPositiveButton("Enable",null).create()
+        d.setOnShowListener{
+            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener{
+                val src=source.text.toString().trim();val dest=destination.text.toString().trim()
+                val checked=runCatching{NexusArtworkOrganization.validateRoots(src,dest)}
+                if(checked.isFailure){destination.error=checked.exceptionOrNull()?.message;return@setOnClickListener}
+                d.dismiss()
+                AlertDialog.Builder(a).setTitle("Enable verified artwork moves?")
+                    .setMessage(src+"\n→ "+dest+"\n\nOnly high-confidence Core routes; exact byte verification and reversible receipts.")
+                    .setNegativeButton("Cancel",null)
+                    .setPositiveButton("Enable"){_,_->run(a,"Enable artwork routing",{NexusArtworkOrganization.configure(a,scope,src,dest,true)}){account(a,scope,label)}}.show()
+            }
+        }
+        d.show()
     }
     private fun edit(a:Activity,scope:String,label:String,source:NexusAutomaticOrganization.Source){
         val layout=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL;val p=(18*resources.displayMetrics.density).toInt();setPadding(p,p,p,p)}
