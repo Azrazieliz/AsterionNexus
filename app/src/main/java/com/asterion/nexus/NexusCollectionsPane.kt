@@ -47,7 +47,8 @@ private val builtins=listOf(
 )
 private fun localMedia(ctx:android.content.Context,item:NexusRegistry.Item)=CollectionMedia("sha:"+item.sha256,NexusLibraryProvider.uriFor(ctx,item.sha256),item.displayName,item.mime,item.sha256)
 private fun coreMedia(item:FusionSmartCollections.Entry)=CollectionMedia("core:"+item.imageId,Uri.parse(item.uri),item.filename,item.mime,imageId=item.imageId)
-private fun collectionCover(ctx:android.content.Context,item:CollectionMedia):Bitmap?=runCatching{
+private fun collectionCover(ctx:android.content.Context,item:CollectionMedia):Bitmap?{
+    return runCatching{
     if(item.sha!=null){
         val original=NexusRegistry(ctx).find(item.sha)?:return null
         return NexusContentThumbnail.load(ctx,original)
@@ -58,7 +59,8 @@ private fun collectionCover(ctx:android.content.Context,item:CollectionMedia):Bi
     var sample=1
     while(maxOf(bounds.outWidth,bounds.outHeight)/sample>1024)sample*=2
     ctx.contentResolver.openInputStream(item.uri)?.use{BitmapFactory.decodeStream(it,null,BitmapFactory.Options().apply{inSampleSize=sample})}
-}.getOrNull()
+    }.getOrNull()
+}
 
 @Composable
 internal fun NexusCollectionsPane(onOpen:(Uri,String,String,Int)->Unit,onCoreRoute:(String)->Unit){
