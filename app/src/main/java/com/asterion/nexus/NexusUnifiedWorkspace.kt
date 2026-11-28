@@ -163,7 +163,8 @@ fun NexusWorkspace(
         "Transfers"->NexusUnifiedTransfers(onOpen)
         "Asterion Bridges"->NexusPartnerPane()
         "Cloud"->NexusUnifiedCloud(onOpen,onLibraryRefresh)
-        "CoreGallery","Collections","Organize","Activity","Taxonomy","Review","Intelligence"->
+        "Collections"->NexusCollectionsPane(onOpen,onCoreRoute)
+        "CoreGallery","Organize","Activity","Taxonomy","Review","Intelligence"->
             com.ailm.android.ui.screens.NexusCorePane(section,onCoreRoute)
     }
 }
