@@ -53,6 +53,7 @@ jobs:
                       assert f"assets/translation-models/{language}/{name}" in names
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: nexus-translation-reference-smoke-not-device-certification
           path: nexus_translation_smoke.json
