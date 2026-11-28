@@ -14,6 +14,7 @@ class AsterionApplication:Application() {
     override fun onCreate() {
         super.onCreate()
         CrashDiagnostics.install(this)
+        com.asterion.nexus.NexusArtworkOrganization.install(this)
         if(Build.VERSION.SDK_INT>=28) {
             val process=Application.getProcessName()
             if(process!=packageName) {
