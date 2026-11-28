@@ -17,7 +17,9 @@ public final class NexusFileOpen {
             FgTeraboxClient.mime(title==null?"":title):mime;
         resolved=NexusRegistry.canonicalComicMime(title,resolved);
         Intent intent;
-        if(resolved.startsWith("image/")){
+        if(NexusMesh.supported(resolved,title)){
+            intent=new Intent(activity,NexusMeshActivity.class);
+        }else if(resolved.startsWith("image/")){
             intent=new Intent(activity,NexusImageViewerActivity.class);
         }else if(resolved.startsWith("video/")||resolved.startsWith("audio/")){
             intent=new Intent(activity,NexusRounderPlaybackActivity.class);
