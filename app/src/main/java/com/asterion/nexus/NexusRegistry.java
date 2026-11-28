@@ -94,6 +94,8 @@ public final class NexusRegistry {
             else if(filename.endsWith(".cbz"))
                 type="application/vnd.comicbook+zip";
             else if(filename.endsWith(".pdf"))type="application/pdf";
+            else if(filename.endsWith(".xlsx"))type=NexusSpreadsheet.XLSX;
+            else if(filename.endsWith(".csv"))type="text/csv";
             else if(filename.endsWith(".cbr"))type="application/vnd.comicbook-rar";
         }
         type=canonicalComicMime(displayName,type);
