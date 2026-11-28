@@ -30,6 +30,7 @@ public final class FgTeraboxClient {
     private final Context app;
     private final SharedPreferences prefs;
     private final String accountSlot;
+    private final String fixedScope;
     private static final String DEFAULT_PREFS="fg_terabox_secure";
     private static final String ACCOUNTS_PREFS="fg_terabox_account_slots";
     private final java.util.concurrent.atomic.AtomicInteger thumbnailWrites=
@@ -60,7 +61,9 @@ public final class FgTeraboxClient {
         }
     }
     public FgTeraboxClient(Context context){this(context,null);}
-    private FgTeraboxClient(Context context,String slot){
+    private FgTeraboxClient(Context context,String slot){this(context,slot,null);}
+    private FgTeraboxClient(Context context,String slot,String scope){
+        fixedScope=scope;
         app=context.getApplicationContext();
         accountSlot=slot;
         prefs=app.getSharedPreferences(slot==null?DEFAULT_PREFS:DEFAULT_PREFS+"_"+slot,Context.MODE_PRIVATE);
@@ -95,10 +98,13 @@ public final class FgTeraboxClient {
     public static FgTeraboxClient forScope(Context context,String scope)throws IOException{
         if(!validScope(scope))throw new IOException("Cloud account identity unavailable");
         FgTeraboxClient primary=new FgTeraboxClient(context);
-        if(primary.configured()&&scope.equals(primary.metadataScope()))return primary;
+        if(primary.configured()&&scope.equals(primary.metadataScope())){
+            FgTeraboxClient pinned=new FgTeraboxClient(context,null,scope);
+            pinned.requireScope(scope);return pinned;
+        }
         if(!context.getSharedPreferences(ACCOUNTS_PREFS,Context.MODE_PRIVATE).contains(scope))
             throw new IOException("Cloud account is no longer authorized");
-        FgTeraboxClient account=new FgTeraboxClient(context,scope);
+        FgTeraboxClient account=new FgTeraboxClient(context,scope,scope);
         account.requireScope(scope);
         return account;
     }
@@ -135,7 +141,7 @@ public final class FgTeraboxClient {
         return gen.generateKey();
     }
     public synchronized boolean setCookie(String userInput){
-        if(userInput==null)return false;
+        if(userInput==null||fixedScope!=null)return false;
         String token=userInput.trim();
         java.util.regex.Matcher found=java.util.regex.Pattern
             .compile("(?:^|;\\s*)ndus=([^;]+)",java.util.regex.Pattern.CASE_INSENSITIVE)
@@ -146,24 +152,24 @@ public final class FgTeraboxClient {
            token.contains("\r")||token.contains(" "))return false;
         try{
             // Same exact credential reconnect retains the established account namespace.
-            if(configured()&&validScope(metadataScope())&&cookie().equals("ndus="+token))return true;
+            try{if(configured()&&validScope(metadataScope())&&cookie().equals("ndus="+token))return true;}catch(Exception unreadable){/* Owner supplied a replacement credential. */}
             Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE,key());
             byte[] ciphertext=cipher.doFinal(token.getBytes(StandardCharsets.UTF_8));
             fgWriteJsToken="";fgWriteJsTokenTime=0L;
             synchronized(hotPages){hotPages.clear();}
             linkCache.clear();thumbUrls.clear();
-            prefs.edit().putString("preview_scope",accountSlot==null?java.util.UUID.randomUUID().toString():accountSlot)
+            return prefs.edit().putString("preview_scope",accountSlot==null?java.util.UUID.randomUUID().toString():accountSlot)
                 .putString("ndus",Base64.encodeToString(ciphertext,Base64.NO_WRAP))
                 .putString("iv",Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP))
                 .commit();
-            return configured();
         }catch(Exception error){
             android.util.Log.w("FG_TERA","Keystore failed: "+error.getClass().getSimpleName());
             return false;
         }
     }
     public synchronized void disconnect(){
+        if(fixedScope!=null)throw new IllegalStateException("Cannot mutate a scoped cloud client");
         fgWriteJsToken="";fgWriteJsTokenTime=0L;
         linkCache.clear();thumbUrls.clear();
         synchronized(hotPages){hotPages.clear();}
@@ -174,8 +180,10 @@ public final class FgTeraboxClient {
     // Scoped private metadata pages can never leak between TeraBox accounts.
     public String metadataScope(){return prefs.getString("preview_scope","");}
     private String cookie() throws Exception{
-        String ciphertext=prefs.getString("ndus",null);
-        String iv=prefs.getString("iv",null);
+        Map<String,?> snapshot=prefs.getAll();
+        if(fixedScope!=null&&!fixedScope.equals(snapshot.get("preview_scope")))throw new IOException("Cloud account changed or disconnected");
+        String ciphertext=(String)snapshot.get("ndus");
+        String iv=(String)snapshot.get("iv");
         if(ciphertext==null||iv==null)throw new IOException("TeraBox account is not connected");
         Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.DECRYPT_MODE,key(),new GCMParameterSpec(128,

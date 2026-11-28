@@ -28,6 +28,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     }
     private static final int LIMIT=96;
     private final FgTeraboxClient cloud;
+    private final Context context;
     private final String boundScope;
     private volatile boolean closed=false;
     private final Listener listener;
@@ -38,9 +39,13 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     private volatile long lastProgressMs=0;
 
     public FgTeraboxSearchIndex(Context context,FgTeraboxClient cloud,Listener listener) {
+        this(context,cloud,null,listener);
+    }
+    public FgTeraboxSearchIndex(Context context,FgTeraboxClient cloud,String scope,Listener listener) {
         super(context.getApplicationContext(),"rounder-terabox-search-v1.db",null,3);
         this.cloud=cloud;
-        this.boundScope=cloud.metadataScope();
+        this.context=context.getApplicationContext();
+        this.boundScope=scope;
         this.listener=listener;
         setWriteAheadLoggingEnabled(true);
     }
@@ -103,9 +108,10 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     private String connectedScope(){
         if(closed||!cloud.configured())return "";
         String scope=cloud.metadataScope();
-        return scope==null||!scope.equals(boundScope)?"":scope;
+        return scope==null||(boundScope!=null&&!scope.equals(boundScope))?"":scope;
     }
-    public void ensure(boolean force){
+    public synchronized void ensure(boolean force){
+        if(closed)return;
         String scope=connectedScope();
         if(scope.isEmpty())return;
         if(!force && System.currentTimeMillis()<retryAfter.getOrDefault(scope,0L))return;
@@ -113,6 +119,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
         scanner.execute(()->{
             try{scan(scope,force);}
             catch(Exception e){
+                if(closed)return;
                 android.util.Log.w("FG_CLOUD_SEARCH","Index interrupted: "+e.getClass().getSimpleName());
                 retryAfter.put(scope,System.currentTimeMillis()+60000L);
                 try{
@@ -124,7 +131,9 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
         });
     }
     private void scan(String scope,boolean force)throws Exception {
+        if(closed)return;
         SQLiteDatabase db=getWritableDatabase();
+        FgTeraboxClient scoped=FgTeraboxClient.forScope(context,scope);
         // Every query and write is scoped. Preserve sibling account indexes.
         State s=state(db,scope);
         if(s.building==0 && s.active>0 && !force){progress(scope,true);return;}
@@ -148,7 +157,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                 throw new java.io.IOException("TeraBox account disconnected or changed");
             // A failed metadata page is retried on the next scan, at this exact
             // folder/page. Cursor is persisted after each committed page.
-            JSONArray rows=cloud.listPageCached(task.path,task.page);
+            JSONArray rows=scoped.listPageCached(task.path,task.page);
             if(!scope.equals(connectedScope()))throw new java.io.IOException("Cloud account changed");
             if(rows==null)throw new java.io.IOException("Cloud directory page is unavailable");
             writePage(db,scope,generation,task,rows);
@@ -245,10 +254,12 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     private static String escapeLike(String value){
         return value.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
     }
-    public void search(String text,String category,int offset,int request) {
+    public synchronized void search(String text,String category,int offset,int request) {
+        if(closed)return;
         ensure(false);
         String scope=connectedScope();
         queries.execute(()->{
+            if(closed)return;
             try{
                 State s=state(getReadableDatabase(),scope);
                 int gen=s.active>0?s.active:s.building;
@@ -307,6 +318,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                 reply.put("items",results).put("hasMore",more);
                 listener.onSearch(reply.toString());
             }catch(Exception e){
+                if(closed)return;
                 android.util.Log.w("FG_CLOUD_SEARCH","Query rejected",e);
                 try{listener.onSearch(new JSONObject().put("token",request)
                     .put("scope",scope).put("items",new JSONArray())

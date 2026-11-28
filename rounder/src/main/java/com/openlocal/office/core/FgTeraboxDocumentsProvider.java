@@ -149,7 +149,7 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
         String pinned=prefs.getString("scope",null);
         if(pinned==null){if(!prefs.edit().putString("scope",current).commit())throw new IOException("Cannot bind legacy cloud grants");pinned=current;}
         primary.requireScope(pinned);
-        return primary;
+        return FgTeraboxClient.forScope(context,pinned);
     }
     private FgTeraboxClient clientForDocument(String documentId)throws IOException{
         String scope=scopeOf(documentId);

@@ -98,6 +98,7 @@ def check():
     assert "if(old==1&&current==2)" in registry
     assert "score BETWEEN 0 AND 100" in registry and "if(score==-1)" in registry
     taxonomy_revision_regression()
+    cloud_account_regression()
     print("PASS: one Nexus launcher; approved navigation; native transfer routes; real cover flow; taxonomy revision SQL fixture")
 
 def taxonomy_revision_regression():
@@ -134,6 +135,46 @@ def taxonomy_revision_regression():
         assert db.execute("SELECT rating FROM images WHERE image_id=1").fetchone()==(87,)
         assert db.execute("SELECT id FROM fusion_tags").fetchall()==[("existing",)]
         assert db.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='trigger'").fetchone()==(6,)
+
+def cloud_account_regression():
+    # SQLite fixture exercises the actual new DDL and legacy migration shape.
+    donor=APP/"java/com/azrael/pixivdumpsync"
+    for filename,table,pk,legacy_pk,values in (
+        ("TeraBoxRemoteOriginals.kt","remote_originals","account_scope,id","id",
+         {"id":"same","url_cipher":"encrypted","category":"book","filename":"book.epub",
+          "destination":"/Books","created_at":1,"updated_at":1,"state":"VERIFIED","remote_path":"/Books/book.epub"}),
+        ("NduCloudQueue.kt","jobs","category,content_uri,account_scope","category,content_uri",
+         {"category":"book","name":"book.epub","content_uri":"content://local/book","state":"VERIFIED",
+          "remote_path":"/Books/book.epub","remote_size":12}),
+    ):
+        source=(donor/filename).read_text(encoding="utf-8")
+        ddl=re.search(r'db\.execSQL\("""(CREATE TABLE '+table+r'\(.*?)"""\)',source,re.S).group(1)
+        legacy=re.sub(r"\s*account_scope TEXT NOT NULL DEFAULT '',","",ddl).replace("PRIMARY KEY("+pk+")","PRIMARY KEY("+legacy_pk+")")
+        with sqlite3.connect(":memory:") as db:
+            db.execute(legacy)
+            fields=",".join(values)
+            placeholders=",".join("?" for _ in values)
+            db.execute(f"INSERT INTO {table}({fields}) VALUES({placeholders})",tuple(values.values()))
+            db.execute(f"ALTER TABLE {table} RENAME TO {table}_legacy")
+            db.execute(ddl)
+            db.execute(f"INSERT INTO {table}({fields}) SELECT {fields} FROM {table}_legacy")
+            db.execute(f"DROP TABLE {table}_legacy")
+            assert db.execute(f"SELECT account_scope,remote_path FROM {table}").fetchall()==[("","/Books/book.epub")]
+            for scope in ("account-a","account-b"):
+                db.execute(f"INSERT INTO {table}({fields},account_scope) VALUES({placeholders},?)",(*values.values(),scope))
+            db.execute(f"UPDATE {table} SET state='ERROR' WHERE account_scope=?",("account-a",))
+            assert db.execute(f"SELECT account_scope,state FROM {table} ORDER BY account_scope").fetchall()==[
+                ("","VERIFIED"),("account-a","ERROR"),("account-b","VERIFIED")]
+            assert db.execute(f"SELECT count(*) FROM {table} WHERE account_scope=? AND account_scope<>''",("",)).fetchone()==(0,)
+    rounder=ROOT/"rounder/src/main/java/com/openlocal/office/core"
+    client=(rounder/"FgTeraboxClient.java").read_text(encoding="utf-8")
+    index=(rounder/"FgTeraboxSearchIndex.java").read_text(encoding="utf-8")
+    provider=(rounder/"FgTeraboxDocumentsProvider.java").read_text(encoding="utf-8")
+    assert 'fixedScope.equals(snapshot.get("preview_scope"))' in client
+    assert 'FgTeraboxClient.forScope(context,scope)' in index
+    assert 'DELETE FROM objects WHERE scope<>?' not in index
+    assert 'return FgTeraboxClient.forScope(context,pinned)' in provider
+    print("PASS: account-scoped ledger migration and isolation SQL fixtures")
 
 if __name__=="__main__":
     check()

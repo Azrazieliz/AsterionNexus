@@ -185,7 +185,7 @@ private fun NexusUnifiedSearch(
     val cloudAccounts=remember(ctx){FgTeraboxClient.accounts(ctx)}
     val cloudIndexes=remember(ctx){cloudAccounts.mapNotNull{account->
         val cloud=runCatching{FgTeraboxClient.forScope(ctx,account.scope)}.getOrNull()?:return@mapNotNull null
-        FgTeraboxSearchIndex(ctx,cloud,object:FgTeraboxSearchIndex.Listener{
+        FgTeraboxSearchIndex(ctx,cloud,account.scope,object:FgTeraboxSearchIndex.Listener{
             override fun onSearch(raw:String){main.post{
                 runCatching{
                     val response=JSONObject(raw)
@@ -202,7 +202,7 @@ private fun NexusUnifiedSearch(
                             mime=FgTeraboxClient.mime(name),path=path,
                             size=j.optLong("size",-1),folder=j.optBoolean("folder"),account=account.scope))
                     }
-                    hits=(hits+rows).distinctBy{it.account+":"+(it.path?:it.uri?.toString()?:it.web?:it.title)}
+                    hits=(hits+rows).distinctBy{it.account+":"+(it.path?:it.uri?.toString()?:it.web?:it.title)+":"+it.chapter}
                     status="Found "+hits.size+" matches"+if(response.optBoolean("building"))" · cloud index building" else ""
                 }
             }}
