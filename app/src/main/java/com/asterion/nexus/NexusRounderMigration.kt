@@ -100,6 +100,9 @@ class NexusRounderMigration(context:Context){
     }
     private fun imports():List<String> = root.listFiles().orEmpty().filter{it.name.matches(Regex("[0-9a-f]{64}\\.accepted"))}
         .map{it.nameWithoutExtension}.sorted()
+    data class Receipt(val sha:String,val records:Int,val bookmarks:Int,val recent:Int,val bound:Boolean)
+    fun receipts():List<Receipt>{val registry=NexusRegistry(app);return imports().map{sha->val r=report(sha,read(sha));Receipt(sha,r.records,r.bookmarks,r.recent,registry.hasRounderBindings(sha))}}
+    fun recentNames(sha:String):List<String>{require(sha in imports());val rows=JSONArray(read(sha).getJSONObject("records").optString("asterion-rounder-recent-v1","[]"));return (0 until rows.length()).map{rows.getJSONObject(it).getString("name")}}
     fun list():List<Bookmark>{
         val registry=NexusRegistry(app)
         val rows=mutableListOf<Bookmark>()
@@ -122,6 +125,9 @@ class NexusRounderMigration(context:Context){
         val registry=NexusRegistry(app)
         val item=registry.find(original)?:error("Original is not registered")
         require(item.mime=="application/epub+zip"&&registry.verifyOriginal(item)){"A verified offline EPUB is required"}
+        com.openlocal.office.core.BookArchive(app,NexusLibraryProvider.uriFor(app,item.sha256),true).use{archive->
+            require(actual.getInt("chapter") in 0 until archive.chapterCount()){ "Bookmark chapter is outside the selected EPUB" }
+        }
         registry.bindRounderBookmark(bookmark.exportSha,bookmark.key,item.sha256,actual.getInt("chapter"),actual.getDouble("percent"))
     }
     @Synchronized fun rollback(sha:String){
