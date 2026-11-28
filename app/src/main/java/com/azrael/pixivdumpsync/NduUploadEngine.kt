@@ -19,6 +19,7 @@ object NduUploadEngine {
         if(!inProgress.compareAndSet(false,true))
             return Result(0,0,0,"Another direct upload is active")
         try {
+            if(nexusOnly)return drainScopedNexus(context,maximum,durationMs,stop,report)
             val begin=SystemClock.elapsedRealtime()
             val session=NduSettings.session(context)
                 ?: return Result(0,0,0,"NDUS unavailable")
@@ -85,4 +86,55 @@ object NduUploadEngine {
             }
         } finally { inProgress.set(false) }
     }
+    /** One scheduler/outbox, with independent authorized account leases.
+     * Browsing or selecting a new destination cannot strand previous jobs.
+     * Revoked or ambiguous accounts keep their existing receipts and pending rows. */
+    private fun drainScopedNexus(context:Context,maximum:Int,durationMs:Long,
+                                 stop:()->Boolean,report:(String)->Unit):Result{
+        val begin=SystemClock.elapsedRealtime()
+        val accounts=NduSettings.uploadAccounts(context)
+        var uploaded=0
+        var attempted=0
+        var error:String?=null
+        fun cancelled()=stop()||!NduSettings.enabled(context)||!NduSettings.cloudOnly(context)||
+            SystemClock.elapsedRealtime()-begin>=durationMs
+        NduCloudQueue(context).use{queue->
+            val clients=mutableMapOf<String,NduTeraboxClient>()
+            val failedAccounts=mutableSetOf<String>()
+            while(attempted<maximum&&!cancelled()){
+                var advanced=false
+                for(account in accounts){
+                    if(attempted>=maximum||cancelled())break
+                    if(account.scope in failedAccounts||!NduSettings.stillAuthorized(context,account))continue
+                    val job=queue.nextBatchScoped(account.scope,1,true).firstOrNull()?:continue
+                    advanced=true;attempted++
+                    fun stopped()=cancelled()||!NduSettings.stillAuthorized(context,account)
+                    try{
+                        val client=clients[account.scope]?:NduTeraboxClient(account.token,account.host).also{
+                            com.openlocal.office.core.FgTeraboxClient.forScope(context,account.browserScope)
+                                .requireScope(account.browserScope)
+                            it.connect();clients[account.scope]=it
+                        }
+                        if(stopped())break
+                        val path=NduSettings.destination(context,job.category)
+                        val proof=com.asterion.nexus.NexusCloudPublication.publishScoped(
+                            context,client,Uri.parse(job.uri),job.name,path,account,::stopped){done,total->
+                            report("TeraBox "+(if(total>0)done*100/total else 0)+"% / "+job.name)
+                        }
+                        if(stopped())break
+                        queue.completed(job,proof);uploaded++
+                    }catch(t:Exception){
+                        if(stopped()||t is InterruptedException)continue
+                        error=t.javaClass.simpleName
+                        queue.failed(job,error?:"Publication failed")
+                        if(!clients.containsKey(account.scope))failedAccounts.add(account.scope)
+                    }
+                }
+                if(!advanced)break
+            }
+            val pending=accounts.sumOf{queue.pendingNexus(it.scope)}
+            return Result(uploaded,attempted,pending,error)
+        }
+    }
+
 }
