@@ -34,7 +34,7 @@ object NexusCloudIdentity{
             val b=ByteArray(131072)
             while(true){if(Thread.currentThread().isInterrupted)throw InterruptedIOException();val n=input.read(b);if(n<0)break;if(n>0){sha.update(b,0,n);md5.update(b,0,n)}}
         }
-        return if(hex(sha.digest())==item.sha256&&hex(md5.digest())==remote.md5)item.sha256 else null
+        return if(hex(sha.digest())==item.sha256&&hex(md5.digest())==remote.md5&&selected(context,uri)==remote)item.sha256 else null
     }
     private fun hex(bytes:ByteArray)=bytes.joinToString(""){"%02x".format(it.toInt() and 255)}
     fun verify(context:Context,uri:Uri,title:String,mime:String,stop:()->Boolean,progress:(Long,Long)->Unit):NexusRegistry.Item{
