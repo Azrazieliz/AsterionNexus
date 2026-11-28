@@ -48,7 +48,7 @@ object NexusFileDetails {
         }else null
         val core=if(mime.startsWith("image/")&&(uri.authority!=com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY||sha!=null)){
             StandaloneRuntime.initialize(activity.applicationContext)
-            StandaloneRuntime.nexusArtworkId(uri.toString(),sha)
+            StandaloneRuntime.nexusArtworkId(if(uri.authority==com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY)"" else uri.toString(),sha)
         }else null
         return Target(sha,core)
     }
@@ -88,7 +88,7 @@ object NexusFileDetails {
         val status=TextView(activity).apply{text="Reading file metadata…"}
         val slider=SeekBar(activity).apply{max=100;progress=50;isEnabled=false}
         body.addView(info);body.addView(status);body.addView(slider)
-        if(NexusArchiveOperation.available(activity,uri)||type.startsWith("image/")){
+        if(NexusArchiveOperation.available(activity,uri)||type.startsWith("image/")||uri.authority==com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY){
             body.addView(android.widget.Button(activity).apply{
                 text="Add to collection"
                 setOnClickListener{NexusCollectionActions.add(activity,uri,type)}
