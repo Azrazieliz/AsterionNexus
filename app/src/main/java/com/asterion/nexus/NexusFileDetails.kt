@@ -182,6 +182,12 @@ object NexusFileDetails {
                 text="Media inspection"
                 setOnClickListener{NexusMediaActions.inspect(activity,uri)}
             })
+            if(type.startsWith("video/")){
+                body.addView(android.widget.Button(activity).apply{
+                    text="Edit video / transcode"
+                    setOnClickListener{NexusVideoEditActivity.open(activity,listOfNotNull(uri.lastPathSegment),title.orEmpty())}
+                })
+            }
             if(type.startsWith("video/")||type.startsWith("audio/")){
                 body.addView(android.widget.Button(activity).apply{
                     text="Extract audio track"

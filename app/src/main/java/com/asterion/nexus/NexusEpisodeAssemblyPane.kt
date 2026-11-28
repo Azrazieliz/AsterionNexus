@@ -15,7 +15,8 @@ import kotlinx.coroutines.withContext
 /** Contextual video operation; the three permanent destinations remain unchanged. */
 @Composable
 fun NexusEpisodeAssemblyPane(onRefresh:()->Unit){
-    val app=LocalContext.current.applicationContext
+    val context=LocalContext.current
+    val app=context.applicationContext
     val scope=rememberCoroutineScope()
     var title by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
@@ -53,6 +54,9 @@ fun NexusEpisodeAssemblyPane(onRefresh:()->Unit){
                 }
             }
         }
+        TextButton(enabled=!busy&&chosen.isNotEmpty(),onClick={
+            NexusVideoEditActivity.open(context,chosen.map{it.sha256},title)
+        },modifier=Modifier.fillMaxWidth()){Text("Edit timeline / transcode")}
         if(status.isNotBlank())Text(status)
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         Button(enabled=!busy&&title.isNotBlank()&&chosen.size>=2,onClick={

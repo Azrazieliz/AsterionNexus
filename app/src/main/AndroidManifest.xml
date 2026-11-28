@@ -133,6 +133,7 @@
         <activity android:name="com.asterion.nexus.NexusImageViewerActivity"
             android:exported="false"/>
         <activity android:name="com.asterion.nexus.NexusRecoveryActivity" android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusVideoEditActivity" android:exported="false" />
         <activity android:name="com.asterion.nexus.NexusGltfActivity" android:exported="false" />
         <activity android:name="com.asterion.nexus.NexusMeshActivity" android:exported="false" />
         <activity android:name="com.asterion.nexus.NexusReaderActivity"
