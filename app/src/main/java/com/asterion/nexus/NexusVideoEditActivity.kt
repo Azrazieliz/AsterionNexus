@@ -32,17 +32,51 @@ class NexusVideoEditActivity:Activity(){
     private data class Row(val source:NexusVideoExport.Source,var start:String="0",var end:String=source.duration.toString())
     private var running=false
     private var ready=false
+    private var draftKey=""
+    private var initialRows=emptyList<Row>()
+    private fun saveDraft(){
+        if(!ready||draftKey.isEmpty())return
+        sync()
+        val clips=org.json.JSONArray()
+        rows.forEach{clips.put(org.json.JSONObject().put("sha",it.source.item.sha256).put("start",it.start).put("end",it.end))}
+        val draft=org.json.JSONObject().put("clips",clips).put("title",titleField.text.toString())
+            .put("resolution",resolution.selectedItemPosition).put("bitrate",bitrate.selectedItemPosition)
+            .put("codec",codec.selectedItemPosition).put("mute",mute.isChecked)
+        getSharedPreferences("nexus-video-drafts",MODE_PRIVATE).edit().putString(draftKey,draft.toString()).apply()
+    }
+    private fun restoreDraft(items:List<Row>):List<Row>{
+        val raw=getSharedPreferences("nexus-video-drafts",MODE_PRIVATE).getString(draftKey,null)?:return items
+        return runCatching{
+            val d=org.json.JSONObject(raw)
+            val a=d.getJSONArray("clips")
+            require(a.length() in 1..100)
+            val sources=items.associateBy{it.source.item.sha256}
+            val restored=(0 until a.length()).map{i->
+                val j=a.getJSONObject(i)
+                val src=sources.getValue(j.getString("sha")).source
+                Row(src,j.getString("start"),j.getString("end"))
+            }
+            titleField.setText(d.optString("title",titleField.text.toString()))
+            resolution.setSelection(d.optInt("resolution").coerceIn(0,4))
+            bitrate.setSelection(d.optInt("bitrate").coerceIn(0,3))
+            codec.setSelection(d.optInt("codec").coerceIn(0,1))
+            mute.isChecked=d.optBoolean("mute")
+            restored
+        }.getOrElse{items}
+    }
     private lateinit var highlightButton:Button
     override fun onCreate(state:Bundle?){
         super.onCreate(state)
         val ids=intent.getStringArrayListExtra("sources").orEmpty()
         if(ids.isEmpty()||ids.size>100){finish();return}
+        draftKey=NexusOriginalStore.sourceKey(ids.joinToString(":")+":"+intent.getBooleanExtra("automatic",false))
         val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(16,16,16,16);setBackgroundColor(0xff101216.toInt())}
         fun heading(s:String)=TextView(this).apply{text=s;setTextColor(-1);textSize=16f}
         fun choices(values:List<String>)=Spinner(this).apply{adapter=ArrayAdapter(this@NexusVideoEditActivity,android.R.layout.simple_spinner_dropdown_item,values)}
         layout.addView(heading("Video timeline"))
         titleField=EditText(this).apply{hint="Output title";setSingleLine(true);setText(intent.getStringExtra("title").orEmpty().ifBlank{"Edited video"});setTextColor(-1)}
         layout.addView(titleField)
+        layout.addView(Button(this).apply{text="Reset timeline draft";setOnClickListener{if(ready&&!running){android.app.AlertDialog.Builder(this@NexusVideoEditActivity).setMessage("Reset edits to the initial timeline?").setPositiveButton("Reset"){_,_->rows.clear();rows.addAll(initialRows.map{it.copy()});renderRows();saveDraft()}.setNegativeButton("Cancel",null).show()}}})
         timeline=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
         layout.addView(ScrollView(this).apply{addView(timeline)},LinearLayout.LayoutParams(-1,0,1f))
         layout.addView(heading("Resolution · preserve aspect with padding"))
@@ -69,7 +103,7 @@ class NexusVideoEditActivity:Activity(){
             }
             runOnUiThread{
                 if(isDestroyed||isFinishing)return@runOnUiThread
-                result.onSuccess{items->rows.addAll(items);renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=items.size==1}
+                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=items.size==1}
                     .onFailure{status.text="Cannot edit: "+it.message}
             }
         }
@@ -91,9 +125,58 @@ class NexusVideoEditActivity:Activity(){
             action("↓",i<rows.lastIndex){rows.add(i+1,rows.removeAt(i))}
             action("Duplicate",rows.size<100){rows.add(i+1,row.copy())}
             action("Remove",rows.size>1){rows.removeAt(i)}
-            entry.addView(controls);timeline.addView(entry)
+            entry.addView(controls)
+            entry.addView(Button(this).apply{text="Preview / mark clip";isEnabled=!running;setOnClickListener{sync();preview(row)}})
+            timeline.addView(entry)
         }
     }
+    private fun preview(row:Row){
+        val source=row.source
+        val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+        val video=VideoView(this)
+        panel.addView(video,LinearLayout.LayoutParams(-1,(240*resources.displayMetrics.density).toInt()))
+        val position=TextView(this)
+        panel.addView(position)
+        val seek=SeekBar(this).apply{max=1000;isEnabled=false}
+        panel.addView(seek)
+        val controls=LinearLayout(this)
+        var start=row.start.toLongOrNull()?.coerceIn(0,source.duration-1)?:0L
+        var end=row.end.toLongOrNull()?.coerceIn(start+1,source.duration)?:source.duration
+        var prepared=false
+        var dragging=false
+        val handler=android.os.Handler(mainLooper)
+        fun display(){position.text="Position: ${video.currentPosition} ms · clip: $start–$end ms"}
+        val ticker=object:Runnable{
+            override fun run(){
+                if(prepared){
+                    if(video.isPlaying&&video.currentPosition.toLong()>=end){video.pause();video.seekTo(start.toInt())}
+                    if(!dragging)seek.progress=(video.currentPosition.toLong()*1000/source.duration).toInt().coerceIn(0,1000)
+                    display()
+                }
+                handler.postDelayed(this,150)
+            }
+        }
+        fun button(label:String,action:()->Unit){controls.addView(Button(this).apply{text=label;setOnClickListener{if(prepared)action()}},LinearLayout.LayoutParams(0,-2,1f))}
+        button("Play / pause"){if(video.isPlaying)video.pause()else{if(video.currentPosition.toLong() !in start until end)video.seekTo(start.toInt());video.start()}}
+        button("Mark in"){start=video.currentPosition.toLong().coerceIn(0,end-1);display()}
+        button("Mark out"){end=video.currentPosition.toLong().coerceIn(start+1,source.duration);display()}
+        panel.addView(controls)
+        seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+            override fun onStartTrackingTouch(bar:SeekBar){dragging=true;video.pause()}
+            override fun onStopTrackingTouch(bar:SeekBar){dragging=false}
+            override fun onProgressChanged(bar:SeekBar,value:Int,fromUser:Boolean){if(fromUser&&prepared)video.seekTo((source.duration*value/1000).toInt())}
+        })
+        val dialog=android.app.AlertDialog.Builder(this).setTitle(source.item.displayName).setView(panel)
+            .setPositiveButton("Apply marks"){_,_->row.start=start.toString();row.end=end.toString();renderRows();saveDraft()}
+            .setNegativeButton("Cancel",null).create()
+        dialog.setOnDismissListener{handler.removeCallbacks(ticker);video.stopPlayback()}
+        video.setOnPreparedListener{prepared=true;seek.isEnabled=true;video.seekTo(start.toInt());display()}
+        video.setOnErrorListener{_,_,_->prepared=false;seek.isEnabled=false;position.text="Preview decoder unavailable; numerical trim remains available";true}
+        dialog.show()
+        video.setVideoURI(android.net.Uri.fromFile(NexusRegistry(this).original(source.item)))
+        handler.post(ticker)
+    }
+    override fun onPause(){saveDraft();super.onPause()}
     private fun suggestHighlights(){
         if(running||!ready||rows.size!=1)return
         sync()
@@ -119,6 +202,7 @@ class NexusVideoEditActivity:Activity(){
         val dims=listOf(1280 to 720,1920 to 1080,1080 to 1920,3840 to 2160,854 to 480)[resolution.selectedItemPosition]
         val profile=NexusVideoExport.Profile(dims.first,dims.second,listOf(4000000,8000000,16000000,30000000)[bitrate.selectedItemPosition],codec.selectedItemPosition==1,mute.isChecked)
         val name=titleField.text.toString()
+        saveDraft()
         running=true;cancel.set(false);renderRows();exportButton.isEnabled=false;highlightButton.isEnabled=false;cancelButton.isEnabled=true
         status.text="Preparing export…"
         worker.execute{
