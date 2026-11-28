@@ -160,6 +160,9 @@ internal class FusionVisualOnlineHead(private val db: SQLiteDatabase) {
             put("feature", encode(raw))
             put("updated_ms", System.currentTimeMillis())
         }, SQLiteDatabase.CONFLICT_REPLACE)
+        // Whole-image inference also supplies the separate durable retrieval index.
+        // Never mix subject-region vectors or owner-label votes into this index.
+        if (scope == -1) FusionVisualSearchIndex(db).store(imageId, source, modelHash, raw)
         // Only replay owner decisions against the original source and exact region.
         // correct() replaces the vote and removes its pending row in one transaction.
         val pending = mutableListOf<Pair<String, Boolean>>()
