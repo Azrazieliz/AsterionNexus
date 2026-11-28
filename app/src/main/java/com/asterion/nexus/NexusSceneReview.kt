@@ -13,7 +13,7 @@ internal object NexusSceneReview {
     private const val HEIGHT=9
     data class Frame(val time:Long,val rgb:IntArray)
     data class Span(val index:Int,val start:Long,val end:Long)
-    data class Group(val early:Boolean,val spans:List<Span>,val samples:Int)
+    data class Group(val early:Boolean,val spans:List<Span>,val samples:Int,val retainedIndex:Int=if(early)spans.first().index else spans.last().index,val label:String=if(early)"Repeated early scene" else "Repeated late scene")
 
     private fun distance(a:Frame,b:Frame):Double{
         if(a.rgb.size!=b.rgb.size||a.rgb.isEmpty())return Double.POSITIVE_INFINITY
@@ -28,8 +28,9 @@ internal object NexusSceneReview {
     }
     private fun matches(a:Frame,b:Frame):Boolean=distance(a,b)<=12.0
     /** Exact sample cadence and visually varying runs; avoid matches from black or static footage. */
-    fun common(episodes:List<List<Frame>>,early:Boolean):Group?{
-        if(episodes.size<3||episodes.any{it.size<8})return null
+    fun common(episodes:List<List<Frame>>,early:Boolean):Group?=aligned(episodes,early,3)
+    private fun aligned(episodes:List<List<Frame>>,early:Boolean,minimum:Int):Group?{
+        if(episodes.size<minimum||episodes.any{it.size<8})return null
         val first=episodes.first()
         val alignments=episodes.drop(1).map{other->
             val best=Array(first.size){0 to -1}
@@ -60,6 +61,36 @@ internal object NexusSceneReview {
         }
         return best
     }
+    /** Adjacent episode matches cover re-encoded recaps and previews.
+     * These are suggestions, not semantic proof. Ambiguous end/start matches
+     * are retained and can be inspected without losing a witness. */
+    fun adjacent(early:List<List<Frame>>,late:List<List<Frame>>):List<Group>{
+        require(early.size==late.size)
+        val out=mutableListOf<Group>()
+        for(i in 0 until early.lastIndex){
+            val a=late[i];val b=early[i+1]
+            val match=aligned(listOf(a,b),true,2)?:continue
+            val left=match.spans[0].copy(index=i)
+            val right=match.spans[1].copy(index=i+1)
+            val leftInterior=left.end+STEP*2<(a.lastOrNull()?.time?:0L)
+            val rightInterior=right.start>=(b.firstOrNull()?.time?:0L)+STEP*2
+            val recap=leftInterior&&!rightInterior
+            val preview=rightInterior&&!leftInterior
+            if(recap||preview){
+                val retained=if(recap)i else i+1
+                out.add(Group(recap,listOf(left,right),match.samples,retained,
+                    if(recap)"Possible recap from preceding episode" else "Possible preview of next episode"))
+            }else{
+                // No evidence as to which copy is narrative: no proposed cut.
+                out.add(Group(true,listOf(left,right),match.samples,-1,"Ambiguous adjacent repeated scene"))
+            }
+        }
+        return out
+    }
+    fun overlaps(a:Span,b:Span):Boolean=a.index==b.index&&a.start<b.end&&b.start<a.end
+    fun protected(groups:List<Group>):List<Span> = groups.flatMap{g->
+        if(g.retainedIndex<0)g.spans else g.spans.filter{it.index==g.retainedIndex}
+    }
     fun subtract(start:Long,end:Long,cuts:List<Pair<Long,Long>>):List<Pair<Long,Long>>{
         require(start>=0&&end>start)
         val out=mutableListOf<Pair<Long,Long>>()
@@ -74,7 +105,7 @@ internal object NexusSceneReview {
         return out
     }
     fun scan(context:Context,sources:List<NexusVideoExport.Source>):List<Group>{
-        require(sources.size in 3..20&&sources.map{it.item.sha256}.distinct().size==sources.size)
+        require(sources.size in 2..20&&sources.map{it.item.sha256}.distinct().size==sources.size)
         val registry=NexusRegistry(context)
         val early=mutableListOf<List<Frame>>()
         val late=mutableListOf<List<Frame>>()
@@ -110,6 +141,6 @@ internal object NexusSceneReview {
             }finally{retriever.release()}
             check(NexusOriginalStore.matches(source.file,source.item.length,source.item.sha256)){"Original changed during scene review"}
         }
-        return listOfNotNull(common(early,true),common(late,false))
+        return listOfNotNull(common(early,true),common(late,false))+adjacent(early,late)
     }
 }

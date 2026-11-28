@@ -1950,6 +1950,15 @@ class ExternalImportPipeline(
                     return@forEachIndexed
                 }
 
+                if (request.verifiedImageBindingsOnly && tableName == FusionDatabaseSchema.TABLE_IMAGE_PROFILES) {
+                    val merged = mergeVerifiedPreferences(existingRow, row)
+                    if (merged != null) {
+                        resolvedRows += ResolvedRow(tableName, key, MergeAction.UPDATE, merged, "restore missing verified owner preferences")
+                    } else {
+                        resolvedRows += ResolvedRow(tableName, key, MergeAction.SKIP, row, "preserve existing artwork preferences")
+                    }
+                    return@forEachIndexed
+                }
                 if (rowsEquivalent(existingRow, row)) {
                     resolvedRows += ResolvedRow(tableName, key, MergeAction.SKIP, row, "unchanged")
                     return@forEachIndexed
@@ -2023,6 +2032,32 @@ class ExternalImportPipeline(
             conflicts = conflicts,
             warnings = warnings,
         )
+    }
+
+    private fun mergeVerifiedPreferences(existing: Map<String, Any?>, incoming: Map<String, Any?>): MutableMap<String, Any?>? {
+        val old = runCatching { JSONObject(existing["metadata_json"]?.toString().orEmpty()) }.getOrElse { return null }
+        val donor = runCatching { JSONObject(incoming["metadata_json"]?.toString().orEmpty()) }.getOrElse { return null }
+        val merged = existing.toMutableMap()
+        var changed = false
+        // Explicit zero is a rating, and a later explicit clear is a preference.
+        val untouched = !old.has("precision_overall_set") && !old.has("precision_overall_updated_at_ms") &&
+            (existing["rating"]?.toString()?.toIntOrNull() ?: 0) == 0
+        if (untouched && donor.optBoolean("precision_overall_set", false)) {
+            val score = donor.optInt("precision_overall_score", -1)
+            if (score in 0..100 && incoming["rating"]?.toString()?.toIntOrNull() == score) {
+                old.put("precision_overall_set", true)
+                old.put("precision_overall_score", score)
+                old.put("precision_overall_updated_at_ms", donor.optLong("precision_overall_updated_at_ms", 0))
+                merged["rating"] = score
+                changed = true
+            }
+        }
+        // Never replay derived scores, stale paths, foreign model evidence, or
+        // a conflicting rating. The whole source snapshot remains available.
+        if (!changed) return null
+        merged["metadata_json"] = old.toString()
+        merged["updated_at_ms"] = System.currentTimeMillis()
+        return merged
     }
 
     private fun resolveNameConflictForCreate(

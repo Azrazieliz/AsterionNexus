@@ -78,7 +78,7 @@ object NexusOrganizationActions{
     }
     private fun edit(a:Activity,scope:String,label:String,source:NexusAutomaticOrganization.Source){
         val layout=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL;val p=(18*resources.displayMetrics.density).toInt();setPadding(p,p,p,p)}
-        layout.addView(TextView(a).apply{text="Select a dedicated folder of independent, complete media. Existing destination rules are retained. Packages, sidecars, loose 3D assets and artwork requiring identity review are not automatically moved."})
+        layout.addView(TextView(a).apply{text="Select a dedicated folder of independent, complete media. Existing destination rules are retained. Complete standalone documents and media are routed by existing rules. Confirmed model and cosplay identities are reused; packages with unresolved dependencies and unidentified artwork remain for review."})
         val root=EditText(a).apply{hint="Existing cloud ingress folder";setText(source.root);setSingleLine()}
         layout.addView(root)
         val d=AlertDialog.Builder(a).setTitle(source.name).setView(layout)

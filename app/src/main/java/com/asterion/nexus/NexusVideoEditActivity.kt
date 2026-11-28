@@ -111,7 +111,7 @@ class NexusVideoEditActivity:Activity(){
             }
             runOnUiThread{
                 if(isDestroyed||isFinishing)return@runOnUiThread
-                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=true;repeatsButton.isEnabled=items.size in 3..20}
+                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=true;repeatsButton.isEnabled=items.size in 2..20}
                     .onFailure{status.text="Cannot edit: "+it.message}
             }
         }
@@ -188,7 +188,7 @@ class NexusVideoEditActivity:Activity(){
     }
     override fun onPause(){saveDraft();super.onPause()}
     private fun reviewRepeats(){
-        if(running||!ready||initialRows.size !in 3..20)return
+        if(running||!ready||initialRows.size !in 2..20)return
         sync()
         val sources=initialRows.map{it.source}
         running=true;renderRows();exportButton.isEnabled=false;highlightButton.isEnabled=false;repeatsButton.isEnabled=false
@@ -208,11 +208,12 @@ class NexusVideoEditActivity:Activity(){
     private fun showRepeatReview(sources:List<NexusVideoExport.Source>,groups:List<NexusSceneReview.Group>){
         val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(18,12,18,12)}
         val selected=mutableListOf<Pair<NexusSceneReview.Group,NexusSceneReview.Span>>()
+        val protected=NexusSceneReview.protected(groups)
         groups.forEach{group->
-            panel.addView(TextView(this).apply{text=(if(group.early)"Repeated early scene" else "Repeated late scene")+" · visual matching only, not a confirmed opening/ending"})
+            panel.addView(TextView(this).apply{text=group.label+" · visual evidence; inspect before removing"})
             group.spans.forEach{span->
                 val source=sources[span.index]
-                val retained=(group.early&&span.index==0)||(!group.early&&span.index==sources.lastIndex)
+                val retained=protected.any{NexusSceneReview.overlaps(it,span)}
                 val entry=LinearLayout(this)
                 val check=CheckBox(this).apply{
                     text=source.item.displayName+" · "+span.start/1000+"–"+span.end/1000+" s"+if(retained)" (retained)" else ""
@@ -236,11 +237,16 @@ class NexusVideoEditActivity:Activity(){
                     NexusSceneReview.subtract(start,end,cuts).map{Row(row.source,it.first.toString(),it.second.toString(),row.audioTrack)}
                 }}.getOrElse{status.text="Correct clip boundaries before applying cuts";return@setPositiveButton}
                 if(next.isEmpty()||next.size>100){status.text="Review would produce an invalid timeline; no change";return@setPositiveButton}
+                val witnesses=selected.flatMap{(group,_)->group.spans.filter{it.index==group.retainedIndex}}.distinct()
+                if(witnesses.any{w->next.none{r->r.source.item.sha256==sources[w.index].item.sha256&&r.start.toLong()<=w.start&&r.end.toLong()>=w.end}}){
+                    status.text="A matching retained scene is outside the proposed timeline; no change";return@setPositiveButton
+                }
                 selected.forEach{(group,span)->
                     if(reviewLog.length()<200)reviewLog.put(org.json.JSONObject().put("method","visual-edge-review-v1")
                         .put("decision","OWNER_CUT").put("edge",if(group.early)"early" else "late")
                         .put("source_sha",sources[span.index].item.sha256).put("start_ms",span.start).put("end_ms",span.end)
-                        .put("matched_samples",group.samples).put("sample_interval_ms",NexusSceneReview.STEP))
+                        .put("matched_samples",group.samples).put("sample_interval_ms",NexusSceneReview.STEP)
+                        .put("retained_source_sha",sources[group.retainedIndex].item.sha256).put("candidate",group.label))
                 }
                 rows.clear();rows.addAll(next);renderRows();saveDraft()
                 status.text="Checked cuts applied; review joins before exporting"

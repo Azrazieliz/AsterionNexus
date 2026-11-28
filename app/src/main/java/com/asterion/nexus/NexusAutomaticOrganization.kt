@@ -28,13 +28,13 @@ object NexusAutomaticOrganization {
             for(i in 0 until profiles.length()){
                 val j=profiles.getJSONObject(i)
                 val id=j.getString("id")
-                if(id in setOf("downloader","sound"))rows.add(Source(id,j.getString("name"),j.optString("root"),prefs(c).getBoolean(key(account,id)+":enabled",false)))
+                if(id in setOf("downloader","sound","converter"))rows.add(Source(id,j.getString("name"),j.optString("root"),prefs(c).getBoolean(key(account,id)+":enabled",false)))
             }
         }
         return rows
     }
     fun configure(c:Context,account:String,id:String,root:String,enable:Boolean){
-        require(id in setOf("downloader","sound"))
+        require(id in setOf("downloader","sound","converter"))
         // Pause before waiting on a running cycle. Never change its source root mid-cycle.
         check(prefs(c).edit().putBoolean(key(account,id)+":enabled",false).commit())
         if(!enable){NexusOrganizationJob.schedule(c);return}
@@ -55,7 +55,7 @@ object NexusAutomaticOrganization {
         val ext=name.substringAfterLast('.',"").lowercase(Locale.ROOT)
         // No loose 3D meshes, packages, project files, installers, artwork
         // needing identity classification, or dependent sidecar formats.
-        return ext in setOf("epub","cbz","cbr","pdf","mp3","m4a","flac","wav","ogg","opus","aac","mid","midi","mp4","mkv","webm","mov","m4v")
+        return ext in setOf("epub","cbz","cbr","pdf","mp3","m4a","flac","wav","ogg","opus","aac","mid","midi","mp4","mkv","webm","mov","m4v","txt","docx","xlsx","pptx","odt","ods","csv","md","rtf")
     }
     @Synchronized fun run(c:Context,account:String,stop:()->Boolean):Cycle{
         var scanned=0;var moved=0;var review=0;var deferred=0
@@ -63,7 +63,7 @@ object NexusAutomaticOrganization {
         val settings=prefs(c)
         val blocked=NexusCloudOperations.priorMoves(c,account).toMutableSet()
         scoped(c,account){client,sources->
-            for(id in listOf("downloader","sound")){
+            for(id in listOf("downloader","sound","converter")){
                 val base=key(account,id)
                 if(stop()||!settings.getBoolean(base+":enabled",false))continue
                 val root=sources.root(id)
@@ -100,7 +100,9 @@ object NexusAutomaticOrganization {
                         scanned++
                         val name=path.substringAfterLast('/')
                         val ext=name.substringAfterLast('.',"").lowercase(Locale.ROOT)
-                        if(!standalone(name)||(!completeSiblings&&ext !in setOf("epub","cbz","cbr","pdf"))||
+                        val kind=FgRounderSources.classify(name)
+                        val identityAsset=kind=="image"||kind=="model"
+                        if((!standalone(name)&&!identityAsset)||(!completeSiblings&&ext !in setOf("epub","cbz","cbr","pdf"))||
                             name.substringBeforeLast('.').lowercase(Locale.ROOT) in sidecarStems){review++;continue}
                         val route=sources.route(path)
                         if(route==null||route.source!=id||path.startsWith(route.destination+"/")){deferred++;continue}
@@ -113,7 +115,27 @@ object NexusAutomaticOrganization {
                             client.listPage(route.destination,1)
                             client.requireScope(account)
                             if(stop()||!settings.getBoolean(base+":enabled",false)){completed=false;break}
-                            val receipt=NexusCloudOperations.move(c,current,route.destination,name,true)
+                            var outputName=name
+                            if(identityAsset){
+                                val uri=com.openlocal.office.core.FgTeraboxDocumentsProvider.uriForAccount(account,path,current.bytes)
+                                val sha=NexusCloudIdentity.known(c,uri)
+                                val identity=sha?.let{NexusCanonicalNaming.known(c,it)}
+                                if(identity==null||(kind=="image"&&identity.kind!="cosplay")||
+                                    (kind=="model"&&identity.kind !in setOf("character_model","object_model"))){review++;continue}
+                                NexusCanonicalNaming.independentlyNamed(c,uri,name,identity)
+                                val siblings=mutableListOf<String>()
+                                var complete=false
+                                for(p in 1..100){
+                                    if(stop())break
+                                    val entries=client.listPage(route.destination,p)
+                                    for(k in 0 until entries.length())siblings.add(entries.getJSONObject(k).getString("path").substringAfterLast('/'))
+                                    if(entries.length()<FgTeraboxClient.pageSize()){complete=true;break}
+                                }
+                                if(!complete){review++;continue}
+                                outputName=NexusCanonicalNaming.candidate(identity,name,siblings)
+                            }
+                            if(stop()||!settings.getBoolean(base+":enabled",false)){completed=false;break}
+                            val receipt=NexusCloudOperations.move(c,current,route.destination,outputName,true)
                             blocked.add(current.fsId)
                             if(receipt.state=="MOVED"){moved++;changed=true}else{review++;failures.add(receipt.state)}
                         }catch(e:Exception){review++;failures.add(e.javaClass.simpleName)}

@@ -71,7 +71,15 @@ internal object NexusCanonicalNaming{
         }
     }
     fun available(mime:String,name:String):Boolean=mime.startsWith("image/")||mime.startsWith("model/")||NexusGltfActivity.supports(mime,name)||name.lowercase(Locale.ROOT).let{it.endsWith(".obj")||it.endsWith(".stl")}
-    private fun independentlyNamed(c:Context,uri:Uri,name:String,i:Identity){
+    /** Only reuse explicit canonical identity already bound to these exact bytes. */
+    fun known(c:Context,sha:String):Identity?=runCatching{
+        val raw=prefs(c).getString(sha,null)?:return null
+        val j=JSONObject(raw)
+        require(j.getString("evidence")=="owner_confirmed")
+        val kind=j.getString("kind")
+        identity(c,kind,j.optString("character_id"),when(kind){"cosplay"->j.getString("cosplayer");"character_model"->j.optString("transformation");"object_model"->j.getString("object");else->error("Unsupported identity")},j.optString("source_album"))
+    }.getOrNull()
+    fun independentlyNamed(c:Context,uri:Uri,name:String,i:Identity){
         if(i.kind=="cosplay")return
         // Model dependencies stay together. Loose projects and OBJ/MTL sets
         // cannot be renamed as if they were independent content.
