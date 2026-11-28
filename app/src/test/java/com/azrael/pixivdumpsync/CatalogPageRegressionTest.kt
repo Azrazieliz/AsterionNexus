@@ -23,7 +23,7 @@ class CatalogPageRegressionTest {
             "$state:$id","fixture","Fixture $id","",state,null,0L,-1L,null,null,null,null,"*/*")
         val rows=(1..800).map{row("DONE",it)}+
             (1..200).map{row("QUEUED",it)}+listOf(row("FAILED",1),row("HELD",1),row("ACTIVE",1))
-        val selected=UnifiedDownloadsUi.boundedNexusRows(rows)
+        val selected=NexusQueueRowLimiter.bounded(rows) { it.state }
         assertEquals(203,selected.size)
         assertEquals(100,selected.count{it.state=="DONE"})
         assertEquals(100,selected.count{it.state=="QUEUED"})
