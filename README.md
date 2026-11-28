@@ -49,3 +49,7 @@ Scope exclusions: **Adaptive Study** is not part of the cross-app integration au
 The [specification CI workflow](.github/workflows/spec-validation.yml) checks required documents, machine-readable owner decisions, versioned JSON Schemas, synthetic episode-assembly examples, evidence-state honesty, targeted public-source constraints and targeted UI-copy violations. It **does not** compile or test an Android app, download media, perform AI inference or certify physical-phone workflows.
 
 The [import provenance manifest](spec/source-import-manifest.template.json) is intentionally empty until the real source merge occurs. The [acceptance ledger](spec/acceptance-cases.v1.json) starts with all requirements **SPECIFIED**, not passed.
+
+## Latest owner-approved experience (2026-11-27)
+
+[Controlling UI, organisation, naming and acquisition contract](docs/16-APPROVED-EXPERIENCE-AND-ORGANISATION.md): exactly Library / Organising / Downloading, charcoal/silver, content-first, category tiles only for suitable folder/element lists, rating on opened files, distinct Review, TeraBox as primary library for all media, preview-to-original download, donor sync/backfill preservation, and no duplicate commands/module directories. This is the approved target, not a release or phone-certification claim. Native source integration exists on development branches; inspect current CI and device evidence.

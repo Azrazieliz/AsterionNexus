@@ -62,6 +62,10 @@ public final class FgMediaPlayer implements AutoCloseable {
 
     public FgMediaPlayer(Activity activity,Uri original,String filename,
                          boolean video,Runnable onExit,MediaNavigator mediaNavigator){
+        this(activity,original,filename,video,onExit,mediaNavigator,null);
+    }
+    public FgMediaPlayer(Activity activity,Uri original,String filename,
+                         boolean video,Runnable onExit,MediaNavigator mediaNavigator,Runnable onDetails){
         this.activity=activity;this.original=original;this.filename=filename;
         this.video=video;this.onExit=onExit;
         this.mediaNavigator=mediaNavigator;
@@ -116,7 +120,10 @@ public final class FgMediaPlayer implements AutoCloseable {
         Button back=new Button(activity);
         back.setText("Back");
         back.setOnClickListener(v->onExit.run());
-        if(!video)root.addView(back,new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.RIGHT));
+        if(!video){
+            root.addView(back,new FrameLayout.LayoutParams(-2,-2,Gravity.TOP|Gravity.RIGHT));
+            if(onDetails!=null){title.setOnClickListener(v->onDetails.run());title.setContentDescription("File details: "+filename);title.setFocusable(true);}
+        }
         else {
             // Aloha-style fullscreen video chrome: one narrow title/action row,
             // central transport, native seek timeline and compact mode bar.
@@ -157,6 +164,12 @@ public final class FgMediaPlayer implements AutoCloseable {
             videoTitle.setTextColor(-1);videoTitle.setSingleLine(true);
             videoTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
             heading.addView(videoTitle,new LinearLayout.LayoutParams(0,-2,1f));
+            if(onDetails!=null){
+                Button details=new Button(activity);details.setText("Details");details.setTextColor(-1);
+                details.setAllCaps(false);details.setBackgroundColor(0x00000000);
+                details.setOnClickListener(v->onDetails.run());
+                heading.addView(details,new LinearLayout.LayoutParams((int)(76*dp),(int)(48*dp)));
+            }
             // Native vector phone / padlock icons, never diamond or share.
             final View orientation=new View(activity){
                 final android.graphics.Paint p=new android.graphics.Paint(3);
@@ -573,6 +586,13 @@ public final class FgMediaPlayer implements AutoCloseable {
         }
     }
     public View getView(){return root;}
+    /** Restore the selected Nexus preview position in the existing player. */
+    public void seekToPosition(long positionMs){
+        if(!closed&&positionMs>0)player.seekTo(positionMs);
+    }
+    public long positionMs(){return closed?0L:Math.max(0L,player.getCurrentPosition());}
+    public long durationMs(){return closed?0L:Math.max(0L,player.getDuration());}
+    public void pausePlayback(){if(!closed)player.pause();}
     private static final class VideoTransport extends View{
         private final int role;
         private final float dp;

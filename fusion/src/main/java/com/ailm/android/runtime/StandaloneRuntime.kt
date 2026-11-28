@@ -35,6 +35,48 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 object StandaloneRuntime {
+    /** Optional host implementation for scoped cloud artwork. The same
+     * Core workflow and path policy remain authoritative. Null means the
+     * host does not own this URI. A non-null refusal never falls back to SAF. */
+    data class NexusCloudArtworkRequest(val imageId:Int,val sourceUri:String,val sourceFolder:String,val sourceRelative:String,val bytes:Long,val sha:String,val folders:List<String>,val prefix:String,val extension:String)
+    @Volatile private var nexusCloudArtworkMover: ((NexusCloudArtworkRequest)->Map<String,Any>?)? = null
+
+    fun installNexusCloudArtworkMover(mover:(NexusCloudArtworkRequest)->Map<String,Any>?) {
+        nexusCloudArtworkMover=mover
+    }
+
+    private fun hostArtworkMove(record:LocalRepository.ImageRecord,folders:List<String>,prefix:String,extension:String):Map<String,Any>? {
+        val mover=nexusCloudArtworkMover?:return null
+        if(Uri.parse(record.uri).authority!="com.asterion.nexus.terabox.documents")return null
+        val size=record.sizeBytes?:0L
+        val sha=database.readableDatabase.rawQuery(
+            "SELECT sha256 FROM fusion_image_fingerprints WHERE image_id=? AND source_size_bytes=?",
+            arrayOf(record.imageId.toString(),size.toString())
+        ).use{if(it.moveToFirst())it.getString(0).orEmpty() else ""}
+        if(size<=0||!sha.matches(Regex("[a-f0-9]{64}")))return mapOf("ok" to false,"status" to "cloud_identity_missing","message" to "Verified source fingerprint required.")
+        return mover(NexusCloudArtworkRequest(record.imageId,record.uri,record.folderUri,record.relativePath,size,sha,folders.map(::safeAutomationPathSegment),prefix,extension))
+            ?:mapOf("ok" to false,"status" to "cloud_unavailable","message" to "Scoped cloud routing unavailable.")
+    }
+
+    /** Idempotent exact-source catalog reconciliation, including rollback.
+     * Retain ratings, character evidence, fingerprints and all other IDs. */
+    fun nexusCommitCloudArtworkPath(imageId:Int,oldUri:String,newUri:String,folderUri:String,folderName:String,filename:String,relativePath:String,sha:String,bytes:Long):Boolean{
+        ensureInitialized()
+        val db=database.writableDatabase
+        db.beginTransaction()
+        try{
+            val row=repository.getImageRecordsByIds(listOf(imageId)).firstOrNull()?:return false
+            if(row.sizeBytes!=bytes||row.uri !in setOf(oldUri,newUri))return false
+            val fingerprint=db.rawQuery("SELECT 1 FROM fusion_image_fingerprints WHERE image_id=? AND sha256=? AND source_size_bytes=?",
+                arrayOf(imageId.toString(),sha,bytes.toString())).use{it.moveToFirst()}
+            if(!fingerprint)return false
+            val changed=row.uri==newUri||repository.updateImagePathAndClearThumbnails(imageId,newUri,filename,folderUri,folderUri,folderName,relativePath,row.modifiedAtMs,oldUri)
+            if(!changed)return false
+            db.setTransactionSuccessful()
+            return true
+        }finally{db.endTransaction()}
+    }
+
     private const val RUNTIME_TRACE_TAG = "AilmTraceRuntime"
     private const val AUTOMATION_PREFS = "ailm_automation"
     private const val DIAGNOSTIC_PREFS = "ailm_diagnostic_display"
@@ -249,6 +291,7 @@ object StandaloneRuntime {
                             // Knowledge to Fusion. A formerly destructive schema
                             // upgrade must not strand 10 of 15 saved sources.
                             restoreInstalledReferenceKnowledge()
+                            seedBundledReferenceKnowledge()
                             val migration = FusionReferenceMigration(database, knowledgeDatabase).reconcile()
                             check(migration["ok"] == true) {
                                 "Incomplete canonical Knowledge migration: " +
@@ -701,9 +744,10 @@ object StandaloneRuntime {
         }
 
         val response = localAiManager.semanticSearch(semanticPayload)
+        if (response["ok"] != true) return emptyList()
         val matches = extractSemanticMatches(response)
         if (matches.isEmpty()) {
-            return candidateRows.take(topK)
+            return emptyList()
         }
 
         val rowsById = candidateRows.mapNotNull { row ->
@@ -714,16 +758,15 @@ object StandaloneRuntime {
         val ranked = mutableListOf<Map<String, Any>>()
         matches.forEachIndexed { index, match ->
             val imageId = match["image_id"].toIntOrNullValue() ?: return@forEachIndexed
-            val source = rowsById[imageId] ?: repository.searchByImageId(imageId) ?: return@forEachIndexed
+            val source = rowsById[imageId] ?: return@forEachIndexed
             val enriched = source.toMutableMap()
-            match["score"].toDoubleOrNullValue()?.let { score ->
-                enriched["semantic_score"] = score
-            }
+            val score = match["score"].toDoubleOrNullValue()?.takeIf(Double::isFinite) ?: return@forEachIndexed
+            enriched["semantic_score"] = score
             enriched["semantic_rank"] = index + 1
             ranked += enriched
         }
 
-        return if (ranked.isEmpty()) candidateRows.take(topK) else ranked
+        return ranked.distinctBy { it["image_id"] }.take(topK)
     }
 
     fun advancedSearch(payload: Map<String, Any>): Map<String, Any> {
@@ -995,11 +1038,19 @@ object StandaloneRuntime {
             val filename = safeKnowledgePackFileName(uri)
 
             if (isZipKnowledgeDocument(uri, filename)) {
-                referenceResults += mapOf(
-                    "ok" to false,
-                    "message" to "ZIP Knowledge import is disabled. Select the JSON files individually or select several JSON files together.",
-                    "filename" to filename,
-                )
+                val decoded = runCatching {
+                    appContext.contentResolver.openInputStream(uri)?.use {
+                        ReferenceKnowledgeImporter.readZipDocuments(it)
+                    } ?: error("Unable to read reference archive")
+                }
+                decoded.onSuccess { documents ->
+                    // Reject a conflicting selection as a whole; no silent filename overwrite.
+                    if (documents.any { (name, raw) -> rawReferenceDocuments[name]?.let { it != raw } == true }) {
+                        referenceResults += mapOf("ok" to false, "message" to "Conflicting reference document names", "filename" to filename)
+                    } else rawReferenceDocuments.putAll(documents)
+                }.onFailure { error ->
+                    referenceResults += mapOf("ok" to false, "message" to (error.message ?: "Invalid reference archive"), "filename" to filename)
+                }
                 return@forEach
             }
 
@@ -1009,12 +1060,16 @@ object StandaloneRuntime {
                 null
             }
             if (raw != null && ReferenceKnowledgeParser.looksLikeReferenceDocument(filename, raw)) {
-                rawReferenceDocuments[filename] = raw
+                val prior = rawReferenceDocuments[filename]
+                if (prior != null && prior != raw) referenceResults += mapOf(
+                    "ok" to false, "message" to "Conflicting reference document names", "filename" to filename,
+                ) else rawReferenceDocuments[filename] = raw
             } else {
                 ordinaryUris += uri
             }
         }
 
+        if (referenceResults.any { it["ok"] == false }) return referenceResults
         if (rawReferenceDocuments.isNotEmpty()) {
             val sourceName = if (rawReferenceDocuments.size == 1) {
                 rawReferenceDocuments.keys.first()
@@ -2701,6 +2756,9 @@ object StandaloneRuntime {
             "message" to "Resolved character is missing canonical Character Knowledge path data.",
         )
 
+        val cloudPrefix = pathPlan.filenameParts.map(::safeAutomationPathSegment).joinToString(" - ")
+        hostArtworkMove(record,pathPlan.folderSegments,cloudPrefix,extension)?.let { return it }
+
         var targetFolder = root
         val safeFolderSegments = mutableListOf<String>()
         pathPlan.folderSegments.forEach { rawSegment ->
@@ -2778,6 +2836,9 @@ object StandaloneRuntime {
         if (root.isBlank()) {
             return mapOf("ok" to false, "status" to "no_root", "message" to "No writable library root is available.")
         }
+
+        val cloudExtension=record.filename.substringAfterLast('.', "")
+        hostArtworkMove(record,folderSegments,safeAutomationPathSegment(filenamePrefix),cloudExtension)?.let { return it }
 
         var targetFolder = root
         val safeSegments = mutableListOf<String>()
@@ -3267,6 +3328,11 @@ object StandaloneRuntime {
         val response = localAiManager.executeKnowledgePack(prepared)
         applyPipelineSideEffects(prepared, response)
         return response
+    }
+
+    fun ensureBundledBookOcr(): Boolean {
+        ensureInitialized()
+        return localAiManager.ensureBundledBookOcr()
     }
 
     fun runOcrPipeline(payload: Map<String, Any>): Map<String, Any> {
@@ -4292,6 +4358,33 @@ object StandaloneRuntime {
         val array = json.optJSONArray("artwork_visual_features_v1") ?: return emptyList()
         val values = (0 until array.length()).map { array.optDouble(it, Double.NaN) }
         return if (ArtworkVisualPreferenceModel.valid(values)) values else emptyList()
+    }
+
+    /** Nexus must reuse Core's manual artwork rating, not duplicate it. */
+    fun nexusVisualSimilar(imageId: Int, limit: Int = 40): Map<String, Any> {
+        ensureInitialized()
+        val result = FusionVisualSearchIndex(database.writableDatabase).similar(imageId,limit)
+        val matches = result.matches.mapNotNull { match ->
+            repository.searchImages(LibraryQueryOptions(imageId=match.imageId,page=1,pageSize=1))
+                .firstOrNull()?.plus("visual_score" to match.score)
+        }
+        return mapOf("indexed" to result.indexed, "compared" to result.compared, "matches" to matches)
+    }
+
+    fun nexusArtworkId(uri:String,sha256:String?):Int?{
+        ensureInitialized()
+        val db=database.readableDatabase
+        fun unique(sql:String,args:Array<String>):Int?=db.rawQuery(sql,args).use{cursor->
+            if(!cursor.moveToFirst())null else {
+                val id=cursor.getInt(0)
+                check(!cursor.moveToNext()){ "Multiple Core identities require review" }
+                id
+            }
+        }
+        val direct=unique("SELECT image_id FROM images WHERE uri=? LIMIT 2",arrayOf(uri))
+        if(direct!=null)return direct
+        if(sha256==null||!sha256.matches(Regex("[0-9a-f]{64}")))return null
+        return unique("SELECT f.image_id FROM fusion_image_fingerprints f JOIN images i ON f.image_id=i.image_id WHERE f.sha256=? AND f.source_size_bytes=i.size_bytes LIMIT 2",arrayOf(sha256))
     }
 
     /** High-precision quality score, never confused with RT classification. */
@@ -5854,6 +5947,41 @@ object StandaloneRuntime {
      * differ. All sources are imported together so cross-pack parent/category
      * references can resolve regardless of original import order.
      */
+    /** Admit the owner-supplied release once, on both fresh and upgraded databases.
+     * Raw source artifacts are preserved; Fusion reconciliation never replaces user edits.
+     * This is a taxonomy release, NOT character-recognition readiness.
+     */
+    private fun seedBundledReferenceKnowledge() {
+        val root = "nexus_reference_knowledge/owner_taxonomy_20261128"
+        val manifest = appContext.assets.open("$root/manifest.json").bufferedReader(Charsets.UTF_8).use {
+            JSONObject(it.readText())
+        }
+        val expected = manifest.getJSONObject("files")
+        val documents = linkedMapOf<String, String>()
+        val installed = knowledgeDatabase.importedDocumentHashes()
+        fun hash(raw: String) = MessageDigest.getInstance("SHA-256")
+            .digest(raw.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        for (name in expected.keys().asSequence().sorted()) {
+            require(name.matches(Regex("[A-Za-z0-9._-]+[.]json")))
+            val raw = appContext.assets.open("$root/$name").bufferedReader(Charsets.UTF_8).use { it.readText() }
+            require(hash(raw) == expected.getJSONObject(name).getString("sha256")) { "Bundled source checksum mismatch: $name" }
+            val key = "owner-20261128-" + name
+            documents[key] = raw
+        }
+        val parsed = ReferenceKnowledgeParser.parseDocuments(documents)
+        require(documents.size == 16 && parsed.tags.size == 1278 && parsed.series.size == 1621 &&
+            parsed.characters.isEmpty()) { "Incomplete owner taxonomy release" }
+        // Separate release names avoid collisions with previous historical sources.
+        // Old series IDs, installed characters, ratings and user Fusion edits survive.
+        val pending = documents.filter { (name, raw) -> installed[name] != hash(raw) }
+        if (pending.isNotEmpty()) {
+            val report = ReferenceKnowledgeImporter(knowledgeDatabase)
+                .importDocuments(documents, "owner-taxonomy-20261128")
+            require(report["ok"] == true) { report["message"].toString() }
+        }
+        for ((filename, raw) in documents) persistReferenceKnowledgeArtifact(filename, raw)
+    }
+
     private fun restoreInstalledReferenceKnowledge(): Map<String, Any> {
         val documents = linkedMapOf<String, String>()
         for (file in knowledgePackDirectory().listFiles().orEmpty()
@@ -5877,7 +6005,7 @@ object StandaloneRuntime {
                 "sources_restored" to 0)
         }
         val report = ReferenceKnowledgeImporter(knowledgeDatabase)
-            .importDocuments(documents, "stored-reference-knowledge-recovery")
+            .importDocuments(unrecorded, "stored-reference-knowledge-recovery")
         require(report["ok"] == true) {
             "Existing Knowledge JSON reconciliation stopped: " +
                 report["message"].toString()
@@ -6221,8 +6349,8 @@ object StandaloneRuntime {
         // Dimensions are enriched lazily when the user opens/processes a
         // specific image; only metadata from the provider is read here.
         val remoteMetadataOnly = runCatching {
-            android.net.Uri.parse(node.uri).authority ==
-                "com.openlocal.office.terabox.documents"
+            android.net.Uri.parse(node.uri).authority in setOf("com.openlocal.office.terabox.documents",
+                "com.asterion.nexus.terabox.documents")
         }.getOrDefault(false)
         if (!remoteMetadataOnly &&
             !repository.isUnchangedImage(node.uri,node.sizeBytes,node.lastModifiedMs)) {
@@ -6509,7 +6637,7 @@ object StandaloneRuntime {
         if (TeraBoxUris.isTeraBox(uri)) return true
         val parsed = Uri.parse(uri)
         return parsed.scheme == "content" &&
-            parsed.authority == "com.openlocal.office.terabox.documents"
+            parsed.authority in setOf("com.openlocal.office.terabox.documents","com.asterion.nexus.terabox.documents")
     }
 
     /** The native backends use file paths; original SAF grants are not file paths.

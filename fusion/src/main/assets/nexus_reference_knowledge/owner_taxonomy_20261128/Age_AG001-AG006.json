@@ -1,0 +1,46 @@
+[
+  {
+    "id": "AG001",
+    "attribute": "Age Group",
+    "canonical_name": "Child",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "AG002",
+    "attribute": "Age Group",
+    "canonical_name": "Teenager",
+    "aliases": [
+      "Teen"
+    ],
+    "verified": true
+  },
+  {
+    "id": "AG003",
+    "attribute": "Age Group",
+    "canonical_name": "Young Adult",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "AG004",
+    "attribute": "Age Group",
+    "canonical_name": "Adult",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "AG005",
+    "attribute": "Age Group",
+    "canonical_name": "Middle-Aged",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "AG006",
+    "attribute": "Age Group",
+    "canonical_name": "Elderly",
+    "aliases": [],
+    "verified": true
+  }
+]

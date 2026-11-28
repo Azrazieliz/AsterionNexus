@@ -19,6 +19,19 @@ object NduSettings {
     private const val KUROHA_DIR = "kuroha_dir"
     private const val KYORA_DIR = "kyora_dir"
     private const val DOMAIN = "domain"
+    private const val ACCOUNT_SCOPE = "account_scope"
+    private const val ACCOUNT_VAULT = "nexus_upload_account_vault"
+
+    /** Opaque account binding, not a credential-derived identifier. */
+    fun currentAccountScope(ctx:Context):String=ctx.getSharedPreferences(PREF,0).getString(ACCOUNT_SCOPE,"").orEmpty()
+    @Synchronized fun accountScope(ctx:Context):String {
+        if(cookie(ctx)==null)return ""
+        val old=currentAccountScope(ctx)
+        if(old.isNotBlank())return old
+        val scope=java.util.UUID.randomUUID().toString()
+        check(ctx.getSharedPreferences(PREF,0).edit().putString(ACCOUNT_SCOPE,scope).commit()){"Account scope not saved"}
+        return scope
+    }
 
     fun enabled(ctx: Context) = ctx.getSharedPreferences(PREF,0).getBoolean(ENABLE,false)
     private const val CLOUD_ONLY = "cloud_only"
@@ -96,13 +109,78 @@ object NduSettings {
                     .setRandomizedEncryptionRequired(true).build())
             }.generateKey()
     }
-    fun save(ctx: Context, input: String) {
+    internal class Session(val token:String,val scope:String)
+    @Synchronized internal fun session(ctx:Context):Session?{
+        val token=cookie(ctx)?:return null
+        val scope=accountScope(ctx)
+        return if(scope.isBlank())null else Session(token,scope)
+    }
+    @Synchronized fun save(ctx: Context, input: String) {
         val cookie = parseNdus(input)
+        val previous=this.cookie(ctx)
+        val scope=if(previous==cookie)accountScope(ctx) else java.util.UUID.randomUUID().toString()
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE,key())
         val a=Base64.encodeToString(cipher.iv,Base64.NO_WRAP)
         val b=Base64.encodeToString(cipher.doFinal(cookie.toByteArray()),Base64.NO_WRAP)
-        ctx.getSharedPreferences(PREF,0).edit().putString(SECRET,"$a:$b").apply()
+        check(ctx.getSharedPreferences(PREF,0).edit().putString(SECRET,"$a:$b")
+            .putString(ACCOUNT_SCOPE,scope).commit()){"Encrypted session not saved"}
+    }
+    /** Persist encrypted upload sessions separately from the active donor slot.
+     * The browser scope is an opaque local account namespace, never a token.
+     */
+    @Synchronized internal fun saveAccount(ctx:Context,browserScope:String,input:String,uploadScope:String=browserScope){
+        require(browserScope.matches(Regex("[0-9a-f-]{36}"))&&uploadScope.matches(Regex("[0-9a-f-]{36}")))
+        val token=parseNdus(input)
+        val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE,key())
+        val encoded=Base64.encodeToString(cipher.iv,Base64.NO_WRAP)+":"+
+            Base64.encodeToString(cipher.doFinal(token.toByteArray()),Base64.NO_WRAP)
+        check(ctx.getSharedPreferences(ACCOUNT_VAULT,0).edit()
+            .putString(browserScope+":cipher",encoded).putString(browserScope+":scope",uploadScope)
+            .putString(browserScope+":domain",domain(ctx)).commit()){"Account upload session not saved"}
+    }
+    /** Encrypted, immutable account lease for a queued upload. Selection of
+     * another destination never changes credentials used by an existing job. */
+    internal class UploadAccount(val browserScope:String,val scope:String,val token:String,val host:String,internal val cipherIdentity:String)
+    @Synchronized internal fun uploadAccount(ctx:Context,browserScope:String):UploadAccount?{
+        val vault=ctx.getSharedPreferences(ACCOUNT_VAULT,0)
+        val encoded=vault.getString(browserScope+":cipher",null)?:return null
+        val scope=vault.getString(browserScope+":scope",null)?:return null
+        val host=vault.getString(browserScope+":domain",null)?:return null
+        if(!browserScope.matches(Regex("[0-9a-f-]{36}"))||!scope.matches(Regex("[0-9a-f-]{36}"))||host !in allowedDomains)return null
+        val token=runCatching{
+            val parts=encoded.split(':',limit=2)
+            require(parts.size==2)
+            val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(parts[0],Base64.NO_WRAP)))
+            String(cipher.doFinal(Base64.decode(parts[1],Base64.NO_WRAP)),Charsets.UTF_8)
+        }.getOrNull()?:return null
+        return UploadAccount(browserScope,scope,token,host,encoded)
+    }
+    @Synchronized internal fun uploadAccounts(ctx:Context):List<UploadAccount>{
+        val authorized=com.openlocal.office.core.FgTeraboxClient.accounts(ctx).map{it.scope}.toSet()
+        val accounts=authorized.mapNotNull{uploadAccount(ctx,it)}
+        // An ambiguous legacy mapping is held, never assigned by ordering.
+        return accounts.groupBy{it.scope}.values.filter{it.size==1}.map{it.single()}
+    }
+    @Synchronized internal fun stillAuthorized(ctx:Context,account:UploadAccount):Boolean{
+        val vault=ctx.getSharedPreferences(ACCOUNT_VAULT,0)
+        return vault.getString(account.browserScope+":scope",null)==account.scope&&
+            vault.getString(account.browserScope+":domain",null)==account.host&&
+            vault.getString(account.browserScope+":cipher",null)==account.cipherIdentity
+    }
+    internal fun hasAccount(ctx:Context,browserScope:String):Boolean=
+        ctx.getSharedPreferences(ACCOUNT_VAULT,0).contains(browserScope+":cipher")
+    @Synchronized internal fun activateAccount(ctx:Context,browserScope:String):String{
+        val vault=ctx.getSharedPreferences(ACCOUNT_VAULT,0)
+        val cipher=vault.getString(browserScope+":cipher",null)?:error("Account upload session unavailable")
+        val scope=vault.getString(browserScope+":scope",null)?:error("Account identity unavailable")
+        val host=vault.getString(browserScope+":domain","www.terabox.com")?:error("Account host unavailable")
+        require(host in allowedDomains)
+        check(ctx.getSharedPreferences(PREF,0).edit().putString(SECRET,cipher)
+            .putString(ACCOUNT_SCOPE,scope).putString(DOMAIN,host).commit()){"Upload account selection failed"}
+        return scope
     }
     fun parseNdus(input: String): String {
         val cleaned=input.trim()
@@ -128,9 +206,9 @@ object NduSettings {
             String(cipher.doFinal(Base64.decode(parts[1],Base64.NO_WRAP)))
         }.getOrNull()
     }
-    fun clear(ctx: Context) {
+    @Synchronized fun clear(ctx: Context) {
         NduCloudScheduler.configure(ctx,false)
-        ctx.getSharedPreferences(PREF,0).edit().remove(SECRET)
+        ctx.getSharedPreferences(PREF,0).edit().remove(SECRET).remove(ACCOUNT_SCOPE)
             .putBoolean(ENABLE,false).apply()
     }
     fun configured(ctx: Context) = enabled(ctx) && cookie(ctx)!=null

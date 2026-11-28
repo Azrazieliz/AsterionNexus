@@ -85,7 +85,9 @@ internal object TeraBoxRemoteOriginals {
 
 internal class TeraBoxRemoteQueue(ctx:Context):
     SQLiteOpenHelper(ctx.applicationContext,
-        "asterion_terabox_remote_originals.sqlite",null,1) {
+        "asterion_terabox_remote_originals.sqlite",null,2) {
+    private val app=ctx.applicationContext
+    private fun scope()=NduSettings.currentAccountScope(app)
 
     data class Record(val id:String,val encryptedUrl:String,
                       val category:String,val filename:String,
@@ -103,8 +105,8 @@ internal class TeraBoxRemoteQueue(ctx:Context):
     fun stateForId(id:String):String?{
         if(!id.matches(Regex("[0-9a-f]{64}")))return null
         return readableDatabase.rawQuery(
-            "SELECT state FROM remote_originals WHERE id=? LIMIT 1",
-            arrayOf(id)).use{c->
+            "SELECT state FROM remote_originals WHERE id=? AND account_scope=? AND account_scope<>'' LIMIT 1",
+            arrayOf(id,scope())).use{c->
             if(c.moveToFirst())c.getString(0) else null
         }
     }
@@ -113,16 +115,16 @@ internal class TeraBoxRemoteQueue(ctx:Context):
         return readableDatabase.rawQuery(
             "SELECT 1 FROM remote_originals WHERE id=? "+
                 "AND state='VERIFIED' AND remote_size>0 AND remote_fs_id>0 "+
-                "AND remote_path IS NOT NULL LIMIT 1",
-            arrayOf(id)).use{it.moveToFirst()}
+                "AND remote_path IS NOT NULL AND account_scope=? AND account_scope<>'' LIMIT 1",
+            arrayOf(id,scope())).use{it.moveToFirst()}
     }
     fun recent(limit:Int=100):List<Display>{
         val found=ArrayList<Display>()
         readableDatabase.rawQuery(
             "SELECT id,category,filename,state,last_error,updated_at "+
-                "FROM remote_originals WHERE state!='CANCELLED' "+
+                "FROM remote_originals WHERE state!='CANCELLED' AND account_scope=? AND account_scope<>'' "+
                 "ORDER BY updated_at DESC LIMIT ?",
-            arrayOf(limit.coerceIn(1,300).toString())).use{c->
+            arrayOf(scope(),limit.coerceIn(1,300).toString())).use{c->
             while(c.moveToNext())found.add(Display(c.getString(0),
                 c.getString(1),c.getString(2),c.getString(3),
                 c.getString(4),c.getLong(5)))
@@ -134,13 +136,13 @@ internal class TeraBoxRemoteQueue(ctx:Context):
         writableDatabase.update("remote_originals",
             ContentValues().apply{
                 put("state","PAUSED");put("updated_at",System.currentTimeMillis())
-            },"id=? AND state='QUEUED'",arrayOf(id))>0
+            },"id=? AND account_scope=? AND account_scope<>'' AND state='QUEUED'",arrayOf(id,scope()))>0
     fun resume(id:String):Boolean =
         writableDatabase.update("remote_originals",
             ContentValues().apply{
                 put("state","QUEUED");put("retry_after",0L)
                 putNull("last_error");put("updated_at",System.currentTimeMillis())
-            },"id=? AND state IN ('PAUSED','ERROR')",arrayOf(id))>0
+            },"id=? AND account_scope=? AND account_scope<>'' AND state IN ('PAUSED','ERROR')",arrayOf(id,scope()))>0
     /** Already SUBMITTED remote tasks cannot honestly be cancelled here.
      * Cancelling local queue rows would only hide ongoing cloud work.
      */
@@ -148,18 +150,19 @@ internal class TeraBoxRemoteQueue(ctx:Context):
         writableDatabase.update("remote_originals",
             ContentValues().apply{
                 put("state","CANCELLED");put("updated_at",System.currentTimeMillis())
-            },"id=? AND state IN ('QUEUED','PAUSED','ERROR')",
-            arrayOf(id))>0
+            },"id=? AND account_scope=? AND account_scope<>'' AND state IN ('QUEUED','PAUSED','ERROR')",
+            arrayOf(id,scope()))>0
     fun nextDueDelayMs(now:Long=System.currentTimeMillis()):Long? =
         readableDatabase.rawQuery(
             "SELECT MIN(retry_after) FROM remote_originals "+
-                "WHERE state IN ('QUEUED','SUBMITTED')",null).use{c->
+                "WHERE state IN ('QUEUED','SUBMITTED') AND account_scope=? AND account_scope<>''",arrayOf(scope())).use{c->
             if(!c.moveToFirst()||c.isNull(0))null
             else (c.getLong(0)-now).coerceAtLeast(1000L)
         }
     override fun onCreate(db:SQLiteDatabase){
         db.execSQL("""CREATE TABLE remote_originals(
-            id TEXT PRIMARY KEY,
+            id TEXT NOT NULL,
+            account_scope TEXT NOT NULL DEFAULT '',
             url_cipher TEXT NOT NULL,
             category TEXT NOT NULL,
             filename TEXT NOT NULL,
@@ -173,12 +176,21 @@ internal class TeraBoxRemoteQueue(ctx:Context):
             remote_size INTEGER,
             remote_fs_id INTEGER,
             created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
+            updated_at INTEGER NOT NULL,
+            PRIMARY KEY(account_scope,id)
         )""")
-        db.execSQL("CREATE INDEX remote_original_state ON remote_originals(state,retry_after)")
+        db.execSQL("CREATE INDEX remote_original_state ON remote_originals(account_scope,state,retry_after)")
     }
     override fun onUpgrade(db:SQLiteDatabase,old:Int,new:Int){
-        throw IllegalStateException("Unknown cloud queue migration $old -> $new")
+        check(old==1&&new==2){"Unknown cloud queue migration $old -> $new"}
+        db.execSQL("ALTER TABLE remote_originals RENAME TO remote_originals_legacy")
+        db.execSQL("DROP INDEX IF EXISTS remote_original_state")
+        onCreate(db)
+        // Historical jobs had no account evidence. Preserve them without
+        // ever silently resuming a transfer into a different cloud account.
+        val fields="id,url_cipher,category,filename,destination,state,task_id,attempts,retry_after,last_error,remote_path,remote_size,remote_fs_id,created_at,updated_at"
+        db.execSQL("INSERT INTO remote_originals("+fields+") SELECT "+fields+" FROM remote_originals_legacy")
+        db.execSQL("DROP TABLE remote_originals_legacy")
     }
     @Synchronized fun enqueue(ctx:Context,url:String,category:String,
                               explicitName:String?=null):Boolean{
@@ -191,6 +203,8 @@ internal class TeraBoxRemoteQueue(ctx:Context):
         }
         // URL-based reservation occurs *before* the backend downloads bytes,
         // even when two modules request the same original simultaneously.
+        val account=NduSettings.accountScope(ctx)
+        check(account.isNotBlank()){"Cloud account identity unavailable"}
         val id=TeraBoxRemoteOriginals.identity(url)
         // Remote TeraBox chooses the source filename; an unrelated article
         // title cannot rename the remote task's output or verify its receipt.
@@ -198,7 +212,7 @@ internal class TeraBoxRemoteQueue(ctx:Context):
         val encrypted=DirectRetryVault.protect(url)
         val destination=NduSettings.destination(ctx,category)+"/"+id.take(12)
         val row=ContentValues().apply{
-            put("id",id);put("url_cipher",encrypted);put("category",category)
+            put("id",id);put("account_scope",account);put("url_cipher",encrypted);put("category",category)
             put("filename",name);put("destination",destination)
             put("state","QUEUED");put("created_at",System.currentTimeMillis())
             put("updated_at",System.currentTimeMillis())
@@ -212,15 +226,15 @@ internal class TeraBoxRemoteQueue(ctx:Context):
                 ContentValues().apply{
                     put("state","QUEUED");put("retry_after",0L)
                     put("updated_at",System.currentTimeMillis())
-                },"id=? AND state='CANCELLED'",arrayOf(id))
+                },"id=? AND account_scope=? AND state='CANCELLED'",arrayOf(id,account))
         }
         return inserted
     }
     fun summary():Summary{
         val found=HashMap<String,Int>()
         readableDatabase.rawQuery(
-            "SELECT state,COUNT(*) FROM remote_originals GROUP BY state",
-            null).use{c->
+            "SELECT state,COUNT(*) FROM remote_originals WHERE account_scope=? AND account_scope<>'' GROUP BY state",
+            arrayOf(scope())).use{c->
             while(c.moveToNext())found[c.getString(0)]=c.getInt(1)
         }
         return Summary(found.getOrDefault("QUEUED",0),
@@ -228,16 +242,16 @@ internal class TeraBoxRemoteQueue(ctx:Context):
             found.getOrDefault("VERIFIED",0),
             found.getOrDefault("ERROR",0))
     }
-    private fun pending(limit:Int):List<Record>{
+    private fun pending(limit:Int,account:String):List<Record>{
         val out=ArrayList<Record>()
         val query="""SELECT id,url_cipher,category,filename,destination,state,
             task_id,attempts,retry_after
             FROM remote_originals
-            WHERE state IN ('QUEUED','SUBMITTED') AND retry_after<=?
+            WHERE account_scope=? AND account_scope<>'' AND state IN ('QUEUED','SUBMITTED') AND retry_after<=?
             ORDER BY CASE WHEN state='SUBMITTED' THEN 0 ELSE 1 END,
                 created_at ASC LIMIT ?"""
         readableDatabase.rawQuery(query,arrayOf(
-            System.currentTimeMillis().toString(),limit.coerceIn(1,100).toString()
+            account,System.currentTimeMillis().toString(),limit.coerceIn(1,100).toString()
         )).use{c->
             while(c.moveToNext())out.add(Record(c.getString(0),c.getString(1),
                 c.getString(2),c.getString(3),c.getString(4),c.getString(5),
@@ -245,7 +259,7 @@ internal class TeraBoxRemoteQueue(ctx:Context):
         }
         return out
     }
-    @Synchronized private fun update(id:String,state:String,taskId:String?=null,
+    @Synchronized private fun update(account:String,id:String,state:String,taskId:String?=null,
                                     receipt:NduRemoteReceipt?=null,
                                     error:String?=null,attempt:Int=0,
                                     retryAfter:Long=0L){
@@ -260,7 +274,7 @@ internal class TeraBoxRemoteQueue(ctx:Context):
                 put("remote_size",receipt.size)
                 put("remote_fs_id",receipt.fsId)
             }
-        },"id=?",arrayOf(id))
+        },"id=? AND account_scope=?",arrayOf(id,account))
     }
     private fun minorNetwork(error:Throwable):Boolean {
         val reason=error.message.orEmpty().lowercase(Locale.ROOT)
@@ -277,17 +291,19 @@ internal class TeraBoxRemoteQueue(ctx:Context):
             active=true
         }
         try{
-            val list=pending(limit)
+            val session=NduSettings.session(ctx)?:return summary()
+            val account=session.scope
+            fun cancelled()=stop()||scope()!=account||!NduSettings.enabled(ctx)
+            val list=pending(limit,account)
             if(list.isEmpty())return summary()
-            val cookie=NduSettings.cookie(ctx)?:return summary()
-            val client=NduTeraboxClient(cookie,NduSettings.domain(ctx))
+            val client=NduTeraboxClient(session.token,NduSettings.domain(ctx))
             client.connect()
             val records=runCatching{client.remoteImportRecords()}.getOrNull()
             var submitted=readableDatabase.rawQuery(
-                "SELECT COUNT(*) FROM remote_originals WHERE state='SUBMITTED'",
-                null).use{c->if(c.moveToFirst())c.getInt(0)else 0}
+                "SELECT COUNT(*) FROM remote_originals WHERE state='SUBMITTED' AND account_scope=?",
+                arrayOf(account)).use{c->if(c.moveToFirst())c.getInt(0)else 0}
             for(job in list){
-                if(stop())break
+                if(cancelled())break
                 try{
                     val address=DirectRetryVault.reveal(job.encryptedUrl)
                     require(TeraBoxRemoteOriginals.verifiedPublicFileLink(address) &&
@@ -302,9 +318,10 @@ internal class TeraBoxRemoteQueue(ctx:Context):
                         check(client.remoteOriginalReceipt(remotePath)==null){
                             "Cloud destination already occupied; identity unverified"
                         }
+                        if(cancelled())break
                         val ticket=client.submitRemoteOriginal(
                             address,job.destination)
-                        update(job.id,"SUBMITTED",ticket.taskId,
+                        update(account,job.id,"SUBMITTED",ticket.taskId,
                             attempt=job.attempts,
                             retryAfter=System.currentTimeMillis()+60_000L)
                         submitted++
@@ -317,18 +334,18 @@ internal class TeraBoxRemoteQueue(ctx:Context):
                     val linked=TeraBoxRemoteOriginals.matchingTask(
                         current,job.taskId,address)
                     if(!linked){
-                        update(job.id,"SUBMITTED",job.taskId,
+                        update(account,job.id,"SUBMITTED",job.taskId,
                             attempt=job.attempts,
                             retryAfter=System.currentTimeMillis()+60_000L)
                         continue
                     }
                     val receipt=client.remoteOriginalReceipt(remotePath)
                     if(receipt==null){
-                        update(job.id,"SUBMITTED",job.taskId,
+                        update(account,job.id,"SUBMITTED",job.taskId,
                             attempt=job.attempts,
                             retryAfter=System.currentTimeMillis()+60_000L)
                     }else{
-                        update(job.id,"VERIFIED",job.taskId,
+                        update(account,job.id,"VERIFIED",job.taskId,
                             receipt=receipt,attempt=job.attempts)
                         submitted=(submitted-1).coerceAtLeast(0)
                     }
@@ -342,7 +359,7 @@ internal class TeraBoxRemoteQueue(ctx:Context):
                     // submitted task is queried, not re-submitted.
                     if(job.state=="SUBMITTED" && !retry)
                         submitted=(submitted-1).coerceAtLeast(0)
-                    update(job.id,if(job.state=="SUBMITTED" && retry)
+                    update(account,job.id,if(job.state=="SUBMITTED" && retry)
                             "SUBMITTED" else if(retry)"QUEUED" else "ERROR",
                         job.taskId,error=e.message?:e.javaClass.simpleName,
                         attempt=n,retryAfter=if(retry)

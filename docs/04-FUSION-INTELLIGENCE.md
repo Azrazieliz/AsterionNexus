@@ -45,7 +45,7 @@ Character Knowledge is not yet sufficient for full live recognition acceptance. 
 ## Organization and review
 
 - High-confidence, owner-approved routing rules may organize with durable moved-file receipts and rollback, respecting SAF permissions and cloud presence. Distinguish proposal from applied move and from verified destination.
-- Uncertain identity/tags/rating, incompatible species traits and weak evidence enter a precise review inbox; user correction is persistent and retractable.
+- Uncertain identity/tags, incompatible species traits, uncertain automation and weak evidence enter a precise Review inbox; user correction is persistent and retractable. Owner liking is separate 0–100 file metadata, accessible when the file is opened, not a Review or Ratings module. Both correction and preference signals learn automatically without conflating them.
 - Junk/preview triage and aesthetic score below 25/100 may suggest discard/review, **never automatically delete**. Original Characters and Uncertain Identity routes preserve evidence and allow correction.
 - Smart collections/visual semantic search use actual embeddings or accepted Fusion evidence, with an indexed similarity layer, no cross-subject tag contamination and explainable matching. Recommendations derived from existing library are private, optional, grounded and never auto-download/deleting originals.
 - Any material moved to an independent collection retains source identity, original path, source provider and backward navigation.
@@ -63,3 +63,7 @@ Character Knowledge is not yet sufficient for full live recognition acceptance. 
 - `docs/production/ASTERION_CORE_CANONICAL_TAGGING_ORDER_2026-11-18.md`
 - `android_app/app/src/main/java/com/ailm/android/runtime/` (Fusion stores, label mapper, confidence policies, region inference, visual head, reviews)
 - `scripts/fusion_wd_training.py`, `scripts/prepare_bundled_wd_vit_v3.py` and associated Python/JUnit gates.
+
+## 2026-11-27 owner rules and regression gates
+
+Preserve the Android AutomationPathPolicy and StandaloneRuntime per-folder prefix/extension counters, not the older generic Python rename template. All approved naming/routing, separate review and rating learning, and the owner-reported missing fusion_taxonomy_revision table and checking-ratings/queue-state defects are specified in [16](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md). Require non-destructive upgraded-database and device regression tests. No root cause or repair is certified by this report.

@@ -1,8 +1,10 @@
 import java.security.MessageDigest
+import java.util.zip.ZipFile
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // Original v0.6.1 signing key: external/secret only, never committed to Git.
@@ -36,6 +38,7 @@ android {
 
     defaultConfig {
         applicationId = "com.asterion.nexus"
+        externalNativeBuild { cmake { targets += listOf("asterioncwd", "nexus_sentencepiece").filter { it == "asterioncwd" || file("src/main/cpp/third_party/sentencepiece/CMakeLists.txt").isFile } } }
         minSdk = 30
         targetSdk = 35
         versionCode = 10000
@@ -141,6 +144,7 @@ android {
         }
     }
 
+    buildFeatures { compose = true }
     packaging { jniLibs { useLegacyPackaging = true } }
 
     compileOptions {
@@ -155,7 +159,14 @@ kotlin {
 }
 
 dependencies {
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.activity:activity-compose:1.10.0")
+    implementation("androidx.compose.ui:ui:1.7.6")
+    implementation("androidx.compose.foundation:foundation:1.7.6")
+    implementation("androidx.compose.material3:material3:1.3.1")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
     implementation(project(":fusion"))
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")
     implementation(project(":rounder"))
     implementation("org.jsoup:jsoup:1.18.1")
     implementation("org.libtorrent4j:libtorrent4j:2.1.0-39")
@@ -287,3 +298,72 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
         }
     }
 }
+
+/** A signed production candidate must carry the genuine Core model package.
+ * Debug source checks may run without fetching large model weights. */
+val requireCoreReleaseModel = tasks.register("requireCoreReleaseModel") {
+    val bundle = rootProject.file("fusion/src/main/assets/bundled_wd_vit_v3.zip")
+    inputs.file(bundle).optional()
+    doLast {
+        require(bundle.isFile && bundle.length() > 10_000_000L) {
+            "Core model missing: run scripts/prepare_bundled_wd_vit_v3.py and its inference test"
+        }
+        ZipFile(bundle).use { zip ->
+            val model = zip.getEntry("model.onnx")
+            val metadata = zip.getEntry("metadata.json")
+            require(model != null && model.size > 10_000_000L && metadata != null) {
+                "Invalid inherited Core model bundle"
+            }
+            val digest = MessageDigest.getInstance("SHA-256")
+            zip.getInputStream(model).use { input ->
+                val buffer = ByteArray(1024 * 1024)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    digest.update(buffer, 0, count)
+                }
+            }
+            val sha = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+            val descriptor = zip.getInputStream(metadata).bufferedReader().use { it.readText() }
+            require(descriptor.contains("\"model_id\":\"asterion-wd-vit-tagger-v3\"") &&
+                descriptor.contains("\"upstream_model_sha256\":\"35f23693620b668f4d53fd3c62bf65e40af739bc52c7eb0fbc49258b58d065b6\"") &&
+                descriptor.contains("\"packaged_model_sha256\":\"$sha\"") &&
+                descriptor.contains("fusion_wd_features")) {
+                "Core model descriptor or graph checksum mismatch"
+            }
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(requireCoreReleaseModel) }
+
+/** Production release requires the actual offline reading model, not an empty
+ * app claiming OCR capability. Debug/source builds remain independent. */
+val requireBookOcrReleaseModel = tasks.register("requireBookOcrReleaseModel") {
+    val bundle = rootProject.file("fusion/src/main/assets/bundled_ppocrv5_cjk.zip")
+    inputs.file(bundle).optional()
+    doLast {
+        require(bundle.isFile && bundle.length() > 1_000_000L) {
+            "Verified PP-OCRv5 model missing: run scripts/prepare_nexus_ocr.py"
+        }
+        ZipFile(bundle).use { zip ->
+            val meta = zip.getEntry("metadata.json")
+            require(meta != null && meta.size in 1..100_000)
+            val descriptor = zip.getInputStream(meta).bufferedReader().use { it.readText() }
+            require(descriptor.contains("asterion-ppocrv5-cjk") &&
+                descriptor.contains("3b76726c3606c4af92f5133b359ed14e0d30a455") &&
+                descriptor.contains("reference_smoke") && descriptor.contains("artifact_sha256"))
+            for (name in listOf("det.onnx","rec.onnx","dict.txt")) {
+                val entry = zip.getEntry(name)
+                require(entry != null && entry.size in 1..100_000_000)
+                val md = MessageDigest.getInstance("SHA-256")
+                zip.getInputStream(entry).use { input ->
+                    val b = ByteArray(131072)
+                    while (true) { val n = input.read(b); if (n < 0) break; if(n>0)md.update(b,0,n) }
+                }
+                val digest = md.digest().joinToString("") { "%02x".format(it) }
+                require(descriptor.contains("\"$name\": \"$digest\"")) { "OCR artifact hash mismatch: $name" }
+            }
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(requireBookOcrReleaseModel) }

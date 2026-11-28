@@ -221,7 +221,7 @@
     {
       "id": "TXT-001",
       "phase": "P6",
-      "requirement": "Automatic phone-offline CJK translation of eligible books",
+      "requirement": "Automatic phone-offline Japanese and Korean translation of eligible books; Chinese translation deferred (OCR/index retained)",
       "evidence": [
         "model_runtime_offline",
         "real_output_quality",
@@ -322,6 +322,123 @@
       "status": "SPECIFIED",
       "actual_evidence": [],
       "owner_accepted": false
+    },
+    {
+      "id": "UI-027",
+      "phase": "P3",
+      "requirement": "Exactly three persistent destinations; charcoal/silver; content-first media-specific layouts, category tiles only replacing lists; no duplicated controls or module trees",
+      "evidence": [
+        "phone_screenshots",
+        "canonical_action_registry_audit",
+        "navigation_and_gesture_tests"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "UI-028",
+      "phase": "P3",
+      "requirement": "Centered muted video preview transitions into actual fullscreen playback; horizontal book/collection cover flow with selected preview near 85–95% available area; restore context",
+      "evidence": [
+        "phone_video_recording",
+        "player_seek_and_resume",
+        "cover_flow_and_back_tests"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "ACQ-027",
+      "phase": "P3",
+      "requirement": "Online preview tap acquires exact selected authorized original without external browser redirect; existing library hit opens existing item; type-separated modules and same canonical queue",
+      "evidence": [
+        "actual_preview_to_verified_original",
+        "navigation_trace",
+        "queue_identity_tests"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "ACQ-028",
+      "phase": "P3",
+      "requirement": "Independent live sync/backfill, following, subscriptions and retained source-specific donor behavior through shared services",
+      "evidence": [
+        "donor_function_parity_matrix",
+        "independent_cursor_and_resume_tests"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "CLOUD-027",
+      "phase": "P3",
+      "requirement": "Every supported media type defaults to verified TeraBox permanent publication; remote reopen, account isolation, cache and pin safety",
+      "evidence": [
+        "remote_publication_receipts",
+        "actual_cloud_reopen",
+        "account_and_cleanup_tests"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "ORG-027",
+      "phase": "P3",
+      "requirement": "Automatic confident routing and deterministic filenames for artwork, cosplay, complete comics, assembled video/film and 3D; safe dependency paths, collision handling and reversible authorized moves",
+      "evidence": [
+        "naming_fixtures",
+        "verified_move_and_rollback_receipts",
+        "metadata_relationship_tests"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "BOOK-027",
+      "phase": "P3",
+      "requirement": "Complete selected comic title as one ordered CBZ named by title, not chapter archives",
+      "evidence": [
+        "actual_complete_title_enumeration",
+        "cbz_page_order_and_reopen"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "FUS-027",
+      "phase": "P3",
+      "requirement": "Review only uncertainty/confirmation; rating on opened file metadata, no rating module; independent correction and preference learning with preserved manual ratings",
+      "evidence": [
+        "phone_interaction_recording",
+        "preference_and_correctness_learning_tests",
+        "rating_migration_and_reindex_tests"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
+    },
+    {
+      "id": "FUS-028",
+      "phase": "P3",
+      "requirement": "Owner-reported fusion_taxonomy_revision missing table and Review checking/queue-state failures repaired with non-destructive migration",
+      "evidence": [
+        "legacy_database_upgrade_regression",
+        "revision_row_trigger_checks",
+        "rating_query_and_queue_state_tests",
+        "physical_phone_evidence"
+      ],
+      "status": "SPECIFIED",
+      "actual_evidence": [],
+      "owner_accepted": false
     }
-  ]
+  ],
+  "updated_as_spec_on": "2026-11-27"
 }

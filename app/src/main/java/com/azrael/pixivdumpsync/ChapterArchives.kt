@@ -56,10 +56,10 @@ object ChapterArchives {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL,"Chapter downloads",NotificationManager.IMPORTANCE_LOW))
         val open=PendingIntent.getActivity(context,0,
-            Intent(context,DownloaderHubActivity::class.java),
+            Intent(context,com.asterion.nexus.NexusPremiumHomeActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return Notification.Builder(context,CHANNEL)
-            .setContentTitle("Asterion Downloader · Chapters")
+            .setContentTitle("Nexus · Comics")
             .setContentText(message.take(95))
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentIntent(open).setOngoing(true)
@@ -98,6 +98,7 @@ object ChapterArchives {
                             .joinToString(""){"%02x".format(it.toInt() and 255)}
                         val earlier=db.savedSignature(job.id)
                         val preserved=earlier!=null && earlier.second==signature &&
+                            Uri.parse(earlier.first).authority==context.packageName+".library" &&
                             runCatching{
                                 context.contentResolver.openAssetFileDescriptor(
                                     Uri.parse(earlier.first),"r")?.use{
@@ -112,13 +113,11 @@ object ChapterArchives {
                         if(pauses.contains(job.id))
                             throw java.util.concurrent.CancellationException("Archive paused")
                         db.completeCheck(job.id,uri,signature)
-                        if(!preserved && NduSettings.configured(context)) {
-                            NduCloudQueue(context).use { queue->
-                                queue.enqueue("comics",safeName(job.title)+".zip",Uri.parse(uri))
-                            }
-                            NduUploadService.launch(context)
-                        }
-                        onStatus("Saved ${job.title}")
+                        val item=com.asterion.nexus.NexusRegistry(context).find(Uri.parse(uri).lastPathSegment)
+                        if(item!=null){
+                            com.asterion.nexus.NexusCloudPublication.enqueueIfConnected(context,item)
+                            onStatus(com.asterion.nexus.NexusCloudPublication.status(context,item))
+                        }else onStatus("Local archive verified; cloud receipt unavailable")
                     }catch(t:Exception){
                         if(pauses.remove(job.id) ||
                             t is java.util.concurrent.CancellationException){
@@ -242,14 +241,17 @@ object ChapterArchives {
         val cache=File(base,"chapter-cache/${task.id}")
         require(cache.isDirectory||cache.mkdirs()){"Unable to create page cache"}
         require(chapters.isNotEmpty()){"No chapters discovered"}
-        val out=File(cache,"complete.zip.part")
+        val out=File(cache,"complete.cbz.part")
         try{
             var expectedPages=0
+            val chapterManifest=org.json.JSONArray()
             ZipOutputStream(FileOutputStream(out)).use{zip->
                 for((chapterIndex,chapter) in chapters.withIndex()){
                     if(pauses.contains(task.id))
                         throw java.util.concurrent.CancellationException("Archive paused")
                     val images=ChapterScraper.pageImages(chapter.url,context)
+                    require(images.isNotEmpty()){"No complete pages for "+chapter.title}
+                    val pageManifest=org.json.JSONArray()
                     for((pageIndex,image) in images.withIndex()){
                         if(pauses.contains(task.id))
                             throw java.util.concurrent.CancellationException("Archive paused")
@@ -260,43 +262,43 @@ object ChapterArchives {
                             download(context,image,chapter.url,page){
                                 pauses.contains(task.id)||!AppPower.enabled(context)
                             }
-                        // One ZIP with flat page entries; keep chapter/page numbering in filenames.
-                        val name="%05d_%s_%05d.%s".format(chapterIndex+1,
-                            safeName(chapter.title),pageIndex+1,ext)
+                        val bounds=android.graphics.BitmapFactory.Options().apply{inJustDecodeBounds=true}
+                        android.graphics.BitmapFactory.decodeFile(page.absolutePath,bounds)
+                        require(bounds.outWidth>0&&bounds.outHeight>0){"Invalid cached comic page"}
+                        val actualExt=when(bounds.outMimeType){
+                            "image/png"->"png";"image/jpeg"->"jpg";"image/webp"->"webp"
+                            "image/gif"->"gif";"image/avif"->"avif"
+                            else->throw IllegalStateException("Unsupported comic image format")
+                        }
+                        // Flat natural page ordering; actual image format is retained.
+                        val name="%05d_%s_%05d.%s".format(java.util.Locale.ROOT,chapterIndex+1,
+                            safeName(chapter.title),pageIndex+1,actualExt)
                         zip.putNextEntry(ZipEntry(name))
                         page.inputStream().buffered().use{it.copyTo(zip,128*1024)}
                         zip.closeEntry()
                         expectedPages++
+                        pageManifest.put(org.json.JSONObject().put("page",pageIndex+1).put("entry",name)
+                            .put("source_id",com.asterion.nexus.NexusOriginalStore.sourceKey(image)))
                     }
+                    chapterManifest.put(org.json.JSONObject().put("chapter",chapterIndex+1).put("title",chapter.title)
+                        .put("source_id",com.asterion.nexus.NexusOriginalStore.sourceKey(chapter.url)).put("pages",pageManifest))
                     onProgress((chapterIndex+1)*90/chapters.size)
                 }
+                zip.putNextEntry(ZipEntry("nexus-comic-manifest.json"))
+                zip.write(org.json.JSONObject().put("version",1).put("title",task.title)
+                    .put("series_source_id",com.asterion.nexus.NexusOriginalStore.sourceKey(task.url))
+                    .put("chapters",chapterManifest).put("page_count",expectedPages).toString().toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
             }
             require(out.length()>100){"Incomplete ZIP archive"}
             out.inputStream().use{
                 ArchiveIntegrity.inspect(it,"ZIP",expectedImages=expectedPages)
             }
-            val values=ContentValues().apply{
-                put(MediaStore.Downloads.DISPLAY_NAME,safeName(task.title)+".zip")
-                put(MediaStore.Downloads.MIME_TYPE,"application/zip")
-                put(MediaStore.Downloads.RELATIVE_PATH,
-                    Environment.DIRECTORY_DOWNLOADS+"/AsterionDownloader/Comics/")
-                put(MediaStore.Downloads.IS_PENDING,1)
+            val result=out.inputStream().use{input->
+                com.asterion.nexus.NexusRegistry(context).ingest(input,safeName(task.title)+".cbz",
+                    "application/vnd.comicbook+zip","nexus-comic","owner",task.url,out.length(),null)
             }
-            val uri=context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values)
-                ?:error("Unable to create final ZIP")
-            try{
-                context.contentResolver.openOutputStream(uri,"w")!!.use{dest->
-                    out.inputStream().buffered().use{it.copyTo(dest,256*1024)}
-                }
-                val bytes=context.contentResolver.openAssetFileDescriptor(uri,"r")
-                    ?.use{it.length}?:-1L
-                require(bytes<0||bytes==out.length()){"ZIP copy verification failed"}
-                context.contentResolver.update(uri,ContentValues().apply{
-                    put(MediaStore.Downloads.IS_PENDING,0)},null,null)
-            }catch(t:Exception){
-                context.contentResolver.delete(uri,null,null)
-                throw t
-            }
+            val uri=com.asterion.nexus.NexusLibraryProvider.uriFor(context,result.sha256)
             cache.listFiles()?.forEach{it.delete()}
             cache.delete()
             onProgress(100)

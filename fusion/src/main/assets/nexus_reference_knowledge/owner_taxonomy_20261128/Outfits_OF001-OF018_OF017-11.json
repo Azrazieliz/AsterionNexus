@@ -1,0 +1,3542 @@
+[
+  {
+    "id": "OF001",
+    "parent_outfit": "",
+    "canonical_name": "Casual",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-1",
+    "parent_outfit": "OF001",
+    "canonical_name": "Casual Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-2",
+    "parent_outfit": "OF001",
+    "canonical_name": "Hoodie Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-3",
+    "parent_outfit": "OF001",
+    "canonical_name": "Sweater Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-4",
+    "parent_outfit": "OF001",
+    "canonical_name": "Cardigan Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-5",
+    "parent_outfit": "OF001",
+    "canonical_name": "Denim Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-6",
+    "parent_outfit": "OF001",
+    "canonical_name": "Casual Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-7",
+    "parent_outfit": "OF001",
+    "canonical_name": "Sundress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-8",
+    "parent_outfit": "OF001",
+    "canonical_name": "Off-Shoulder Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-9",
+    "parent_outfit": "OF001",
+    "canonical_name": "Streetwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-10",
+    "parent_outfit": "OF001",
+    "canonical_name": "Gyaru Fashion",
+    "aliases": [
+      "Gal Fashion"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF001-11",
+    "parent_outfit": "OF001",
+    "canonical_name": "Lolita Fashion",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-12",
+    "parent_outfit": "OF001",
+    "canonical_name": "Gothic Lolita",
+    "aliases": [
+      "GothLoli"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF001-13",
+    "parent_outfit": "OF001",
+    "canonical_name": "Punk Fashion",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-14",
+    "parent_outfit": "OF001",
+    "canonical_name": "Gothic Fashion",
+    "aliases": [
+      "Goth"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF001-15",
+    "parent_outfit": "OF001",
+    "canonical_name": "Rock Fashion",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-16",
+    "parent_outfit": "OF001",
+    "canonical_name": "Techwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-17",
+    "parent_outfit": "OF001",
+    "canonical_name": "Oversized Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-18",
+    "parent_outfit": "OF001",
+    "canonical_name": "Y2K Fashion",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-19",
+    "parent_outfit": "OF001",
+    "canonical_name": "Jirai Kei",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF001-20",
+    "parent_outfit": "OF001",
+    "canonical_name": "Yami Kawaii",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002",
+    "parent_outfit": "",
+    "canonical_name": "School",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002-1",
+    "parent_outfit": "OF002",
+    "canonical_name": "School Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002-2",
+    "parent_outfit": "OF002",
+    "canonical_name": "Sailor Uniform",
+    "aliases": [
+      "Sailor Fuku"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF002-3",
+    "parent_outfit": "OF002",
+    "canonical_name": "Blazer Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002-4",
+    "parent_outfit": "OF002",
+    "canonical_name": "Gakuran",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002-5",
+    "parent_outfit": "OF002",
+    "canonical_name": "School Swimsuit",
+    "aliases": [
+      "Sukumizu"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF002-6",
+    "parent_outfit": "OF002",
+    "canonical_name": "Cheerleader Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002-7",
+    "parent_outfit": "OF002",
+    "canonical_name": "Marching Band Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002-8",
+    "parent_outfit": "OF002",
+    "canonical_name": "School Club Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF002-9",
+    "parent_outfit": "OF002",
+    "canonical_name": "Graduation Gown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF003",
+    "parent_outfit": "",
+    "canonical_name": "Formal",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF003-1",
+    "parent_outfit": "OF003",
+    "canonical_name": "Evening Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF003-2",
+    "parent_outfit": "OF003",
+    "canonical_name": "Ball Gown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF003-3",
+    "parent_outfit": "OF003",
+    "canonical_name": "Cocktail Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF003-4",
+    "parent_outfit": "OF003",
+    "canonical_name": "Wedding Dress",
+    "aliases": [
+      "Bridal Gown",
+      "Bride Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF003-5",
+    "parent_outfit": "OF003",
+    "canonical_name": "Princess Dress",
+    "aliases": [
+      "Princess Gown"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF003-6",
+    "parent_outfit": "OF003",
+    "canonical_name": "Party Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF003-7",
+    "parent_outfit": "OF003",
+    "canonical_name": "Gala Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF003-8",
+    "parent_outfit": "OF003",
+    "canonical_name": "Office Lady Outfit",
+    "aliases": [
+      "Business Suit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF003-9",
+    "parent_outfit": "OF003",
+    "canonical_name": "Suit",
+    "aliases": [
+      "Women's Suit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF003-10",
+    "parent_outfit": "OF003",
+    "canonical_name": "Tuxedo",
+    "aliases": [
+      "Female Tuxedo"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF004",
+    "parent_outfit": "",
+    "canonical_name": "Traditional",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF004-1",
+    "parent_outfit": "OF004",
+    "canonical_name": "Kimono",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF004-2",
+    "parent_outfit": "OF004",
+    "canonical_name": "Yukata",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF004-3",
+    "parent_outfit": "OF004",
+    "canonical_name": "Shrine Maiden Outfit",
+    "aliases": [
+      "Miko Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF004-4",
+    "parent_outfit": "OF004",
+    "canonical_name": "Cheongsam",
+    "aliases": [
+      "Qipao",
+      "Chinese Dress"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF004-5",
+    "parent_outfit": "OF004",
+    "canonical_name": "Hanfu",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF004-6",
+    "parent_outfit": "OF004",
+    "canonical_name": "Hakama",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF004-7",
+    "parent_outfit": "OF004",
+    "canonical_name": "Furisode",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF004-8",
+    "parent_outfit": "OF004",
+    "canonical_name": "Dancer Outfit",
+    "aliases": [
+      "Belly Dancer Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF004-9",
+    "parent_outfit": "OF004",
+    "canonical_name": "Ao Dai",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF004-10",
+    "parent_outfit": "OF004",
+    "canonical_name": "Sari",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005",
+    "parent_outfit": "",
+    "canonical_name": "Occupational",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-1",
+    "parent_outfit": "OF005",
+    "canonical_name": "Maid Outfit",
+    "aliases": [
+      "French Maid"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF005-2",
+    "parent_outfit": "OF005",
+    "canonical_name": "Nurse Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-3",
+    "parent_outfit": "OF005",
+    "canonical_name": "Doctor Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-4",
+    "parent_outfit": "OF005",
+    "canonical_name": "Police Uniform",
+    "aliases": [
+      "Police Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF005-5",
+    "parent_outfit": "OF005",
+    "canonical_name": "Detective Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-6",
+    "parent_outfit": "OF005",
+    "canonical_name": "Secretary Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-7",
+    "parent_outfit": "OF005",
+    "canonical_name": "Waitress Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-8",
+    "parent_outfit": "OF005",
+    "canonical_name": "Cafe Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-9",
+    "parent_outfit": "OF005",
+    "canonical_name": "Chef Outfit",
+    "aliases": [
+      "Cook Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF005-10",
+    "parent_outfit": "OF005",
+    "canonical_name": "Idol Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-11",
+    "parent_outfit": "OF005",
+    "canonical_name": "Magician Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-12",
+    "parent_outfit": "OF005",
+    "canonical_name": "Nun Habit",
+    "aliases": [
+      "Nun Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF005-13",
+    "parent_outfit": "OF005",
+    "canonical_name": "Teacher Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-14",
+    "parent_outfit": "OF005",
+    "canonical_name": "Lab Coat",
+    "aliases": [
+      "Scientist Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF005-15",
+    "parent_outfit": "OF005",
+    "canonical_name": "Mechanic Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-16",
+    "parent_outfit": "OF005",
+    "canonical_name": "Pilot Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF005-17",
+    "parent_outfit": "OF005",
+    "canonical_name": "Flight Attendant Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF006",
+    "parent_outfit": "",
+    "canonical_name": "Military",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF006-1",
+    "parent_outfit": "OF006",
+    "canonical_name": "Military Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF006-2",
+    "parent_outfit": "OF006",
+    "canonical_name": "Naval Uniform",
+    "aliases": [
+      "Navy Uniform"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF006-3",
+    "parent_outfit": "OF006",
+    "canonical_name": "Officer Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF006-4",
+    "parent_outfit": "OF006",
+    "canonical_name": "Cadet Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF006-5",
+    "parent_outfit": "OF006",
+    "canonical_name": "Commander Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF006-6",
+    "parent_outfit": "OF006",
+    "canonical_name": "General Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF006-7",
+    "parent_outfit": "OF006",
+    "canonical_name": "Combat Uniform",
+    "aliases": [
+      "Battle Uniform"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF006-8",
+    "parent_outfit": "OF006",
+    "canonical_name": "Tactical Outfit",
+    "aliases": [
+      "Tactical Gear"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF006-9",
+    "parent_outfit": "OF006",
+    "canonical_name": "Camouflage Uniform",
+    "aliases": [
+      "Camo Uniform"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF006-10",
+    "parent_outfit": "OF006",
+    "canonical_name": "Military Dress Uniform",
+    "aliases": [
+      "Parade Uniform"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF007",
+    "parent_outfit": "",
+    "canonical_name": "Fantasy",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-1",
+    "parent_outfit": "OF007",
+    "canonical_name": "Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-2",
+    "parent_outfit": "OF007",
+    "canonical_name": "Light Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-3",
+    "parent_outfit": "OF007",
+    "canonical_name": "Barbarian Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-4",
+    "parent_outfit": "OF007",
+    "canonical_name": "Heavy Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-5",
+    "parent_outfit": "OF007",
+    "canonical_name": "Plate Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-6",
+    "parent_outfit": "OF007",
+    "canonical_name": "Leather Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-7",
+    "parent_outfit": "OF007",
+    "canonical_name": "Mage Robe",
+    "aliases": [
+      "Wizard Robe"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF007-8",
+    "parent_outfit": "OF007",
+    "canonical_name": "Witch Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-9",
+    "parent_outfit": "OF007",
+    "canonical_name": "Sorceress Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-10",
+    "parent_outfit": "OF007",
+    "canonical_name": "Priestess Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-11",
+    "parent_outfit": "OF007",
+    "canonical_name": "Cleric Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-12",
+    "parent_outfit": "OF007",
+    "canonical_name": "Paladin Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-13",
+    "parent_outfit": "OF007",
+    "canonical_name": "Knight Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-14",
+    "parent_outfit": "OF007",
+    "canonical_name": "Adventurer Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-15",
+    "parent_outfit": "OF007",
+    "canonical_name": "Assassin Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-16",
+    "parent_outfit": "OF007",
+    "canonical_name": "Rogue Outfit",
+    "aliases": [
+      "Thief Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF007-17",
+    "parent_outfit": "OF007",
+    "canonical_name": "Archer Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-18",
+    "parent_outfit": "OF007",
+    "canonical_name": "Huntress Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-19",
+    "parent_outfit": "OF007",
+    "canonical_name": "Demon Lord Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-20",
+    "parent_outfit": "OF007",
+    "canonical_name": "Royal Outfit",
+    "aliases": [
+      "Queen Outfit",
+      "Princess Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF007-21",
+    "parent_outfit": "OF007",
+    "canonical_name": "Battle Bikini Armor",
+    "aliases": [
+      "Bikini Armor"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF007-22",
+    "parent_outfit": "OF007",
+    "canonical_name": "Revealing Mage Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-23",
+    "parent_outfit": "OF007",
+    "canonical_name": "Dark Priestess Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-24",
+    "parent_outfit": "OF007",
+    "canonical_name": "Dark Queen Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-25",
+    "parent_outfit": "OF007",
+    "canonical_name": "Dark Knight Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-26",
+    "parent_outfit": "OF007",
+    "canonical_name": "Battle Nun Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-27",
+    "parent_outfit": "OF007",
+    "canonical_name": "Dark Shrine Maiden Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-28",
+    "parent_outfit": "OF007",
+    "canonical_name": "Dark Mage Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-29",
+    "parent_outfit": "OF007",
+    "canonical_name": "Dragon Priestess Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-30",
+    "parent_outfit": "OF007",
+    "canonical_name": "Sacrificial Maiden Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-31",
+    "parent_outfit": "OF007",
+    "canonical_name": "Oracle Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-32",
+    "parent_outfit": "OF007",
+    "canonical_name": "Druid Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-33",
+    "parent_outfit": "OF007",
+    "canonical_name": "Alchemist Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-34",
+    "parent_outfit": "OF007",
+    "canonical_name": "Necromancer Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-35",
+    "parent_outfit": "OF007",
+    "canonical_name": "Enchantress Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-36",
+    "parent_outfit": "OF007",
+    "canonical_name": "Battle Maiden Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF007-37",
+    "parent_outfit": "OF007",
+    "canonical_name": "Revealing Armor",
+    "aliases": [
+      "Fanservice Armor"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF008",
+    "parent_outfit": "",
+    "canonical_name": "Sports",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF008-1",
+    "parent_outfit": "OF008",
+    "canonical_name": "Tracksuit",
+    "aliases": [
+      "Jersey"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF008-2",
+    "parent_outfit": "OF008",
+    "canonical_name": "Gym Outfit",
+    "aliases": [
+      "PE Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF008-3",
+    "parent_outfit": "OF008",
+    "canonical_name": "Tennis Outfit",
+    "aliases": [
+      "Tennis Uniform"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF008-4",
+    "parent_outfit": "OF008",
+    "canonical_name": "Volleyball Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF008-5",
+    "parent_outfit": "OF008",
+    "canonical_name": "Basketball Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF008-6",
+    "parent_outfit": "OF008",
+    "canonical_name": "Soccer Uniform",
+    "aliases": [
+      "Football Uniform"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF008-7",
+    "parent_outfit": "OF008",
+    "canonical_name": "Baseball Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF008-8",
+    "parent_outfit": "OF008",
+    "canonical_name": "Swimsuit Athlete Outfit",
+    "aliases": [
+      "Competitive Swimsuit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF008-9",
+    "parent_outfit": "OF008",
+    "canonical_name": "Martial Arts Gi",
+    "aliases": [
+      "Dogi"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF008-10",
+    "parent_outfit": "OF008",
+    "canonical_name": "Fencing Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF008-11",
+    "parent_outfit": "OF008",
+    "canonical_name": "Racing Suit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF008-12",
+    "parent_outfit": "OF008",
+    "canonical_name": "Cycling Suit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF008-13",
+    "parent_outfit": "OF008",
+    "canonical_name": "Figure Skating Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009",
+    "parent_outfit": "",
+    "canonical_name": "Swimwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-1",
+    "parent_outfit": "OF009",
+    "canonical_name": "One-Piece Swimsuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-2",
+    "parent_outfit": "OF009",
+    "canonical_name": "School Swimsuit",
+    "aliases": [
+      "Sukumizu"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF009-3",
+    "parent_outfit": "OF009",
+    "canonical_name": "Bikini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-4",
+    "parent_outfit": "OF009",
+    "canonical_name": "Competitive Swimsuit",
+    "aliases": [
+      "Racing Swimsuit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF009-5",
+    "parent_outfit": "OF009",
+    "canonical_name": "Tankini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-6",
+    "parent_outfit": "OF009",
+    "canonical_name": "Monokini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-7",
+    "parent_outfit": "OF009",
+    "canonical_name": "Rash Guard",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-8",
+    "parent_outfit": "OF009",
+    "canonical_name": "Diving Suit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-9",
+    "parent_outfit": "OF009",
+    "canonical_name": "Lifeguard Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-10",
+    "parent_outfit": "OF009",
+    "canonical_name": "Extreme Micro Bikini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-11",
+    "parent_outfit": "OF009",
+    "canonical_name": "Transparent Swimsuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-12",
+    "parent_outfit": "OF009",
+    "canonical_name": "Cut-Out Swimsuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-13",
+    "parent_outfit": "OF009",
+    "canonical_name": "Slingshot Swimsuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-14",
+    "parent_outfit": "OF009",
+    "canonical_name": "Frilled Bikini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-15",
+    "parent_outfit": "OF009",
+    "canonical_name": "Bandage Bikini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF009-16",
+    "parent_outfit": "OF009",
+    "canonical_name": "Triangle Bikini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF010",
+    "parent_outfit": "",
+    "canonical_name": "Sleepwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF010-1",
+    "parent_outfit": "OF010",
+    "canonical_name": "Pajamas",
+    "aliases": [
+      "Pyjamas"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF010-2",
+    "parent_outfit": "OF010",
+    "canonical_name": "Nightgown",
+    "aliases": [
+      "Nightdress"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF010-3",
+    "parent_outfit": "OF010",
+    "canonical_name": "Babydoll",
+    "aliases": [
+      "Babydoll Dress"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF010-4",
+    "parent_outfit": "OF010",
+    "canonical_name": "Negligee",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF010-5",
+    "parent_outfit": "OF010",
+    "canonical_name": "Sleep Shirt",
+    "aliases": [
+      "Oversized Sleep Shirt"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF010-6",
+    "parent_outfit": "OF010",
+    "canonical_name": "Robe",
+    "aliases": [
+      "Dressing Gown"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF010-7",
+    "parent_outfit": "OF010",
+    "canonical_name": "Kigurumi",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF010-8",
+    "parent_outfit": "OF010",
+    "canonical_name": "Slippers",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011",
+    "parent_outfit": "",
+    "canonical_name": "Underwear",
+    "aliases": [
+      "Lingerie"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-1",
+    "parent_outfit": "OF011",
+    "canonical_name": "Bra and Panties",
+    "aliases": [
+      "Set"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-2",
+    "parent_outfit": "OF011",
+    "canonical_name": "Bra",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-3",
+    "parent_outfit": "OF011",
+    "canonical_name": "Panties",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-4",
+    "parent_outfit": "OF011",
+    "canonical_name": "Sports Bra",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-5",
+    "parent_outfit": "OF011",
+    "canonical_name": "Bralette",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-6",
+    "parent_outfit": "OF011",
+    "canonical_name": "Camisole",
+    "aliases": [
+      "Cami"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-7",
+    "parent_outfit": "OF011",
+    "canonical_name": "Corset",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-8",
+    "parent_outfit": "OF011",
+    "canonical_name": "Bustier",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-9",
+    "parent_outfit": "OF011",
+    "canonical_name": "Teddy Lingerie",
+    "aliases": [
+      "Teddy"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-10",
+    "parent_outfit": "OF011",
+    "canonical_name": "Chemise",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-11",
+    "parent_outfit": "OF011",
+    "canonical_name": "Garter Belt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-12",
+    "parent_outfit": "OF011",
+    "canonical_name": "Stockings",
+    "aliases": [
+      "Thigh-High Stockings"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-13",
+    "parent_outfit": "OF011",
+    "canonical_name": "Pantyhose",
+    "aliases": [
+      "Tights"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-14",
+    "parent_outfit": "OF011",
+    "canonical_name": "Bloomers",
+    "aliases": [
+      "Buruma"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-15",
+    "parent_outfit": "OF011",
+    "canonical_name": "Sheer Lingerie",
+    "aliases": [
+      "Transparent Lingerie"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-16",
+    "parent_outfit": "OF011",
+    "canonical_name": "Open Front Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-17",
+    "parent_outfit": "OF011",
+    "canonical_name": "Decorative Body Harness",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-18",
+    "parent_outfit": "OF011",
+    "canonical_name": "Crotchless Panties",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF011-19",
+    "parent_outfit": "OF011",
+    "canonical_name": "Thong",
+    "aliases": [
+      "G-String"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF011-20",
+    "parent_outfit": "OF011",
+    "canonical_name": "Micro Panties",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012",
+    "parent_outfit": "",
+    "canonical_name": "Festival",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-1",
+    "parent_outfit": "OF012",
+    "canonical_name": "Santa Outfit",
+    "aliases": [
+      "Santa Costume"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF012-2",
+    "parent_outfit": "OF012",
+    "canonical_name": "Christmas Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-3",
+    "parent_outfit": "OF012",
+    "canonical_name": "Halloween Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-4",
+    "parent_outfit": "OF012",
+    "canonical_name": "Witch Costume",
+    "aliases": [
+      "Halloween Witch"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF012-5",
+    "parent_outfit": "OF012",
+    "canonical_name": "Vampire Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-6",
+    "parent_outfit": "OF012",
+    "canonical_name": "Devil Costume",
+    "aliases": [
+      "Demon Costume"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF012-7",
+    "parent_outfit": "OF012",
+    "canonical_name": "Angel Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-8",
+    "parent_outfit": "OF012",
+    "canonical_name": "Easter Bunny Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-9",
+    "parent_outfit": "OF012",
+    "canonical_name": "Valentine Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-10",
+    "parent_outfit": "OF012",
+    "canonical_name": "New Year Kimono",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-11",
+    "parent_outfit": "OF012",
+    "canonical_name": "Setsubun Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF012-12",
+    "parent_outfit": "OF012",
+    "canonical_name": "Oktoberfest Outfit",
+    "aliases": [
+      "Dirndl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF013",
+    "parent_outfit": "",
+    "canonical_name": "Seasonal",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-1",
+    "parent_outfit": "OF013",
+    "canonical_name": "Winter Coat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-2",
+    "parent_outfit": "OF013",
+    "canonical_name": "Fur Coat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-3",
+    "parent_outfit": "OF013",
+    "canonical_name": "Cape",
+    "aliases": [
+      "Cloak"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF013-4",
+    "parent_outfit": "OF013",
+    "canonical_name": "Raincoat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-5",
+    "parent_outfit": "OF013",
+    "canonical_name": "Scarf Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-6",
+    "parent_outfit": "OF013",
+    "canonical_name": "Winter Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-7",
+    "parent_outfit": "OF013",
+    "canonical_name": "Summer Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-8",
+    "parent_outfit": "OF013",
+    "canonical_name": "Spring Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF013-9",
+    "parent_outfit": "OF013",
+    "canonical_name": "Autumn Outfit",
+    "aliases": [
+      "Fall Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014",
+    "parent_outfit": "",
+    "canonical_name": "Fetish",
+    "aliases": [
+      "Costumes"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-1",
+    "parent_outfit": "OF014",
+    "canonical_name": "Latex Suit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-2",
+    "parent_outfit": "OF014",
+    "canonical_name": "PVC Outfit",
+    "aliases": [
+      "Vinyl Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-3",
+    "parent_outfit": "OF014",
+    "canonical_name": "Leather Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-4",
+    "parent_outfit": "OF014",
+    "canonical_name": "Bondage Outfit",
+    "aliases": [
+      "BDSM Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-5",
+    "parent_outfit": "OF014",
+    "canonical_name": "Harness",
+    "aliases": [
+      "Body Harness"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-6",
+    "parent_outfit": "OF014",
+    "canonical_name": "Body Stocking",
+    "aliases": [
+      "Catsuit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-7",
+    "parent_outfit": "OF014",
+    "canonical_name": "Leotard",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-8",
+    "parent_outfit": "OF014",
+    "canonical_name": "Bunny Suit",
+    "aliases": [
+      "Bunny Girl Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-9",
+    "parent_outfit": "OF014",
+    "canonical_name": "Micro Bikini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-10",
+    "parent_outfit": "OF014",
+    "canonical_name": "String Bikini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-11",
+    "parent_outfit": "OF014",
+    "canonical_name": "Monokini",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-12",
+    "parent_outfit": "OF014",
+    "canonical_name": "School Swimsuit (Modified)",
+    "aliases": [
+      "Modified Sukumizu"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-13",
+    "parent_outfit": "OF014",
+    "canonical_name": "Catgirl Costume",
+    "aliases": [
+      "Nekomimi Costume"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-14",
+    "parent_outfit": "OF014",
+    "canonical_name": "Foxgirl Costume",
+    "aliases": [
+      "Kitsunemimi Costume"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-15",
+    "parent_outfit": "OF014",
+    "canonical_name": "Wolfgirl Costume",
+    "aliases": [
+      "Ookamimimi Costume"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-16",
+    "parent_outfit": "OF014",
+    "canonical_name": "Cowgirl Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-17",
+    "parent_outfit": "OF014",
+    "canonical_name": "Devil Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-18",
+    "parent_outfit": "OF014",
+    "canonical_name": "Angel Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-19",
+    "parent_outfit": "OF014",
+    "canonical_name": "Witch Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-20",
+    "parent_outfit": "OF014",
+    "canonical_name": "Police Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-21",
+    "parent_outfit": "OF014",
+    "canonical_name": "Nurse Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-22",
+    "parent_outfit": "OF014",
+    "canonical_name": "Maid Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-23",
+    "parent_outfit": "OF014",
+    "canonical_name": "Reversed Bunny Suit",
+    "aliases": [
+      "Reverse Bunny Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-24",
+    "parent_outfit": "OF014",
+    "canonical_name": "Mummy Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-25",
+    "parent_outfit": "OF014",
+    "canonical_name": "Jiangshi Outfit",
+    "aliases": [
+      "Chinese Vampire Costume"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-26",
+    "parent_outfit": "OF014",
+    "canonical_name": "Succubus Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-27",
+    "parent_outfit": "OF014",
+    "canonical_name": "Sheepgirl Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-28",
+    "parent_outfit": "OF014",
+    "canonical_name": "Cat Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-29",
+    "parent_outfit": "OF014",
+    "canonical_name": "Prisoner Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-30",
+    "parent_outfit": "OF014",
+    "canonical_name": "Play Suit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-31",
+    "parent_outfit": "OF014",
+    "canonical_name": "Dancer Costume",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-32",
+    "parent_outfit": "OF014",
+    "canonical_name": "Shrink Wrap Outfit",
+    "aliases": [
+      "Plastic Wrap Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-33",
+    "parent_outfit": "OF014",
+    "canonical_name": "Bandage Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-34",
+    "parent_outfit": "OF014",
+    "canonical_name": "Shibari Outfit",
+    "aliases": [
+      "Rope Bondage Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-35",
+    "parent_outfit": "OF014",
+    "canonical_name": "Body Ribbon Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-36",
+    "parent_outfit": "OF014",
+    "canonical_name": "Gift Wrap Outfit",
+    "aliases": [
+      "Present Wrap"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-37",
+    "parent_outfit": "OF014",
+    "canonical_name": "Reversed Bikini Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-38",
+    "parent_outfit": "OF014",
+    "canonical_name": "Reverse School Swimsuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-39",
+    "parent_outfit": "OF014",
+    "canonical_name": "Reverse Leotard",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-40",
+    "parent_outfit": "OF014",
+    "canonical_name": "Maid Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-41",
+    "parent_outfit": "OF014",
+    "canonical_name": "Nurse Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-42",
+    "parent_outfit": "OF014",
+    "canonical_name": "Police Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-43",
+    "parent_outfit": "OF014",
+    "canonical_name": "Miko Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-44",
+    "parent_outfit": "OF014",
+    "canonical_name": "Chinese Dress Lingerie",
+    "aliases": [
+      "Sexy Cheongsam"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-45",
+    "parent_outfit": "OF014",
+    "canonical_name": "Waifu Apron",
+    "aliases": [
+      "Apron Dress"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-46",
+    "parent_outfit": "OF014",
+    "canonical_name": "Wrapped Ribbon Outfit",
+    "aliases": [
+      "Present Ribbon"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-47",
+    "parent_outfit": "OF014",
+    "canonical_name": "Rope Outfit",
+    "aliases": [
+      "Decorative Rope"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-48",
+    "parent_outfit": "OF014",
+    "canonical_name": "Chain Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-49",
+    "parent_outfit": "OF014",
+    "canonical_name": "Blindfold Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-50",
+    "parent_outfit": "OF014",
+    "canonical_name": "Muzzle Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-51",
+    "parent_outfit": "OF014",
+    "canonical_name": "Kittysuit",
+    "aliases": [
+      "Cat Bunny Suit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-52",
+    "parent_outfit": "OF014",
+    "canonical_name": "Tactical Bunny Suit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-53",
+    "parent_outfit": "OF014",
+    "canonical_name": "Wa Bunny",
+    "aliases": [
+      "Japanese Bunny Suit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF014-54",
+    "parent_outfit": "OF014",
+    "canonical_name": "Reverse Cheongsam",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-55",
+    "parent_outfit": "OF014",
+    "canonical_name": "Reverse Kimono",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-56",
+    "parent_outfit": "OF014",
+    "canonical_name": "Reverse Miko Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-57",
+    "parent_outfit": "OF014",
+    "canonical_name": "Latex Maid Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-58",
+    "parent_outfit": "OF014",
+    "canonical_name": "Latex Nurse Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-59",
+    "parent_outfit": "OF014",
+    "canonical_name": "Swimsuit Maid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-60",
+    "parent_outfit": "OF014",
+    "canonical_name": "Bondage Maid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-61",
+    "parent_outfit": "OF014",
+    "canonical_name": "Bondage Miko",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF014-62",
+    "parent_outfit": "OF014",
+    "canonical_name": "Bandaged Bust",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015",
+    "parent_outfit": "",
+    "canonical_name": "NSFW",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-1",
+    "parent_outfit": "OF015",
+    "canonical_name": "Nude",
+    "aliases": [
+      "Naked"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-2",
+    "parent_outfit": "OF015",
+    "canonical_name": "Topless",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-3",
+    "parent_outfit": "OF015",
+    "canonical_name": "Bottomless",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-4",
+    "parent_outfit": "OF015",
+    "canonical_name": "Sheer Outfit",
+    "aliases": [
+      "Transparent Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-5",
+    "parent_outfit": "OF015",
+    "canonical_name": "See-Through Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-6",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Cup Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-7",
+    "parent_outfit": "OF015",
+    "canonical_name": "Crotchless Lingerie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-8",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Front Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-9",
+    "parent_outfit": "OF015",
+    "canonical_name": "Body Tape Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-10",
+    "parent_outfit": "OF015",
+    "canonical_name": "Pasties",
+    "aliases": [
+      "Nipple Covers"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-11",
+    "parent_outfit": "OF015",
+    "canonical_name": "Leaf Covering",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-12",
+    "parent_outfit": "OF015",
+    "canonical_name": "Towel Only",
+    "aliases": [
+      "Bath Towel"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-13",
+    "parent_outfit": "OF015",
+    "canonical_name": "Blanket Only",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-14",
+    "parent_outfit": "OF015",
+    "canonical_name": "Apron Only",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-15",
+    "parent_outfit": "OF015",
+    "canonical_name": "Naked Apron",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-16",
+    "parent_outfit": "OF015",
+    "canonical_name": "Strategic Covering",
+    "aliases": [
+      "Convenient Covering"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-17",
+    "parent_outfit": "OF015",
+    "canonical_name": "Wardrobe Malfunction",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-18",
+    "parent_outfit": "OF015",
+    "canonical_name": "Ripped Clothing",
+    "aliases": [
+      "Torn Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-19",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Shirt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-20",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Jacket",
+    "aliases": [
+      "Unzipped Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-21",
+    "parent_outfit": "OF015",
+    "canonical_name": "Slipped Clothing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-22",
+    "parent_outfit": "OF015",
+    "canonical_name": "Clothing Around Waist",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-23",
+    "parent_outfit": "OF015",
+    "canonical_name": "Clothing Around Ankles",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-24",
+    "parent_outfit": "OF015",
+    "canonical_name": "Undressed",
+    "aliases": [
+      "Disrobed"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-25",
+    "parent_outfit": "OF015",
+    "canonical_name": "Wet Clothing",
+    "aliases": [
+      "Soaked Outfit"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-26",
+    "parent_outfit": "OF015",
+    "canonical_name": "Clinging Clothing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-27",
+    "parent_outfit": "OF015",
+    "canonical_name": "Translucent Clothing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-28",
+    "parent_outfit": "OF015",
+    "canonical_name": "Exposed Underwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-29",
+    "parent_outfit": "OF015",
+    "canonical_name": "Visible Panties",
+    "aliases": [
+      "Pantyshot"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-30",
+    "parent_outfit": "OF015",
+    "canonical_name": "Visible Bra",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-31",
+    "parent_outfit": "OF015",
+    "canonical_name": "Underboob",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-32",
+    "parent_outfit": "OF015",
+    "canonical_name": "Sideboob",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-33",
+    "parent_outfit": "OF015",
+    "canonical_name": "Side Exposure",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-34",
+    "parent_outfit": "OF015",
+    "canonical_name": "Front Exposure",
+    "aliases": [
+      "Slipped Shoulder"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-35",
+    "parent_outfit": "OF015",
+    "canonical_name": "Backless Exposure",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-36",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Crotch Outfit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-37",
+    "parent_outfit": "OF015",
+    "canonical_name": "Lifted Skirt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-38",
+    "parent_outfit": "OF015",
+    "canonical_name": "Lifted Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-39",
+    "parent_outfit": "OF015",
+    "canonical_name": "Pulled Down Panties",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-40",
+    "parent_outfit": "OF015",
+    "canonical_name": "Pulled Aside Panties",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-41",
+    "parent_outfit": "OF015",
+    "canonical_name": "Unfastened Bra",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-42",
+    "parent_outfit": "OF015",
+    "canonical_name": "Slipped Bra Strap",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-43",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Robe",
+    "aliases": [
+      "Open Kimono"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF015-44",
+    "parent_outfit": "OF015",
+    "canonical_name": "Dress Unfastened",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-45",
+    "parent_outfit": "OF015",
+    "canonical_name": "Shirt Lifted",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-46",
+    "parent_outfit": "OF015",
+    "canonical_name": "Bra Removed",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-47",
+    "parent_outfit": "OF015",
+    "canonical_name": "Panties Removed",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-48",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Swimsuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-49",
+    "parent_outfit": "OF015",
+    "canonical_name": "Unfastened Bodysuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-50",
+    "parent_outfit": "OF015",
+    "canonical_name": "Robe Falling Off",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-51",
+    "parent_outfit": "OF015",
+    "canonical_name": "Kimono Slipped",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-52",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Uniform",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-53",
+    "parent_outfit": "OF015",
+    "canonical_name": "Open Armor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF015-54",
+    "parent_outfit": "OF015",
+    "canonical_name": "Destroyed Clothing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018",
+    "parent_outfit": "",
+    "canonical_name": "Clothing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1",
+    "parent_outfit": "OF018",
+    "canonical_name": "Tops",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-1",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "T-Shirt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-2",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Shirt",
+    "aliases": [
+      "Button-Up Shirt"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-3",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Blouse",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-4",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Tank Top",
+    "aliases": [
+      "Sleeveless Shirt"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-5",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Crop Top",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-6",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Turtleneck",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-7",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Hoodie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-8",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Sweater",
+    "aliases": [
+      "Pullover"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-9",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Cardigan",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-10",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Jacket",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-11",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Coat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-12",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Vest",
+    "aliases": [
+      "Waistcoat"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-13",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Tube Top",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-14",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Bodysuit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-1-15",
+    "parent_outfit": "OF018-1",
+    "canonical_name": "Bolero",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2",
+    "parent_outfit": "OF018",
+    "canonical_name": "Bottoms",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-1",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Skirt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-2",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Pleated Skirt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-3",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Mini Skirt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-4",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Long Skirt",
+    "aliases": [
+      "Maxi Skirt"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-5",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Shorts",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-6",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Pants",
+    "aliases": [
+      "Trousers"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-7",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Jeans",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-8",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Leggings",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-9",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Hot Pants",
+    "aliases": [
+      "Hotpants"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-10",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Cargo Pants",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-2-11",
+    "parent_outfit": "OF018-2",
+    "canonical_name": "Yoga Pants",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-3",
+    "parent_outfit": "OF018",
+    "canonical_name": "Dresses",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-3-1",
+    "parent_outfit": "OF018-3",
+    "canonical_name": "Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-3-2",
+    "parent_outfit": "OF018-3",
+    "canonical_name": "Off-Shoulder Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-3-3",
+    "parent_outfit": "OF018-3",
+    "canonical_name": "Strapless Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-3-4",
+    "parent_outfit": "OF018-3",
+    "canonical_name": "High-Slit Dress",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-4",
+    "parent_outfit": "OF018",
+    "canonical_name": "Outerwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-4-1",
+    "parent_outfit": "OF018-4",
+    "canonical_name": "Cape",
+    "aliases": [
+      "Cloak"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-4-2",
+    "parent_outfit": "OF018-4",
+    "canonical_name": "Poncho",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-4-3",
+    "parent_outfit": "OF018-4",
+    "canonical_name": "Apron",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-5",
+    "parent_outfit": "OF018",
+    "canonical_name": "Handwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-5-1",
+    "parent_outfit": "OF018-5",
+    "canonical_name": "Gloves",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-5-2",
+    "parent_outfit": "OF018-5",
+    "canonical_name": "Fingerless Gloves",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-5-3",
+    "parent_outfit": "OF018-5",
+    "canonical_name": "Opera Gloves",
+    "aliases": [
+      "Long Gloves"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-6",
+    "parent_outfit": "OF018",
+    "canonical_name": "Legwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-6-1",
+    "parent_outfit": "OF018-6",
+    "canonical_name": "Thigh-High Socks",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-6-2",
+    "parent_outfit": "OF018-6",
+    "canonical_name": "Knee-High Socks",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-6-3",
+    "parent_outfit": "OF018-6",
+    "canonical_name": "Crew Socks",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-6-4",
+    "parent_outfit": "OF018-6",
+    "canonical_name": "Loose Socks",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-6-5",
+    "parent_outfit": "OF018-6",
+    "canonical_name": "Pantyhose",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-6-6",
+    "parent_outfit": "OF018-6",
+    "canonical_name": "Stockings",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-6-7",
+    "parent_outfit": "OF018-6",
+    "canonical_name": "Leg Warmers",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7",
+    "parent_outfit": "OF018",
+    "canonical_name": "Footwear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-1",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "Boots",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-2",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "High Boots",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-3",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "Ankle Boots",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-4",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "Sneakers",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-5",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "Loafers",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-6",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "Sandals",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-7",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "High Heels",
+    "aliases": [
+      "Pumps"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF018-7-8",
+    "parent_outfit": "OF018-7",
+    "canonical_name": "Barefoot",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016",
+    "parent_outfit": "",
+    "canonical_name": "Accessories",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1",
+    "parent_outfit": "OF016",
+    "canonical_name": "Head Accessories",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-1",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Hair Ribbon",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-2",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Hair Bow",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-3",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Hair Clip",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-4",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Hairpin",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-5",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Flower Hair Ornament",
+    "aliases": [
+      "Flower Clip"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-6",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Headband",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-7",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Headpiece",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-8",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Tiara",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-9",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Crown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-10",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Veil",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-11",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Hat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-12",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Beret",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-13",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Baseball Cap",
+    "aliases": [
+      "Cap"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-14",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Beanie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-15",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Witch Hat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-16",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Earmuffs",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-17",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Hair Comb",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-18",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Hair Flower",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-19",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Cat Ear Headband",
+    "aliases": [
+      "Nekomimi Headband"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-20",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Bunny Ear Headband",
+    "aliases": [
+      "Usagimimi Headband"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-1-21",
+    "parent_outfit": "OF016-1",
+    "canonical_name": "Fox Ear Headband",
+    "aliases": [
+      "Kitsunemimi Headband"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-2",
+    "parent_outfit": "OF016",
+    "canonical_name": "Eyewear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-2-1",
+    "parent_outfit": "OF016-2",
+    "canonical_name": "Glasses",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-2-2",
+    "parent_outfit": "OF016-2",
+    "canonical_name": "Sunglasses",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-2-3",
+    "parent_outfit": "OF016-2",
+    "canonical_name": "Monocle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-2-4",
+    "parent_outfit": "OF016-2",
+    "canonical_name": "Eyepatch",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-2-5",
+    "parent_outfit": "OF016-2",
+    "canonical_name": "Goggles",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-2-6",
+    "parent_outfit": "OF016-2",
+    "canonical_name": "Visor",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-3",
+    "parent_outfit": "OF016",
+    "canonical_name": "Neck Accessories",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-3-1",
+    "parent_outfit": "OF016-3",
+    "canonical_name": "Necklace",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-3-2",
+    "parent_outfit": "OF016-3",
+    "canonical_name": "Choker",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-3-3",
+    "parent_outfit": "OF016-3",
+    "canonical_name": "Pendant",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-3-4",
+    "parent_outfit": "OF016-3",
+    "canonical_name": "Brooch",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-3-5",
+    "parent_outfit": "OF016-3",
+    "canonical_name": "Collar",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-3-8",
+    "parent_outfit": "OF016-3",
+    "canonical_name": "Scarf",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-4",
+    "parent_outfit": "OF016",
+    "canonical_name": "Hand & Arm Accessories",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-4-1",
+    "parent_outfit": "OF016-4",
+    "canonical_name": "Bracelet",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-4-2",
+    "parent_outfit": "OF016-4",
+    "canonical_name": "Bangle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-4-3",
+    "parent_outfit": "OF016-4",
+    "canonical_name": "Wristband",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-4-4",
+    "parent_outfit": "OF016-4",
+    "canonical_name": "Ring",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-4-5",
+    "parent_outfit": "OF016-4",
+    "canonical_name": "Armlet",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-5",
+    "parent_outfit": "OF016",
+    "canonical_name": "Waist Accessories",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-5-1",
+    "parent_outfit": "OF016-5",
+    "canonical_name": "Belt Pouch",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-5-2",
+    "parent_outfit": "OF016-5",
+    "canonical_name": "Chain Belt",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-5-3",
+    "parent_outfit": "OF016-5",
+    "canonical_name": "Decorative Chain",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-6",
+    "parent_outfit": "OF016",
+    "canonical_name": "Leg & Foot Accessories",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-6-1",
+    "parent_outfit": "OF016-6",
+    "canonical_name": "Anklet",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-6-2",
+    "parent_outfit": "OF016-6",
+    "canonical_name": "Leg Warmers",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-6-3",
+    "parent_outfit": "OF016-6",
+    "canonical_name": "Garter",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-7",
+    "parent_outfit": "OF016",
+    "canonical_name": "Jewelry & Piercings",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-7-1",
+    "parent_outfit": "OF016-7",
+    "canonical_name": "Earrings",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-7-2",
+    "parent_outfit": "OF016-7",
+    "canonical_name": "Multiple Earrings",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-7-3",
+    "parent_outfit": "OF016-7",
+    "canonical_name": "Nose Ring",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-7-4",
+    "parent_outfit": "OF016-7",
+    "canonical_name": "Lip Piercing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-7-5",
+    "parent_outfit": "OF016-7",
+    "canonical_name": "Navel Piercing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8",
+    "parent_outfit": "OF016",
+    "canonical_name": "Props",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-1",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Lollipop",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-2",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Lollipop Stick",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-3",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Plastic Cup",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-4",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Drink Can",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-5",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Bottle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-6",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Smartphone",
+    "aliases": [
+      "Phone"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-7",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Mirror",
+    "aliases": [
+      "Compact Mirror"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-8",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Umbrella",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-9",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Parasol",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-10",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Fan",
+    "aliases": [
+      "Folding Fan"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-11",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Book",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-12",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Plushie",
+    "aliases": [
+      "Stuffed Toy"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-13",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Microphone",
+    "aliases": [
+      "Mic"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-14",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Camera",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-15",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Ice Cream",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-16",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Coffee Cup",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-17",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Tea Cup",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-18",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Wine Glass",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-19",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Champagne Glass",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-20",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Bouquet",
+    "aliases": [
+      "Flower Bouquet"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-21",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Gift Box",
+    "aliases": [
+      "Present Box"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF016-8-22",
+    "parent_outfit": "OF016-8",
+    "canonical_name": "Shopping Bag",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017",
+    "parent_outfit": "",
+    "canonical_name": "NSFW Accessories",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-1",
+    "parent_outfit": "OF017",
+    "canonical_name": "Blindfold",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-2",
+    "parent_outfit": "OF017",
+    "canonical_name": "Muzzle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-3",
+    "parent_outfit": "OF017",
+    "canonical_name": "Collar",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-4",
+    "parent_outfit": "OF017",
+    "canonical_name": "Leash",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-5",
+    "parent_outfit": "OF017",
+    "canonical_name": "Handcuffs",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-6",
+    "parent_outfit": "OF017",
+    "canonical_name": "Leg Cuffs",
+    "aliases": [
+      "Ankle Cuffs"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF017-7",
+    "parent_outfit": "OF017",
+    "canonical_name": "Cuffs",
+    "aliases": [
+      "Wrist Cuffs"
+    ],
+    "verified": true
+  },
+  {
+    "id": "OF017-8",
+    "parent_outfit": "OF017",
+    "canonical_name": "Rope",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-9",
+    "parent_outfit": "OF017",
+    "canonical_name": "Chains",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-10",
+    "parent_outfit": "OF017",
+    "canonical_name": "Ball Gag",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "OF017-11",
+    "parent_outfit": "OF017",
+    "canonical_name": "Tape Gag",
+    "aliases": [],
+    "verified": true
+  }
+]

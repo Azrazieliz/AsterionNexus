@@ -1,0 +1,297 @@
+[
+  {
+    "id": "EC001",
+    "attribute": "Eye Color",
+    "canonical_name": "Black",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC002",
+    "attribute": "Eye Color",
+    "canonical_name": "Dark Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC003",
+    "attribute": "Eye Color",
+    "canonical_name": "Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC004",
+    "attribute": "Eye Color",
+    "canonical_name": "Light Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC005",
+    "attribute": "Eye Color",
+    "canonical_name": "Amber",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC006",
+    "attribute": "Eye Color",
+    "canonical_name": "Hazel",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC007",
+    "attribute": "Eye Color",
+    "canonical_name": "Gold",
+    "aliases": [
+      "Golden"
+    ],
+    "verified": true
+  },
+  {
+    "id": "EC008",
+    "attribute": "Eye Color",
+    "canonical_name": "Yellow",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC009",
+    "attribute": "Eye Color",
+    "canonical_name": "Orange",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC010",
+    "attribute": "Eye Color",
+    "canonical_name": "Red",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC011",
+    "attribute": "Eye Color",
+    "canonical_name": "Pink",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC012",
+    "attribute": "Eye Color",
+    "canonical_name": "Purple",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC013",
+    "attribute": "Eye Color",
+    "canonical_name": "Light Purple",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC014",
+    "attribute": "Eye Color",
+    "canonical_name": "Blue",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC015",
+    "attribute": "Eye Color",
+    "canonical_name": "Light Blue",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC016",
+    "attribute": "Eye Color",
+    "canonical_name": "Dark Blue",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC017",
+    "attribute": "Eye Color",
+    "canonical_name": "Cyan",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC018",
+    "attribute": "Eye Color",
+    "canonical_name": "Aqua",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC019",
+    "attribute": "Eye Color",
+    "canonical_name": "Turquoise",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC020",
+    "attribute": "Eye Color",
+    "canonical_name": "Green",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC021",
+    "attribute": "Eye Color",
+    "canonical_name": "Light Green",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC022",
+    "attribute": "Eye Color",
+    "canonical_name": "Dark Green",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC023",
+    "attribute": "Eye Color",
+    "canonical_name": "Emerald Green",
+    "aliases": [
+      "Emerald"
+    ],
+    "verified": true
+  },
+  {
+    "id": "EC024",
+    "attribute": "Eye Color",
+    "canonical_name": "Gray",
+    "aliases": [
+      "Grey"
+    ],
+    "verified": true
+  },
+  {
+    "id": "EC025",
+    "attribute": "Eye Color",
+    "canonical_name": "Silver",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC026",
+    "attribute": "Eye Color",
+    "canonical_name": "White",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "EC027",
+    "attribute": "Eye Color",
+    "canonical_name": "Multicolored",
+    "aliases": [
+      "Multi-colored",
+      "Multi Color"
+    ],
+    "verified": true
+  },
+  {
+    "id": "ET001",
+    "attribute": "Eye Traits",
+    "canonical_name": "Heterochromia",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET002",
+    "attribute": "Eye Traits",
+    "canonical_name": "Slit Pupils",
+    "aliases": [
+      "Cat Pupils"
+    ],
+    "verified": true
+  },
+  {
+    "id": "ET003",
+    "attribute": "Eye Traits",
+    "canonical_name": "Cross-Shaped Pupils",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET004",
+    "attribute": "Eye Traits",
+    "canonical_name": "Star-Shaped Pupils",
+    "aliases": [
+      "Star Eyes"
+    ],
+    "verified": true
+  },
+  {
+    "id": "ET005",
+    "attribute": "Eye Traits",
+    "canonical_name": "Spiral Eyes",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET006",
+    "attribute": "Eye Traits",
+    "canonical_name": "Ripple Eyes",
+    "aliases": [
+      "Concentric Eyes"
+    ],
+    "verified": true
+  },
+  {
+    "id": "ET007",
+    "attribute": "Eye Traits",
+    "canonical_name": "Multi-Ring Eyes",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET008",
+    "attribute": "Eye Traits",
+    "canonical_name": "Vertical Slit Pupils",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET009",
+    "attribute": "Eye Traits",
+    "canonical_name": "Horizontal Slit Pupils",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET010",
+    "attribute": "Eye Traits",
+    "canonical_name": "No Visible Pupils",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET011",
+    "attribute": "Eye Traits",
+    "canonical_name": "No Visible Iris",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET012",
+    "attribute": "Eye Traits",
+    "canonical_name": "Mechanical Eyes",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "ET013",
+    "attribute": "Eye Traits",
+    "canonical_name": "Multiple Pupils",
+    "aliases": [],
+    "verified": true
+  }
+]

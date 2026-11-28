@@ -75,3 +75,7 @@ The acceptance oracle should compare an annotated set of **real, authorized, rep
 ## Direct source relationship and other apps
 
 Nexus owns source segments, media editing, export and library state. **Control** may optionally orchestrate a separate multi-app creative workflow; it is never required for ordinary automatic Episode Assembly. Sound can generate/rework soundtrack and Art can generate visual assets through independent scoped calls, with provenance and owner approval. Neither gains authority to rewrite Nexus original files.
+
+## 2026-11-27 output convention
+
+The selected assembled series/episode collection becomes Series Name.mp4; a film becomes Film Title.mp4. Retain all source provenance and unique narrative content and publish verified outputs to TeraBox. Library video previews autoplay muted when centered and open to actual fullscreen playback on tap. See [16](16-APPROVED-EXPERIENCE-AND-ORGANISATION.md).

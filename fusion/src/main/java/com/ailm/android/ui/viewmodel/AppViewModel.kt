@@ -56,6 +56,9 @@ data class AppUiState(
     val knowledgeSummary: Map<String, Any> = emptyMap(),
     val reviewQueue: List<Map<String, Any>> = emptyList(),
     val reviewActionBusy: Boolean = false,
+    val reviewQueueLoaded: Boolean = false,
+    val reviewQueueLoading: Boolean = false,
+    val reviewQueueError: String? = null,
     val lowRatingSuggestions: List<Map<String, Any>> = emptyList(),
     val lowRatingLoading: Boolean = false,
     val lowRatingHasMore: Boolean = false,
@@ -235,14 +238,19 @@ class AppViewModel : ViewModel() {
 
     /** Refresh the durable review queue independently of automation run counters. */
     fun refreshReviewQueue() {
+        if (_uiState.value.reviewQueueLoading) return
+        _uiState.value = _uiState.value.copy(reviewQueueLoading = true, reviewQueueError = null)
         viewModelScope.launch(Dispatchers.IO) {
-            val refreshed = runCatching { StandaloneRuntime.getReviewQueue() }
-                .getOrElse { failure ->
-                    Log.w("AsterionReview", "Review queue refresh unavailable; cached entries retained.", failure)
-                    return@launch
-                }
+            val result = runCatching { StandaloneRuntime.getReviewQueue() }
             withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(reviewQueue = refreshed)
+                result.onSuccess { refreshed ->
+                    _uiState.value = _uiState.value.copy(reviewQueue = refreshed,
+                        reviewQueueLoaded = true, reviewQueueLoading = false, reviewQueueError = null)
+                }.onFailure { failure ->
+                    Log.w("AsterionReview", "Review refresh unavailable; cached entries retained.", failure)
+                    _uiState.value = _uiState.value.copy(reviewQueueLoading = false,
+                        reviewQueueError = "Review queue unavailable. Retry without resetting saved data.")
+                }
             }
         }
     }
@@ -322,6 +330,7 @@ class AppViewModel : ViewModel() {
                         knowledgePacks = knowledgePacks,
                         knowledgeSummary = knowledgeSummary,
                         reviewQueue = reviewQueue,
+                        reviewQueueLoaded = true, reviewQueueError = null,
                         tags = tags,
                         aiOverview = ai.overview,
                         aiExecutionChain = ai.executionChain,

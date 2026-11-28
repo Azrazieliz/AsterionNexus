@@ -71,6 +71,8 @@ object FusionDatabaseSchema {
     fun ensureArtifacts(db: SQLiteDatabase) {
         createFusionTables(db, ifNotExists = true)
         createCharacterSheetTable(db)
+        // Existing databases must receive the revision row and triggers too.
+        createTaxonomyRevision(db)
         createFusionIndexes(db, ifNotExists = true)
         createImmutableIdTriggers(db, ifNotExists = true)
         createLegacyImageSyncTriggers(db, ifNotExists = true)
@@ -83,6 +85,17 @@ object FusionDatabaseSchema {
      * no images, private examples or learned rows enter the public repository.
      */
     private fun createVisualLearningTables(db: SQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS fusion_visual_search_index (
+            image_id INTEGER PRIMARY KEY REFERENCES images(image_id) ON DELETE CASCADE,
+            source_hash TEXT NOT NULL, encoder_hash TEXT NOT NULL,
+            feature BLOB NOT NULL CHECK(length(feature)=768),updated_ms INTEGER NOT NULL
+        )""".trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_visual_search_encoder ON fusion_visual_search_index(encoder_hash,image_id)")
+        db.execSQL("""CREATE TRIGGER IF NOT EXISTS trg_visual_search_source_update AFTER UPDATE OF sha256,source_size_bytes ON fusion_image_fingerprints
+            WHEN old.sha256 IS NOT new.sha256 OR old.source_size_bytes IS NOT new.source_size_bytes
+            BEGIN DELETE FROM fusion_visual_search_index WHERE image_id=new.image_id; END""".trimIndent())
+        db.execSQL("""CREATE TRIGGER IF NOT EXISTS trg_visual_search_source_delete AFTER DELETE ON fusion_image_fingerprints
+            BEGIN DELETE FROM fusion_visual_search_index WHERE image_id=old.image_id; END""".trimIndent())
         db.execSQL("""
             CREATE TABLE IF NOT EXISTS fusion_visual_feature_cache (
                 image_id INTEGER NOT NULL,

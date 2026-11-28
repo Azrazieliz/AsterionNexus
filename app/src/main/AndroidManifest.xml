@@ -15,6 +15,10 @@
     <!-- Package visibility is needed to validate the installed peer certificate
          on Android 11+. Unknown apps still fail the UID/approval check. -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
         <package android:name="com.azrael.pixivdumpsync"/>
         <package android:name="com.asterion.control"/>
         <package android:name="com.asterion.art"/>
@@ -25,8 +29,8 @@
     <application
         android:name=".AsterionApplication"
         android:allowBackup="false"
-        android:icon="@drawable/ic_asterion_downloader"
-        android:roundIcon="@drawable/ic_asterion_downloader"
+        android:icon="@drawable/ic_asterion_nexus"
+        android:roundIcon="@drawable/ic_asterion_nexus"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
@@ -102,21 +106,34 @@
             android:authorities="${applicationId}.torrent-files"
             android:exported="false"
             android:grantUriPermissions="true" />
-        <activity android:name="com.asterion.nexus.NexusLibraryActivity"
+        <activity android:name="com.asterion.nexus.NexusPremiumHomeActivity"
             android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name="com.asterion.nexus.NexusLibraryActivity"
+            android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name="com.asterion.nexus.NexusPlaybackActivity"
             android:exported="false"/>
         <activity android:name="com.asterion.nexus.NexusCloudActivity"
             android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name="com.asterion.nexus.NexusSearchActivity"
             android:exported="false" android:windowSoftInputMode="adjustResize"/>
+        <activity android:name="com.asterion.nexus.NexusSourcesActivity"
+            android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusSafBrowserActivity"
+            android:exported="false"/>
         <activity android:name="com.asterion.nexus.NexusFusionActivity"
             android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusCoreActivity"
+            android:exported="false"/>
+        <!-- Pictures remain inside the one Nexus application, not external ACTION_VIEW. -->
+        <activity android:name="com.asterion.nexus.NexusImageViewerActivity"
+            android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusRecoveryActivity" android:exported="false"/>
+        <activity android:name="com.asterion.nexus.NexusMeshActivity" android:exported="false" />
         <activity android:name="com.asterion.nexus.NexusReaderActivity"
             android:exported="false" android:windowSoftInputMode="adjustResize"/>
         <activity android:name="com.asterion.nexus.NexusRounderPlaybackActivity"
@@ -124,6 +141,7 @@
         <!-- One distinct authority; never claim or disturb the installed Rounder provider. -->
         <provider android:name="com.openlocal.office.core.FgTeraboxDocumentsProvider"
             android:authorities="com.asterion.nexus.terabox.documents"
+            android:process=":terabox"
             android:permission="android.permission.MANAGE_DOCUMENTS"
             android:exported="true" android:grantUriPermissions="true">
             <intent-filter>
@@ -223,6 +241,14 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <!-- Boot restoration is a deferred JobService. No provider sync or
              Python initialization may occupy the BOOT_COMPLETED broadcast. -->
+        <service android:name="com.asterion.nexus.NexusOrganizationJob"
+            android:exported="true" android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service android:name="com.asterion.nexus.NexusTranslationJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"/>
+        <service android:name="com.asterion.nexus.NexusBookIndexJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"/>
         <service android:name=".RestoreDownloadSchedulesJob"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE"/>

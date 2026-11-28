@@ -1,0 +1,435 @@
+[
+  {
+    "id": "WP001",
+    "parent_weapon": "",
+    "canonical_name": "Melee",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-1",
+    "parent_weapon": "WP001",
+    "canonical_name": "Sword",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-2",
+    "parent_weapon": "WP001",
+    "canonical_name": "Greatsword",
+    "aliases": [
+      "Two-Handed Sword"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP001-3",
+    "parent_weapon": "WP001",
+    "canonical_name": "Katana",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-4",
+    "parent_weapon": "WP001",
+    "canonical_name": "Rapier",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-5",
+    "parent_weapon": "WP001",
+    "canonical_name": "Dagger",
+    "aliases": [
+      "Knife"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP001-6",
+    "parent_weapon": "WP001",
+    "canonical_name": "Spear",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-7",
+    "parent_weapon": "WP001",
+    "canonical_name": "Lance",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-8",
+    "parent_weapon": "WP001",
+    "canonical_name": "Halberd",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-9",
+    "parent_weapon": "WP001",
+    "canonical_name": "Axe",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-10",
+    "parent_weapon": "WP001",
+    "canonical_name": "Hammer",
+    "aliases": [
+      "Warhammer"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP001-11",
+    "parent_weapon": "WP001",
+    "canonical_name": "Mace",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-12",
+    "parent_weapon": "WP001",
+    "canonical_name": "Scythe",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-13",
+    "parent_weapon": "WP001",
+    "canonical_name": "Whip",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-14",
+    "parent_weapon": "WP001",
+    "canonical_name": "Club",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-15",
+    "parent_weapon": "WP001",
+    "canonical_name": "Naginata",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-16",
+    "parent_weapon": "WP001",
+    "canonical_name": "Trident",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-17",
+    "parent_weapon": "WP001",
+    "canonical_name": "Twinblade",
+    "aliases": [
+      "Double-Bladed Sword"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP001-18",
+    "parent_weapon": "WP001",
+    "canonical_name": "Flail",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP001-19",
+    "parent_weapon": "WP001",
+    "canonical_name": "Sickle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002",
+    "parent_weapon": "",
+    "canonical_name": "Ranged",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-1",
+    "parent_weapon": "WP002",
+    "canonical_name": "Bow",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-2",
+    "parent_weapon": "WP002",
+    "canonical_name": "Crossbow",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-3",
+    "parent_weapon": "WP002",
+    "canonical_name": "Handgun",
+    "aliases": [
+      "Pistol"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP002-4",
+    "parent_weapon": "WP002",
+    "canonical_name": "Revolver",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-5",
+    "parent_weapon": "WP002",
+    "canonical_name": "Rifle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-6",
+    "parent_weapon": "WP002",
+    "canonical_name": "Shotgun",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-7",
+    "parent_weapon": "WP002",
+    "canonical_name": "Sniper Rifle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-8",
+    "parent_weapon": "WP002",
+    "canonical_name": "Submachine Gun",
+    "aliases": [
+      "SMG"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP002-9",
+    "parent_weapon": "WP002",
+    "canonical_name": "Assault Rifle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-10",
+    "parent_weapon": "WP002",
+    "canonical_name": "Rocket Launcher",
+    "aliases": [
+      "RPG"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP002-11",
+    "parent_weapon": "WP002",
+    "canonical_name": "Grenade Launcher",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP002-12",
+    "parent_weapon": "WP002",
+    "canonical_name": "Minigun",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP003",
+    "parent_weapon": "",
+    "canonical_name": "Magic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP003-1",
+    "parent_weapon": "WP003",
+    "canonical_name": "Staff",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP003-2",
+    "parent_weapon": "WP003",
+    "canonical_name": "Wand",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP003-3",
+    "parent_weapon": "WP003",
+    "canonical_name": "Grimoire",
+    "aliases": [
+      "Spellbook"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP003-4",
+    "parent_weapon": "WP003",
+    "canonical_name": "Orb",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP003-5",
+    "parent_weapon": "WP003",
+    "canonical_name": "Scepter",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP003-6",
+    "parent_weapon": "WP003",
+    "canonical_name": "Talisman",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP003-7",
+    "parent_weapon": "WP003",
+    "canonical_name": "Magic Card",
+    "aliases": [
+      "Card Deck"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP005",
+    "parent_weapon": "",
+    "canonical_name": "Defensive",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP005-1",
+    "parent_weapon": "WP005",
+    "canonical_name": "Shield",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP005-2",
+    "parent_weapon": "WP005",
+    "canonical_name": "Tower Shield",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP005-3",
+    "parent_weapon": "WP005",
+    "canonical_name": "Buckler",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP006",
+    "parent_weapon": "",
+    "canonical_name": "Exotic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP006-1",
+    "parent_weapon": "WP006",
+    "canonical_name": "Chainsaw",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP006-2",
+    "parent_weapon": "WP006",
+    "canonical_name": "Chain Weapon",
+    "aliases": [
+      "Chain Blade"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP006-3",
+    "parent_weapon": "WP006",
+    "canonical_name": "Gauntlet",
+    "aliases": [
+      "Fist Weapon"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP006-4",
+    "parent_weapon": "WP006",
+    "canonical_name": "Claws",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP006-5",
+    "parent_weapon": "WP006",
+    "canonical_name": "Fan",
+    "aliases": [
+      "Tessen"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP006-6",
+    "parent_weapon": "WP006",
+    "canonical_name": "Umbrella",
+    "aliases": [
+      "Combat Umbrella"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP006-7",
+    "parent_weapon": "WP006",
+    "canonical_name": "Yo-Yo",
+    "aliases": [
+      "Combat Yo-Yo"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP006-8",
+    "parent_weapon": "WP006",
+    "canonical_name": "Instrument",
+    "aliases": [
+      "Musical Weapon"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP006-9",
+    "parent_weapon": "WP006",
+    "canonical_name": "Chains",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "WP006-10",
+    "parent_weapon": "WP006",
+    "canonical_name": "Puppet",
+    "aliases": [
+      "Marionette"
+    ],
+    "verified": true
+  },
+  {
+    "id": "WP006-11",
+    "parent_weapon": "WP006",
+    "canonical_name": "Mechanical Armament",
+    "aliases": [
+      "Mechanical Weapon"
+    ],
+    "verified": true
+  }
+]

@@ -211,7 +211,9 @@ internal object ReferenceKnowledgeParser {
                             .map(::cleanIdValue)
                             .filter(String::isNotBlank),
                         sheetAssetId = cleanId(obj, "sheet_asset_id"),
-                        metadata = emptyMap(),
+                        metadata = obj.optJSONObject("metadata")?.let { source ->
+                            source.keys().asSequence().associateWith { key -> source.opt(key)?.toString().orEmpty() }
+                        } ?: emptyMap(),
                     )
                     putUnique(
                         target = characters,
@@ -254,8 +256,12 @@ internal object ReferenceKnowledgeParser {
                 )
                     .asSequence()
                     .map { key -> cleanId(obj, key) }
-                    .firstOrNull(String::isNotBlank)
+                    .firstOrNull { it.isNotBlank() && !it.equals(id, ignoreCase = true) }
                     .orEmpty()
+                    .ifBlank {
+                        if (id.startsWith("SP")) stringList(obj.opt("related_species")).singleOrNull().orEmpty()
+                        else ""
+                    }
 
                 // Preserve owner-authored applicability and SP/SA relations.
                 // Never infer a required/forbidden trait from a free-text label.
@@ -268,6 +274,7 @@ internal object ReferenceKnowledgeParser {
                     "species_rules", "species_trait_requirements",
                     "species_trait_requirement", "trait_requirement",
                     "tag_scope", "scope", "applies_to",
+                    "related_species", "primary_eye_state", "primary_mouth_state", "verified",
                 )) {
                     if (obj.has(key)) metadata.put(key, obj.opt(key))
                 }
@@ -439,21 +446,57 @@ internal object ReferenceKnowledgeParser {
 internal class ReferenceKnowledgeImporter(
     private val knowledgeDatabase: KnowledgeDatabase,
 ) {
-    fun importZip(input: InputStream, sourceName: String): Map<String, Any> {
-        val documents = linkedMapOf<String, String>()
-        ZipInputStream(input).use { zip ->
-            while (true) {
-                val entry = zip.nextEntry ?: break
-                if (!entry.isDirectory && entry.name.lowercase(Locale.US).endsWith(".json")) {
-                    documents[entry.name.substringAfterLast('/')] = zip.readBytes().toString(Charsets.UTF_8)
+    fun importZip(input: InputStream, sourceName: String): Map<String, Any> =
+        runCatching { importDocuments(readZipDocuments(input), sourceName) }
+            .getOrElse { mapOf("ok" to false, "message" to (it.message ?: "Invalid reference archive")) }
+
+    companion object {
+        fun readZipDocuments(input: InputStream): Map<String, String> {
+            val documents = linkedMapOf<String, String>()
+            var entries = 0
+            var total = 0L
+            ZipInputStream(input).use { zip ->
+                while (true) {
+                    val entry = zip.nextEntry ?: break
+                    require(++entries <= 128) { "Too many archive entries" }
+                    val name = entry.name
+                    require(name.length <= 240 && !name.startsWith("/") &&
+                        name.indexOf(92.toChar()) < 0 && name.split('/').none { it == ".." || it == "." }) {
+                        "Invalid archive entry"
+                    }
+                    if (!entry.isDirectory) {
+                        require(name.endsWith(".json", ignoreCase = true)) { "Reference archive must contain only JSON documents" }
+                        val basename = name.substringAfterLast('/')
+                        require(basename.matches(Regex("[A-Za-z0-9._-]+[.]json")) &&
+                            !documents.containsKey(basename)) { "Duplicate or invalid JSON name" }
+                        val out = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(16384)
+                        while (true) {
+                            val count = zip.read(buffer)
+                            if (count < 0) break
+                            if (count == 0) continue
+                            total += count
+                            require(total <= 32L * 1024 * 1024 && out.size() + count <= 16 * 1024 * 1024) {
+                                "Reference archive exceeds the safe size limit"
+                            }
+                            out.write(buffer, 0, count)
+                        }
+                        val raw = Charsets.UTF_8.newDecoder()
+                            .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                            .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                            .decode(java.nio.ByteBuffer.wrap(out.toByteArray())).toString()
+                        require(ReferenceKnowledgeParser.looksLikeReferenceDocument(basename, raw)) {
+                            "Unsupported reference document: " + basename
+                        }
+                        documents[basename] = raw
+                    }
+                    zip.closeEntry()
                 }
-                zip.closeEntry()
             }
+            require(documents.isNotEmpty()) { "No reference JSON documents found" }
+            ReferenceKnowledgeParser.parseDocuments(documents)
+            return documents
         }
-        if (documents.isEmpty()) {
-            return mapOf("ok" to false, "message" to "No JSON knowledge files were found in $sourceName.")
-        }
-        return importDocuments(documents, sourceName)
     }
 
     fun importDocuments(documents: Map<String, String>, sourceName: String): Map<String, Any> {

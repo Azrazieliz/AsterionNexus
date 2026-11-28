@@ -28,7 +28,7 @@ import java.security.*;
  * Content remains in its source; only chapter/page bytes are requested.
  */
 public final class NexusReaderActivity extends Activity {
-    private static final int PANEL=0xff171a22,ACCENT=0xffcdad76,FG=0xfff0f0f2;
+    private static final int PANEL=0xff1b1e23,ACCENT=0xffd4d9e1,FG=0xfff4f5f7;
     private static final String ASSET_HOST="fg-assets.invalid";
     private final ExecutorService work=Executors.newSingleThreadExecutor();
     private WebView web;
@@ -36,10 +36,27 @@ public final class NexusReaderActivity extends Activity {
     private LinearLayout view;
     private TextView heading,position,prev,next;
     private volatile BookArchive book;
+    private volatile NexusRarBook rar;
     private volatile int count=0,current=0,mode=0;
     private Uri source;
     private String sourceKey;
     private byte[] document;
+    private String plainText;
+    private NexusSpreadsheet spreadsheet;
+    private JSONArray archiveEntries;
+    private TextView layoutButton;
+    private int layoutMode=0;
+    private int renderGeneration=0;
+    private boolean scrollReady=false;
+    private double restoreFraction=-1;
+    private int restoreChapter=-1;
+    private int restoreGeneration=-1;
+    private String canonicalSha;
+    private double fraction(){
+        if(web==null||web.getVisibility()!=View.VISIBLE||layoutMode!=0)return 0;
+        double height=web.getContentHeight()*(double)web.getScale();
+        return height<=0?0:Math.max(0,Math.min(1,web.getScrollY()/height));
+    }
     private int dp(int size){return (int)(getResources().getDisplayMetrics().density*size+.5f);}
     private static String safeHtml(String s){
         return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
@@ -63,6 +80,7 @@ public final class NexusReaderActivity extends Activity {
         source=getIntent().getData();
         if(source==null){finish();return;}
         sourceKey=NexusOriginalStore.sourceKey(source.toString());
+        if(NexusArchiveOperation.available(this,source))canonicalSha=source.getLastPathSegment();
         String type=getIntent().getType();
         String path=source.toString().toLowerCase(java.util.Locale.ROOT);
         if("application/pdf".equals(type)||path.endsWith(".pdf"))mode=1;
@@ -70,17 +88,32 @@ public final class NexusReaderActivity extends Activity {
                 ||path.endsWith(".docx"))mode=3;
         else if(path.endsWith(".cbz")||path.endsWith(".zip")||
             "application/zip".equals(type)||"application/vnd.comicbook+zip".equals(type))mode=2;
+        else if(NexusRarBook.supported(type)||path.endsWith(".cbr"))mode=6;
+        else if(NexusSpreadsheet.supported(type,getIntent().getStringExtra("title")))mode=7;
+        else if("text/plain".equals(type))mode=4;
         else mode=0;
-        getWindow().setStatusBarColor(0xff0c0e13);
-        getWindow().setNavigationBarColor(0xff0c0e13);
+        getWindow().setStatusBarColor(0xff0e1013);
+        getWindow().setNavigationBarColor(0xff0e1013);
         view=new LinearLayout(this);view.setOrientation(LinearLayout.VERTICAL);
-        view.setBackgroundColor(0xff0c0e13);
+        view.setBackgroundColor(0xff0e1013);
         view.setPadding(dp(12),dp(8),dp(12),dp(8));
         setContentView(view);
         heading=text(getIntent().getStringExtra("title")==null?
             "Reader":getIntent().getStringExtra("title"),16);
         heading.setSingleLine(true);heading.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        view.addView(heading,new LinearLayout.LayoutParams(-1,dp(45)));
+        LinearLayout metadataHeading=new LinearLayout(this);
+        metadataHeading.setGravity(Gravity.CENTER_VERTICAL);
+        metadataHeading.addView(heading,new LinearLayout.LayoutParams(0,dp(45),1));
+        if(mode==1||mode==2||mode==6){
+            layoutButton=button("Pages",()->switchLayout());
+            metadataHeading.addView(layoutButton,new LinearLayout.LayoutParams(-2,-2));
+        }
+        if(mode==2&&NexusArchiveOperation.available(this,source)){
+            metadataHeading.addView(button("Extract",()->NexusArchiveOperation.show(this,source)),new LinearLayout.LayoutParams(-2,-2));
+        }
+        if(canonicalSha!=null&&mode!=7)metadataHeading.addView(button("Bookmark",()->bookmarkDialog()),new LinearLayout.LayoutParams(-2,-2));
+        metadataHeading.addView(button("Details",()->NexusFileDetails.show(this,source,type,heading.getText().toString())),new LinearLayout.LayoutParams(-2,-2));
+        view.addView(metadataHeading,new LinearLayout.LayoutParams(-1,-2));
         position=text("Opening",12);position.setTextColor(ACCENT);
         view.addView(position,new LinearLayout.LayoutParams(-1,dp(28)));
         web=new WebView(this);
@@ -99,11 +132,51 @@ public final class NexusReaderActivity extends Activity {
                 if(!"https".equals(uri.getScheme())||!ASSET_HOST.equals(uri.getHost()))
                     return denied();
                 try{
+                    String path=uri.getPath();
+                    if(path!=null&&path.startsWith("/nexus-page/")&&(mode==1||mode==2||mode==6)){
+                        int index=Integer.parseInt(path.substring("/nexus-page/".length()));
+                        if(index<0||index>=count)return denied();
+                        if(mode==1){
+                            byte[] data=Base64.decode(UniversalReader.pdfPage(NexusReaderActivity.this,source,index,1280),Base64.DEFAULT);
+                            return new WebResourceResponse("image/jpeg",null,new ByteArrayInputStream(data));
+                        }
+                        if(mode==6){
+                            NexusRarBook currentRar=rar;
+                            if(currentRar==null)return denied();
+                            return new WebResourceResponse(currentRar.mime(index),null,
+                                new ByteArrayInputStream(currentRar.page(index)));
+                        }
+                        BookArchive b=book;
+                        if(b==null)return denied();
+                        String original=Uri.parse(b.archiveEntry(index)).getEncodedPath();
+                        return b.response(original);
+                    }
                     BookArchive currentBook=book;
                     if(currentBook==null)return denied();
                     WebResourceResponse asset=currentBook.response(uri.getEncodedPath());
                     return asset==null?denied():asset;
                 }catch(Exception e){return denied();}
+            }
+            @Override public void onPageFinished(WebView w,String url){
+                if(layoutMode==0&&restoreChapter==current&&restoreGeneration==renderGeneration&&restoreFraction>=0){
+                    final int generation=restoreGeneration;final double fraction=restoreFraction;
+                    w.postVisualStateCallback(generation,new WebView.VisualStateCallback(){
+                        @Override public void onComplete(long id){
+                            if(isDestroyed()||generation!=renderGeneration||restoreChapter!=current||layoutMode!=0)return;
+                            double height=w.getContentHeight()*(double)w.getScale();
+                            int range=(int)Math.max(0,Math.min(Integer.MAX_VALUE,height-w.getHeight()));
+                            w.scrollTo(0,(int)Math.min(range,Math.max(0,height*fraction)));
+                            restoreFraction=-1;restoreChapter=-1;restoreGeneration=-1;
+                        }
+                    });
+                }
+                if(layoutMode!=0&&!scrollReady){
+                    final int target=current;
+                    w.post(()->{if(layoutMode!=0&&!scrollReady){
+                        w.scrollTo(layoutMode==2?target*w.getWidth():0,layoutMode==1?target*w.getHeight():0);
+                        scrollReady=true;
+                    }});
+                }
             }
             @Override public boolean shouldOverrideUrlLoading(WebView w,WebResourceRequest request){
                 return true; // Internal page links never navigate to the public network.
@@ -113,8 +186,15 @@ public final class NexusReaderActivity extends Activity {
                     new ByteArrayInputStream(new byte[0]));
             }
         });
+        web.setOnScrollChangeListener((v,x,y,oldX,oldY)->{
+            if(layoutMode==0||!scrollReady||count==0)return;
+            int size=layoutMode==2?web.getWidth():web.getHeight();
+            if(size<=0)return;
+            int page=Math.max(0,Math.min(count-1,(layoutMode==2?x:y)/size));
+            if(page!=current){current=page;updatePosition();}
+        });
         image=new ImageView(this);
-        image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff11141a);
+        image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff15181d);
         view.addView(web,new LinearLayout.LayoutParams(-1,0,1));
         view.addView(image,new LinearLayout.LayoutParams(-1,0,1));
         image.setVisibility(View.GONE);
@@ -131,18 +211,55 @@ public final class NexusReaderActivity extends Activity {
         try{
             if(mode==1){
                 count=UniversalReader.pdfPages(this,source);
+            } else if(mode==6){
+                if(!NexusArchiveOperation.available(this,source))
+                    throw new IOException("Import a verified offline CBR before reading");
+                NexusRegistry registry=new NexusRegistry(this);
+                NexusRegistry.Item original=registry.find(source.getLastPathSegment());
+                if(original==null||!registry.verifyOriginal(original))throw new IOException("CBR source verification failed");
+                NexusRarBook opened=new NexusRarBook(registry.original(original));
+                if(isDestroyed()){opened.close();return;}
+                rar=opened;count=opened.count();
+            } else if(mode==7){
+                String title=getIntent().getStringExtra("title");
+                boolean csv="text/csv".equals(getIntent().getType())||(title!=null&&title.toLowerCase(java.util.Locale.ROOT).endsWith(".csv"));
+                spreadsheet=NexusSpreadsheet.open(readBounded(source,24*1024*1024),csv);
+                count=spreadsheet.count();
+            } else if(mode==4){
+                byte[] raw=readBounded(source,24*1024*1024);
+                plainText=java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                    .decode(java.nio.ByteBuffer.wrap(raw)).toString();
+                count=(plainText.length()+32767)/32768;
             } else if(mode==3){
                 document=readBounded(source,24*1024*1024);
                 count=(RichDocxPreview.blockCount(document)+35)/36;
             } else {
                 book=new BookArchive(this,source,mode==0);
-                if(mode==2)count=book.imageCount();
+                if(mode==2){
+                    count=book.imageCount();
+                    if(count==0){archiveEntries=book.fileList();mode=5;count=(archiveEntries.length()+99)/100;}
+                }
                 else count=book.chapterCount();
             }
             if(count<=0)throw new IOException("No readable pages in this source");
             int saved=getPreferences(Context.MODE_PRIVATE).getInt(sourceKey,0);
-            final int initial=Math.max(0,Math.min(count-1,saved));
-            runOnUiThread(()->display(initial));
+            NexusRegistry.Bookmark bookmark=null;
+            int canonical=-1;
+            if(canonicalSha!=null){
+                NexusRegistry registry=new NexusRegistry(this);
+                canonical=registry.readingPosition(canonicalSha);
+                if(canonical>=0)saved=canonical;
+                else bookmark=registry.bookmark(canonicalSha);
+            }
+            int requested=getIntent().getIntExtra("chapter",-1);
+            final NexusRegistry.Bookmark initialBookmark=bookmark;
+            final boolean useBookmark=requested<0&&canonical<0&&initialBookmark!=null&&initialBookmark.chapter<count;
+            final int initial=Math.max(0,Math.min(count-1,requested>=0?requested:useBookmark?initialBookmark.chapter:saved));
+            runOnUiThread(()->{
+                if(useBookmark){restoreChapter=initial;restoreFraction=initialBookmark.fraction;}
+                display(initial);
+            });
         }catch(Exception e){
             runOnUiThread(()->position.setText("Reader failed: "+e.getClass().getSimpleName()+
                 (e.getMessage()==null?"":": "+e.getMessage())));
@@ -154,19 +271,77 @@ public final class NexusReaderActivity extends Activity {
             if(input==null)throw new IOException("Cannot open source");
             byte[] buf=new byte[32768];int n;
             while((n=input.read(buf))!=-1){
-                if(n>limit-out.size())throw new IOException("DOCX exceeds 24 MiB safety limit");
+                if(n>limit-out.size())throw new IOException("Document exceeds 24 MiB safety limit");
                 out.write(buf,0,n);
             }
         }
         return out.toByteArray();
     }
+    private void bookmarkDialog(){
+        if(canonicalSha==null||count<=0||mode==5||mode==7)return;
+        final int chapter=current;
+        final double offset=fraction();
+        work.execute(()->{
+            try{
+                NexusRegistry.Bookmark saved=new NexusRegistry(this).bookmark(canonicalSha);
+                runOnUiThread(()->{
+                    if(isDestroyed()||isFinishing())return;
+                    android.app.AlertDialog.Builder d=new android.app.AlertDialog.Builder(this).setTitle("Reading bookmark")
+                        .setMessage(saved==null?"No saved bookmark":"Saved chapter / page "+(saved.chapter+1))
+                        .setPositiveButton("Save current position",(dialog,which)->work.execute(()->{
+                            try{new NexusRegistry(this).saveBookmark(canonicalSha,chapter,offset);
+                                runOnUiThread(()->{if(!isDestroyed())Toast.makeText(this,"Bookmark saved",Toast.LENGTH_SHORT).show();});}
+                            catch(Exception failure){runOnUiThread(()->{if(!isDestroyed())Toast.makeText(this,"Bookmark not saved",Toast.LENGTH_SHORT).show();});}
+                        })).setNegativeButton("Close",null);
+                    if(saved!=null&&saved.chapter<count)d.setNeutralButton("Go to bookmark",(dialog,which)->{
+                        if(layoutMode!=0){layoutMode=0;layoutButton.setText("Pages");web.stopLoading();}
+                        restoreChapter=saved.chapter;restoreFraction=saved.fraction;
+                        display(saved.chapter);
+                    });
+                    d.show();
+                });
+            }catch(Exception failure){runOnUiThread(()->{if(!isDestroyed())Toast.makeText(this,"Bookmark unavailable",Toast.LENGTH_SHORT).show();});}
+        });
+    }
+    private void updatePosition(){
+        position.setText((current+1)+" / "+count+(mode==7&&spreadsheet!=null?" · "+spreadsheet.label(current):""));
+        prev.setEnabled(current>0);next.setEnabled(current+1<count);
+        prev.setAlpha(current>0?1f:.3f);next.setAlpha(current+1<count?1f:.3f);
+        getPreferences(Context.MODE_PRIVATE).edit().putInt(sourceKey,current).apply();
+        if(mode!=5&&mode!=7&&count>0&&NexusArchiveOperation.available(this,source)){
+            final int p=current,n=count;final String sha=source.getLastPathSegment();
+            if(!work.isShutdown())work.execute(()->{
+                try{new NexusRegistry(getApplicationContext()).noteReadingProgress(sha,p,n);}
+                catch(RuntimeException ignored){}
+            });
+        }
+    }
+    private void switchLayout(){
+        if(count<=0||mode==5)return;
+        if(count>10000){position.setText("Continuous layout limited to 10,000 pages");return;}
+        layoutMode=(layoutMode+1)%3;
+        layoutButton.setText(layoutMode==0?"Pages":layoutMode==1?"Vertical":"Horizontal");
+        renderGeneration++;
+        scrollReady=false;
+        if(layoutMode==0){web.stopLoading();display(current);return;}
+        image.setVisibility(View.GONE);web.setVisibility(View.VISIBLE);
+        // Only local, app-generated markup. JavaScript and network remain disabled.
+        StringBuilder html=new StringBuilder("<html><meta name='viewport' content='width=device-width, initial-scale=1'><style>html,body{margin:0;background:#11141a;}body{display:flex;flex-direction:")
+            .append(layoutMode==2?"row":"column").append(";}img{flex:none;width:100vw;height:100vh;object-fit:contain;display:block;}</style>");
+        for(int i=0;i<count;i++)html.append("<img loading='lazy' src='https://fg-assets.invalid/nexus-page/").append(i).append("' alt='Page ").append(i+1).append("'>");
+        html.append("</html>");
+        web.loadDataWithBaseURL("https://fg-assets.invalid/",html.toString(),"text/html","UTF-8",null);
+    }
     private void display(int requested){
-        if(count==0||requested<0||requested>=count)return;
-        current=requested;
-        position.setText((requested+1)+" / "+count);
-        prev.setEnabled(requested>0);next.setEnabled(requested+1<count);
-        prev.setAlpha(requested>0?1f:.3f);next.setAlpha(requested+1<count?1f:.3f);
-        getPreferences(Context.MODE_PRIVATE).edit().putInt(sourceKey,requested).apply();
+        if(count==0||requested<0||requested>=count||isDestroyed())return;
+        current=requested;updatePosition();
+        if(layoutMode!=0){
+            if(scrollReady)web.scrollTo(layoutMode==2?requested*web.getWidth():0,layoutMode==1?requested*web.getHeight():0);
+            return;
+        }
+        final int generation=++renderGeneration;
+        if(restoreChapter==requested&&restoreFraction>=0)restoreGeneration=generation;
+        else{restoreChapter=-1;restoreFraction=-1;restoreGeneration=-1;}
         final int index=requested;
         work.submit(()->{
             try{
@@ -177,10 +352,25 @@ public final class NexusReaderActivity extends Activity {
                     Bitmap bmp=BitmapFactory.decodeByteArray(pixels,0,pixels.length);
                     if(bmp==null)throw new IOException("PDF page decode failed");
                     runOnUiThread(()->{
-                        if(current!=index){bmp.recycle();return;}
+                        if(isDestroyed()||current!=index||renderGeneration!=generation||layoutMode!=0){bmp.recycle();return;}
                         web.setVisibility(View.GONE);image.setVisibility(View.VISIBLE);
                         image.setImageBitmap(bmp);
                     });
+                } else if(mode==5){
+                    StringBuilder listing=new StringBuilder("<html><meta name='viewport' content='width=device-width, initial-scale=1'><body style='padding:14px;font:16px sans-serif;overflow-wrap:anywhere'><h2>Archive contents</h2>");
+                    int end=Math.min(archiveEntries.length(),(index+1)*100);
+                    for(int i=index*100;i<end;i++){
+                        JSONObject entry=archiveEntries.getJSONObject(i);
+                        listing.append("<p>").append(safeHtml(entry.optString("name"))).append("<br><small>")
+                            .append(entry.optLong("size",-1)).append(" bytes</small></p>");
+                    }
+                    listing.append("</body></html>");
+                    showHtml(listing.toString(),"https://fg-assets.invalid/",index,generation);
+                } else if(mode==7){
+                    showHtml(spreadsheet.html(index),"https://fg-assets.invalid/",index,generation);
+                } else if(mode==4){
+                    int start=index*32768,end=Math.min(plainText.length(),start+32768);
+                    showHtml("<html><meta name='viewport' content='width=device-width, initial-scale=1'><body style='white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;font:18px/1.6 sans-serif'>"+safeHtml(plainText.substring(start,end))+"</body></html>","https://fg-assets.invalid/",index,generation);
                 } else if(mode==3){
                     JSONArray chunks=new JSONArray(RichDocxPreview.window(document,index*36,36));
                     StringBuilder html=new StringBuilder("<html><meta name='viewport' content='width=device-width, initial-scale=1'><style>body{background:#f4f2ed;color:#151721;font:17px/1.6 sans-serif;padding:18px}img{max-width:100%}table{max-width:100%;overflow:auto}</style>");
@@ -189,18 +379,18 @@ public final class NexusReaderActivity extends Activity {
                         if(block!=null)html.append(block.optString(1));
                     }
                     html.append("</html>");
-                    showHtml(html.toString(),"https://fg-assets.invalid/",index);
-                } else if(mode==2){
-                    String url=book.archiveEntry(index);
+                    showHtml(html.toString(),"https://fg-assets.invalid/",index,generation);
+                } else if(mode==2||mode==6){
+                    String url=mode==6?"https://fg-assets.invalid/nexus-page/"+index:book.archiveEntry(index);
                     String html="<html><meta name='viewport' content='width=device-width, initial-scale=1'>"+
-                        "<style>html,body{margin:0;background:#11141a}img{width:100%;height:auto;display:block}</style>"+
+                        "<style>html,body{margin:0;background:#11141a}img{width:100vw;height:100vh;object-fit:contain;display:block}</style>"+
                         "<img src='"+safeHtml(url)+"' alt='Comic page'></html>";
-                    showHtml(html,url,index);
+                    showHtml(html,url,index,generation);
                 } else {
                     JSONObject chapter=book.chapter(index);
                     String html=chapter.optString("html","");
                     String base=chapter.optString("base","https://fg-assets.invalid/");
-                    showHtml(html,base,index);
+                    showHtml(html,base,index,generation);
                 }
             }catch(Exception e){
                 runOnUiThread(()->{
@@ -209,9 +399,9 @@ public final class NexusReaderActivity extends Activity {
             }
         });
     }
-    private void showHtml(String html,String base,int index){
+    private void showHtml(String html,String base,int index,int generation){
         runOnUiThread(()->{
-            if(current!=index)return;
+            if(isDestroyed()||current!=index||renderGeneration!=generation||layoutMode!=0)return;
             image.setVisibility(View.GONE);web.setVisibility(View.VISIBLE);
             web.loadDataWithBaseURL(base,html,"text/html","UTF-8",null);
         });
@@ -220,6 +410,7 @@ public final class NexusReaderActivity extends Activity {
         work.shutdownNow();
         if(web!=null){web.loadUrl("about:blank");web.destroy();}
         if(book!=null)try{book.close();}catch(Exception ignored){}
+        if(rar!=null)try{rar.close();}catch(Exception ignored){}
         super.onDestroy();
     }
 }

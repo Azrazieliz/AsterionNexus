@@ -44,7 +44,7 @@ class NduUploadService : Service() {
     override fun onCreate() {
         super.onCreate()
         getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL,"Nocturne TeraBox direct uploads",
+            NotificationChannel(CHANNEL,"Nexus TeraBox uploads",
                 NotificationManager.IMPORTANCE_LOW))
     }
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
@@ -112,12 +112,12 @@ class NduUploadService : Service() {
     }
     private fun notification(text:String):Notification {
         val open=PendingIntent.getActivity(this,0,
-            Intent(this,DownloaderHubActivity::class.java),
+            Intent(this,com.asterion.nexus.NexusPremiumHomeActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val halt=EmergencyBackfillStopReceiver.action(this)
         return Notification.Builder(this,CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
-            .setContentTitle("Nocturne / TeraBox")
+            .setContentTitle("Nexus / TeraBox")
             .setContentText(text.take(110))
             .setContentIntent(open)
             .setOngoing(true)

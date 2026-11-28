@@ -299,6 +299,13 @@ public final class AsterionControlBridgeProvider extends ContentProvider {
         requireOriginalControlCaller();
         if (extras == null || extras.getInt("protocol_version", 0) != 1)
             throw new IllegalArgumentException("Unsupported bridge protocol");
+        if ("asterion.v1.capabilities".equals(method)) {
+            JSONArray actions = new JSONArray();
+            actions.put(new JSONObjectBuilder().put("name","status").put("intent","status.read").build());
+            actions.put(new JSONObjectBuilder().put("name","diagnostics.summary").put("intent","diagnostics.read").build());
+            actions.put(new JSONObjectBuilder().put("name","capabilities").put("intent","capabilities.read").build());
+            return reply(new JSONObjectBuilder().put("pack_version",1).put("actions",actions).build());
+        }
         String requestId = extras.getString("request_id", "");
         if (!requestIdValid(requestId))
             throw new IllegalArgumentException("Invalid durable request ID");

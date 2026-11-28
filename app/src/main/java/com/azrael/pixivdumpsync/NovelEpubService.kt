@@ -510,49 +510,15 @@ object NovelEpubService {
     private fun safeName(raw:String):String=raw
         .replace(Regex("[^\\p{L}\\p{N} ._-]"),"_").trim().take(85)
         .ifBlank{"Novel"}
-    private fun commit(context:Context,file:File,title:String,asZip:Boolean):String {
+    private fun commit(context:Context,file:File,title:String,asZip:Boolean,source:String):String {
         val extension=if(asZip)".zip" else ".epub"
-        val values=ContentValues().apply{
-            put(MediaStore.Downloads.DISPLAY_NAME,safeName(title)+extension)
-            put(MediaStore.Downloads.MIME_TYPE,
-                if(asZip)"application/zip" else "application/epub+zip")
-            put(MediaStore.Downloads.RELATIVE_PATH,
-                Environment.DIRECTORY_DOWNLOADS+"/AsterionDownloader/Books/")
-            put(MediaStore.Downloads.IS_PENDING,1)
+        val item=file.inputStream().use{input->
+            com.asterion.nexus.NexusRegistry(context).ingest(input,safeName(title)+extension,
+                if(asZip)"application/zip" else "application/epub+zip",
+                "nexus-novel","owner",source,file.length(),null)
         }
-        val resolver=context.contentResolver
-        val uri=resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values)
-            ?:error("Cannot create EPUB download")
-        try{
-            // A complete EPUB is already ZIP-validated in private staging.
-            // Public Downloads is still an independent copy: compare the
-            // exact SHA-256 of the bytes written and read back before making
-            // it visible or attempting a separate cloud backup.
-            val copiedDigest=resolver.openOutputStream(uri,"w")?.use{output->
-                file.inputStream().buffered().use{input->
-                    com.asterion.videoflow.NativeMediaReceipt.copyAndDigest(
-                        input,output)
-                }
-            }?:error("EPUB Downloads destination not writable")
-            val written=resolver.openAssetFileDescriptor(uri,"r")
-                ?.use{it.length}?:-1L
-            require(written<0 || written==file.length()){"Incomplete EPUB file copy"}
-            val copyValid=resolver.openInputStream(uri)?.use{input->
-                com.asterion.videoflow.NativeMediaReceipt.matchesSavedCopy(
-                    input,copiedDigest)
-            }?:false
-            check(copyValid){"EPUB Downloads copy failed SHA-256 verification"}
-            val published=resolver.update(uri,ContentValues().apply{
-                put(MediaStore.Downloads.IS_PENDING,0)
-            },null,null)
-            check(published==1){
-                "EPUB bytes were written but Downloads publication failed"
-            }
-            return uri.toString()
-        }catch(t:Exception){
-            resolver.delete(uri,null,null)
-            throw t
-        }
+        com.asterion.nexus.NexusCloudPublication.enqueueIfConnected(context,item)
+        return com.asterion.nexus.NexusLibraryProvider.uriFor(context,item.sha256).toString()
     }
     private fun generate(context:Context,task:NovelEpubTask,stop:()->Boolean,
                          db:NovelEpubQueue):Pair<String,String>{
@@ -560,7 +526,8 @@ object NovelEpubService {
         val (title,chapters)=scan
         val signature=fingerprint(chapters)
         val cached=db.previous(task.url)
-        if(cached!=null && cached.second==signature){
+        if(cached!=null && cached.second==signature &&
+            Uri.parse(cached.first).authority==context.packageName+".library"){
             // Only treat this as an existing successful EPUB when Android can
             // still open the actual MediaStore entry. Never guess cloud presence.
             val present=runCatching{
@@ -584,22 +551,8 @@ object NovelEpubService {
             require(part.length()>2000){"Book archive content unexpectedly empty"}
             part.inputStream().use{ArchiveIntegrity.inspect(it,"EPUB")}
             check(!stop()){"EPUB job paused or cancelled before publishing"}
-            val saved=commit(context,part,title,false)
+            val saved=commit(context,part,title,false,task.url)
             if(!scan.cacheReused)saveCatalog(context,task.url,scan)
-            // Successful local export is authoritative. A separate cloud
-            // connection failure must never turn an already published EPUB
-            // into a failed generation and duplicate the entire book.
-            if(NduSettings.configured(context)){
-                runCatching{
-                    NduCloudQueue(context).use{cloud->
-                        cloud.enqueue("books",safeName(title)+".epub",Uri.parse(saved))
-                    }
-                    NduUploadService.launch(context)
-                }.onFailure{
-                    android.util.Log.w("AsterionEpub",
-                        "Local EPUB saved; cloud backup can be retried",it)
-                }
-            }
             return saved to signature
         }finally{part.delete()}
     }

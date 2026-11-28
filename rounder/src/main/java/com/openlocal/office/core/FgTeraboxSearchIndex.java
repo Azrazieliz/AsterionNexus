@@ -28,6 +28,9 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     }
     private static final int LIMIT=96;
     private final FgTeraboxClient cloud;
+    private final Context context;
+    private final String boundScope;
+    private volatile boolean closed=false;
     private final Listener listener;
     private final ExecutorService scanner=Executors.newSingleThreadExecutor();
     private final ExecutorService queries=Executors.newSingleThreadExecutor();
@@ -36,8 +39,13 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     private volatile long lastProgressMs=0;
 
     public FgTeraboxSearchIndex(Context context,FgTeraboxClient cloud,Listener listener) {
+        this(context,cloud,null,listener);
+    }
+    public FgTeraboxSearchIndex(Context context,FgTeraboxClient cloud,String scope,Listener listener) {
         super(context.getApplicationContext(),"rounder-terabox-search-v1.db",null,3);
         this.cloud=cloud;
+        this.context=context.getApplicationContext();
+        this.boundScope=scope;
         this.listener=listener;
         setWriteAheadLoggingEnabled(true);
     }
@@ -98,11 +106,12 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
         }
     }
     private String connectedScope(){
-        if(!cloud.configured())return "";
+        if(closed||!cloud.configured())return "";
         String scope=cloud.metadataScope();
-        return scope==null?"":scope;
+        return scope==null||(boundScope!=null&&!scope.equals(boundScope))?"":scope;
     }
-    public void ensure(boolean force){
+    public synchronized void ensure(boolean force){
+        if(closed)return;
         String scope=connectedScope();
         if(scope.isEmpty())return;
         if(!force && System.currentTimeMillis()<retryAfter.getOrDefault(scope,0L))return;
@@ -110,6 +119,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
         scanner.execute(()->{
             try{scan(scope,force);}
             catch(Exception e){
+                if(closed)return;
                 android.util.Log.w("FG_CLOUD_SEARCH","Index interrupted: "+e.getClass().getSimpleName());
                 retryAfter.put(scope,System.currentTimeMillis()+60000L);
                 try{
@@ -121,16 +131,10 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
         });
     }
     private void scan(String scope,boolean force)throws Exception {
+        if(closed)return;
         SQLiteDatabase db=getWritableDatabase();
-        // Names of a disconnected/replaced account must not remain searchable.
-        db.beginTransactionNonExclusive();
-        try{
-            db.execSQL("DELETE FROM objects WHERE scope<>?",new Object[]{scope});
-            db.execSQL("DELETE FROM pending WHERE scope<>?",new Object[]{scope});
-            db.execSQL("DELETE FROM accounts WHERE scope<>?",new Object[]{scope});
-            db.execSQL("DELETE FROM preview_marks WHERE scope<>?",new Object[]{scope});
-            db.setTransactionSuccessful();
-        }finally{db.endTransaction();}
+        FgTeraboxClient scoped=FgTeraboxClient.forScope(context,scope);
+        // Every query and write is scoped. Preserve sibling account indexes.
         State s=state(db,scope);
         if(s.building==0 && s.active>0 && !force){progress(scope,true);return;}
         int generation=s.building;
@@ -153,7 +157,8 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                 throw new java.io.IOException("TeraBox account disconnected or changed");
             // A failed metadata page is retried on the next scan, at this exact
             // folder/page. Cursor is persisted after each committed page.
-            JSONArray rows=cloud.listPageCached(task.path,task.page);
+            JSONArray rows=scoped.listPageCached(task.path,task.page);
+            if(!scope.equals(connectedScope()))throw new java.io.IOException("Cloud account changed");
             if(rows==null)throw new java.io.IOException("Cloud directory page is unavailable");
             writePage(db,scope,generation,task,rows);
             progress(scope,false);
@@ -249,10 +254,12 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     private static String escapeLike(String value){
         return value.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
     }
-    public void search(String text,String category,int offset,int request) {
+    public synchronized void search(String text,String category,int offset,int request) {
+        if(closed)return;
         ensure(false);
         String scope=connectedScope();
         queries.execute(()->{
+            if(closed)return;
             try{
                 State s=state(getReadableDatabase(),scope);
                 int gen=s.active>0?s.active:s.building;
@@ -264,13 +271,17 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                 boolean more=false;
                 boolean affected="affected".equals(category);
                 if(!scope.isEmpty()&&gen>0&&text!=null&&
-                   (!text.trim().isEmpty()||affected)){
+                   (!text.trim().isEmpty()||affected||"books".equals(category)||"video".equals(category)||"assets".equals(category)||"image".equals(category))){
                     ArrayList<String> params=new ArrayList<>();
                     String sql="SELECT o.path,o.name,o.kind,o.folder,o.size,o.modified,o.parent,o.listing_page,o.preview_missing,COALESCE(mark.marked,0) FROM objects o LEFT JOIN preview_marks mark ON mark.scope=o.scope AND mark.path=o.path WHERE o.scope=? AND o.generation=? AND o.needle LIKE ? ESCAPE '\\'";
                     params.add(scope);params.add(Integer.toString(gen));
                     params.add("%"+escapeLike(text.trim().toLowerCase(Locale.ROOT))+"%");
                     if(affected){
                         sql+=" AND o.kind='image' AND (o.preview_missing=1 OR COALESCE(mark.marked,0)=1)";
+                    }else if("books".equals(category)){
+                        sql+=" AND o.folder=0 AND (o.kind IN ('book','pdf','comic') OR lower(o.name) LIKE '%.docx' OR lower(o.name) LIKE '%.txt')";
+                    }else if("assets".equals(category)){
+                        sql+=" AND o.folder=0 AND o.kind NOT IN ('image','video','book','pdf','comic') AND lower(o.name) NOT LIKE '%.docx' AND lower(o.name) NOT LIKE '%.txt'";
                     }else if(category!=null&&!category.isEmpty()&&!category.equals("all")){
                         sql+=" AND o.kind=?";params.add(category);
                     }
@@ -288,7 +299,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                                 .put("folder",cursor.getInt(3)!=0)
                                 .put("size",cursor.getLong(4))
                                 .put("modified",cursor.getLong(5))
-                                .put("searchPath",cursor.getString(6))
+                                .put("searchPath",cursor.getString(6)).put("listingPage",cursor.getInt(7))
                                 .put("terabox",true).put("indexedSearch",true)
                                 .put("uri","fgterabox://file/"+Uri.encode(path));
                             if("image".equals(cursor.getString(2))){
@@ -307,9 +318,11 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                         }
                     }
                 }
+                if(!scope.equals(connectedScope()))return;
                 reply.put("items",results).put("hasMore",more);
                 listener.onSearch(reply.toString());
             }catch(Exception e){
+                if(closed)return;
                 android.util.Log.w("FG_CLOUD_SEARCH","Query rejected",e);
                 try{listener.onSearch(new JSONObject().put("token",request)
                     .put("scope",scope).put("items",new JSONArray())
@@ -537,12 +550,17 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
             db.setTransactionSuccessful();
         }finally{db.endTransaction();}
     }
+    @Override public synchronized void close(){
+        closed=true;
+        scanner.shutdownNow();queries.shutdownNow();
+        super.close();
+    }
     public void clear(){
         try{
             SQLiteDatabase db=getWritableDatabase();
-            db.execSQL("DELETE FROM objects");db.execSQL("DELETE FROM pending");
-            db.execSQL("DELETE FROM accounts");
-            db.execSQL("DELETE FROM preview_marks");
+            String scope=connectedScope();if(scope.isEmpty())return;
+            for(String table:new String[]{"objects","pending","accounts","preview_marks"})
+                db.execSQL("DELETE FROM "+table+" WHERE scope=?",new Object[]{scope});
         }catch(Exception ignored){}
     }
 }

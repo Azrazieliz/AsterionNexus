@@ -11,10 +11,12 @@ import android.text.TextUtils;
 import android.view.*;
 import android.widget.*;
 import com.azrael.pixivdumpsync.AsterionSearchHub;
+import com.ailm.android.runtime.StandaloneRuntime;
 import com.asterion.videoflow.NexusWebAcquisition;
 import com.openlocal.office.core.FgTeraboxClient;
 import com.openlocal.office.core.FgTeraboxDocumentsProvider;
 import com.openlocal.office.core.FgTeraboxSearchIndex;
+import com.openlocal.office.core.FgSearchIndex;
 import org.json.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -24,8 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Never sends search text to an online service without user selection.
  */
 public final class NexusSearchActivity extends Activity {
-    private static final int BACK=0xff0c0e13,PANEL=0xff1a1d27,EDGE=0xff454652,
-        PRIMARY=0xfff0f0f2,SECONDARY=0xffa4a8b2,ACCENT=0xffcbab73;
+    private static final int BACK=0xff0e1013,PANEL=0xff1b1e23,EDGE=0xff454a53,
+        PRIMARY=0xfff4f5f7,SECONDARY=0xffa8b0bb,ACCENT=0xffd4d9e1;
     private static final String[] MODES={"All videos","Adult videos","Hentai videos","Games","EPUB"};
     private final ExecutorService worker=Executors.newFixedThreadPool(3);
     private final AtomicInteger request=new AtomicInteger();
@@ -37,13 +39,19 @@ public final class NexusSearchActivity extends Activity {
     private LinearLayout results;
     private FgTeraboxClient cloud;
     private FgTeraboxSearchIndex index;
+    private FgSearchIndex authorizedIndex;
+    private final Map<String,List<Result>> safMatches=new LinkedHashMap<>();
     private String currentTerm="";
     private static final class Result {
         final String type,title,detail,source,id,mime;
         final long size;
+        final int chapter;
         Result(String type,String title,String detail,String source,String id,String mime,long size){
+            this(type,title,detail,source,id,mime,size,-1);
+        }
+        Result(String type,String title,String detail,String source,String id,String mime,long size,int chapter){
             this.type=type;this.title=title;this.detail=detail;this.source=source;
-            this.id=id;this.mime=mime;this.size=size;
+            this.id=id;this.mime=mime;this.size=size;this.chapter=chapter;
         }
     }
     private int dp(int x){return (int)(x*getResources().getDisplayMetrics().density+.5f);}
@@ -112,13 +120,34 @@ public final class NexusSearchActivity extends Activity {
                 });
             }
         });
+        authorizedIndex=new FgSearchIndex(this,new FgSearchIndex.Listener(){
+            @Override public void onResult(String response){
+                runOnUiThread(()->receiveSaf(response));
+            }
+            @Override public void onProgress(String response){
+                runOnUiThread(()->{
+                    try{
+                        JSONObject progress=new JSONObject(response);
+                        if(progress.optBoolean("building"))
+                            status.setText("Connected folders indexing · "+
+                                progress.optLong("indexed")+" metadata entries");
+                    }catch(Exception ignored){}
+                });
+            }
+        });
     }
     private void execute(){
         String query=term.getText().toString().trim();
         if(query.length()<2||query.length()>180){status.setText("Enter 2–180 characters");return;}
         currentTerm=query;
         final int requestId=request.incrementAndGet();
-        groups.clear();results.removeAllViews();
+        groups.clear();safMatches.clear();results.removeAllViews();
+        List<Uri> authorizedTrees=new NexusSourceRegistry(this).roots();
+        groups.put("Folders",Collections.emptyList());
+        for(Uri selected:authorizedTrees){
+            authorizedIndex.ensure(selected,false);
+            authorizedIndex.search(selected,query,"all",0,requestId);
+        }
         status.setText("Searching local and cloud metadata");
         worker.submit(()->{
             try{
@@ -129,6 +158,38 @@ public final class NexusSearchActivity extends Activity {
                     item.mime,item.length));
                 runOnUiThread(()->accept(requestId,"Local",found,null));
             }catch(Exception e){runOnUiThread(()->accept(requestId,"Local",
+                Collections.emptyList(),e.getClass().getSimpleName()));}
+        });
+        worker.submit(()->{
+            try{
+                StandaloneRuntime.INSTANCE.initialize(getApplicationContext());
+                var records=StandaloneRuntime.INSTANCE.searchByFilename(query,1,100);
+                ArrayList<Result> found=new ArrayList<>();
+                for(var item:records){
+                    String original=String.valueOf(item.getOrDefault("uri",
+                        item.getOrDefault("image_uri","")));
+                    if(!original.startsWith("content://"))continue;
+                    String title=String.valueOf(item.getOrDefault("filename","Indexed image"));
+                    found.add(new Result("core",title,"Core indexed artwork",
+                        "Core",original,"image/*",-1L));
+                }
+                runOnUiThread(()->accept(requestId,"Core",found,null));
+            }catch(Exception e){runOnUiThread(()->accept(requestId,"Core",
+                Collections.emptyList(),e.getClass().getSimpleName()));}
+        });
+        worker.submit(()->{
+            try{
+                List<NexusBookIndex.Hit> hits=new NexusBookIndex(this).search(query,100);
+                ArrayList<Result> found=new ArrayList<>();
+                for(NexusBookIndex.Hit hit:hits){
+                    NexusRegistry.Item source=new NexusRegistry(this).find(hit.sha256);
+                    if(source==null)continue;
+                    found.add(new Result("book",source.displayName,
+                        "Inside book · chapter "+(hit.chapter+1)+" · "+hit.excerpt,
+                        "Private text",hit.sha256,source.mime,source.length,hit.chapter));
+                }
+                runOnUiThread(()->accept(requestId,"Text",found,null));
+            }catch(Exception e){runOnUiThread(()->accept(requestId,"Text",
                 Collections.emptyList(),e.getClass().getSimpleName()));}
         });
         if(cloud.configured()){
@@ -162,6 +223,34 @@ public final class NexusSearchActivity extends Activity {
             });
         }
     }
+    private void receiveSaf(String raw){
+        try{
+            JSONObject response=new JSONObject(raw);
+            if(response.optInt("token",-1)!=request.get())return;
+            String root=response.optString("root","");
+            if(root.isBlank())return;
+            JSONArray items=response.optJSONArray("items");
+            ArrayList<Result> found=new ArrayList<>();
+            if(items!=null)for(int i=0;i<items.length();i++){
+                JSONObject object=items.optJSONObject(i);
+                if(object==null)continue;
+                String uri=object.optString("uri","");
+                if(!uri.startsWith("content://"))continue;
+                String mime=object.optString("mime","application/octet-stream");
+                found.add(new Result(object.optBoolean("folder")?"saf-folder":"saf",
+                    object.optString("name",uri),
+                    object.optString("searchPath",""),Uri.parse(root).getAuthority(),
+                    uri,mime,object.optLong("size",-1)));
+            }
+            safMatches.put(root,found);
+            ArrayList<Result> all=new ArrayList<>();
+            for(List<Result> rows:safMatches.values())
+                for(Result result:rows)if(all.size()<200)all.add(result);
+            groups.put("Folders",all);
+            render();
+        }catch(Exception ignored){}
+    }
+
     private void receiveCloud(String raw){
         try{
             JSONObject response=new JSONObject(raw);
@@ -187,13 +276,16 @@ public final class NexusSearchActivity extends Activity {
         groups.put(source,items);
         render();
         String state="Local "+groups.getOrDefault("Local",Collections.emptyList()).size()+
+            " · Text "+groups.getOrDefault("Text",Collections.emptyList()).size()+
+            " · Core "+groups.getOrDefault("Core",Collections.emptyList()).size()+
+            " · Folders "+groups.getOrDefault("Folders",Collections.emptyList()).size()+
             " · Cloud "+groups.getOrDefault("Cloud",Collections.emptyList()).size()+
             (online.isChecked()?" · Online "+groups.getOrDefault("Online",Collections.emptyList()).size():"");
         status.setText(error==null?state:state+" · "+source+" partial failure");
     }
     private void render(){
         results.removeAllViews();
-        for(String source:new String[]{"Local","Cloud","Online"}){
+        for(String source:new String[]{"Local","Text","Core","Folders","Cloud","Online"}){
             if(!groups.containsKey(source))continue;
             List<Result> items=groups.get(source);
             results.addView(text(source+" · "+items.size(),18,true),spaced(18));
@@ -211,6 +303,33 @@ public final class NexusSearchActivity extends Activity {
     }
     private void open(Result r){
         try{
+            if("book".equals(r.type)){
+                Intent reader=new Intent(this,NexusReaderActivity.class);
+                reader.setDataAndType(NexusLibraryProvider.uriFor(this,r.id),r.mime);
+                reader.putExtra("title",r.title);
+                reader.putExtra("chapter",r.chapter);
+                startActivity(reader);return;
+            }
+            if("core".equals(r.type)){
+                NexusFileOpen.open(this,Uri.parse(r.id),"image/*",r.title);
+                return;
+            }
+            if("saf".equals(r.type)){
+                NexusFileOpen.open(this,Uri.parse(r.id),r.mime,r.title);
+                return;
+            }
+            if("saf-folder".equals(r.type)){
+                Uri child=Uri.parse(r.id);
+                for(Uri tree:new NexusSourceRegistry(this).roots()){
+                    if(tree.getAuthority().equals(child.getAuthority())){
+                        Intent intent=new Intent(this,NexusSafBrowserActivity.class);
+                        intent.putExtra("tree",tree.toString());
+                        intent.putExtra("documentId",android.provider.DocumentsContract.getDocumentId(child));
+                        startActivity(intent);return;
+                    }
+                }
+                status.setText("Folder permission no longer granted");return;
+            }
             if("folder".equals(r.type)){
                 Intent open=new Intent(this,NexusCloudActivity.class);
                 open.putExtra("folder",r.id);startActivity(open);return;
@@ -259,6 +378,6 @@ public final class NexusSearchActivity extends Activity {
                 }).show();
     }
     @Override protected void onDestroy(){
-        worker.shutdownNow();index.close();super.onDestroy();
+        worker.shutdownNow();index.close();authorizedIndex.close();super.onDestroy();
     }
 }

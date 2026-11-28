@@ -21,8 +21,8 @@ import java.io.*;
 
 /** Native cloud browser, metadata-only indexed search and explicit offline publication. */
 public final class NexusCloudActivity extends Activity {
-    private static final int BACKGROUND=0xff0c0e13,PANEL=0xff191c25,WHITE=0xfff0f0f2,
-        SECONDARY=0xffa4a9b5,GOLD=0xffceac71,EDGE=0xff383c48;
+    private static final int BACKGROUND=0xff0e1013,PANEL=0xff1b1e23,WHITE=0xfff4f5f7,
+        SECONDARY=0xffa8b0bb,GOLD=0xffd4d9e1,EDGE=0xff454a53;
     private final ExecutorService queue=Executors.newFixedThreadPool(3);
     private final FgTeraboxClient[] cloud=new FgTeraboxClient[1];
     private FgTeraboxSearchIndex index;

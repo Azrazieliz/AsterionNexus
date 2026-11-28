@@ -1134,6 +1134,46 @@ object UnifiedDownloadsUi {
      * entire screen; stale results from a previous page are discarded.
      */
     @Suppress("UNUSED_PARAMETER")
+    /** Read-only Nexus projection of the SAME durable cross-module queues.
+     * Calls to original queue controls are intentionally unchanged.
+     */
+    data class NexusQueueEntry(
+        val key:String,val source:String,val title:String,val detail:String,
+        val state:String,val progress:Int?,val transferred:Long,val expected:Long,
+        val actionLabel:String?,val perform:(()->Unit)?,val remove:(()->Unit)?,
+        val savedUri:String?,val mime:String
+    )
+    @JvmStatic
+    fun snapshotForNexus(activity:Activity):List<NexusQueueEntry> {
+        val accounts=NduSettings.uploadAccounts(activity).associateBy{it.scope}
+        val labels=com.openlocal.office.core.FgTeraboxClient.accounts(activity).associate{it.scope to it.label}
+        val staged=NduCloudQueue(activity).use{it.nexusPublications()}.map{row->
+            val complete=row.state=="VERIFIED"&&row.size>0&&!row.path.isNullOrBlank()
+            val account=accounts[row.scope]
+            val state=if(complete)"DONE" else if(account==null)"HELD" else if(row.error!=null)"FAILED" else "QUEUED"
+            NexusQueueEntry("nexus-publication:"+row.scope+":"+row.uri,"TeraBox · "+(account?.let{labels[it.browserScope]}?:"Account unavailable"),row.name,
+                if(complete)"Remote receipt verified" else if(account==null)"Original account authorization unavailable" else row.error?:"Verified local bytes; remote publication pending",
+                state,if(complete)100 else null,if(complete)row.size else 0L,row.size,
+                if(complete||account==null)null else "Retry publication",if(complete||account==null)null else ({
+                    NduCloudQueue(activity).use{it.retryNexusScoped(row.uri,row.scope)}
+                    NduCloudScheduler.requestImmediate(activity);Unit
+                }),null,if(complete&&account!=null)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriForAccount(account.browserScope,row.path,row.size).toString() else null,
+                com.openlocal.office.core.FgTeraboxClient.mime(row.name))
+        }
+        val stagedUris=NduCloudQueue(activity).use{it.nexusPublications().map{row->row.uri}.toSet()}
+        return (staged+collect(activity).filterNot{row->row.saved?.let{it in stagedUris}==true}.take(350).map{row->
+            NexusQueueEntry(
+                rowId(row),row.source,row.filename,
+                row.info,row.state.name,
+                row.percent,row.receivedBytes,row.totalBytes,
+                row.actionText?.takeUnless{it=="COOLDOWN"},
+                if(row.hasPrimaryAction && row.actionText!=null &&
+                    row.actionText!="COOLDOWN")row.action else null,
+                row.onRemove,row.saved,row.mime
+            )
+        }).distinctBy{it.key}.take(500)
+    }
+
     fun render(a:Activity,parent:LinearLayout,refresh:()->Unit){
         val surface=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL}
         parent.addView(surface)

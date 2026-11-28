@@ -1,0 +1,702 @@
+[
+  {
+    "tag_id": "AC001",
+    "parent_action": null,
+    "canonical_name": "Movement",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-1",
+    "parent_action": "AC001",
+    "canonical_name": "Walking",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-2",
+    "parent_action": "AC001",
+    "canonical_name": "Running",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-3",
+    "parent_action": "AC001",
+    "canonical_name": "Jumping",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-4",
+    "parent_action": "AC001",
+    "canonical_name": "Falling",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-5",
+    "parent_action": "AC001",
+    "canonical_name": "Flying",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-6",
+    "parent_action": "AC001",
+    "canonical_name": "Swimming",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-7",
+    "parent_action": "AC001",
+    "canonical_name": "Crawling",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-8",
+    "parent_action": "AC001",
+    "canonical_name": "Climbing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC001-9",
+    "parent_action": "AC001",
+    "canonical_name": "Dodging",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC002",
+    "parent_action": null,
+    "canonical_name": "Idle",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC002-1",
+    "parent_action": "AC002",
+    "canonical_name": "Resting",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC002-2",
+    "parent_action": "AC002",
+    "canonical_name": "Sleeping",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC002-3",
+    "parent_action": "AC002",
+    "canonical_name": "Waiting",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC002-4",
+    "parent_action": "AC002",
+    "canonical_name": "Meditating",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC002-5",
+    "parent_action": "AC002",
+    "canonical_name": "Stretching",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003",
+    "parent_action": null,
+    "canonical_name": "Communication",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003-1",
+    "parent_action": "AC003",
+    "canonical_name": "Talking",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003-2",
+    "parent_action": "AC003",
+    "canonical_name": "Shouting",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003-3",
+    "parent_action": "AC003",
+    "canonical_name": "Whispering",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003-4",
+    "parent_action": "AC003",
+    "canonical_name": "Laughing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003-5",
+    "parent_action": "AC003",
+    "canonical_name": "Crying",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003-6",
+    "parent_action": "AC003",
+    "canonical_name": "Singing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC003-7",
+    "parent_action": "AC003",
+    "canonical_name": "Calling",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004",
+    "parent_action": null,
+    "canonical_name": "Daily Life",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-1",
+    "parent_action": "AC004",
+    "canonical_name": "Eating",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-2",
+    "parent_action": "AC004",
+    "canonical_name": "Drinking",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-3",
+    "parent_action": "AC004",
+    "canonical_name": "Cooking",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-4",
+    "parent_action": "AC004",
+    "canonical_name": "Cleaning",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-5",
+    "parent_action": "AC004",
+    "canonical_name": "Bathing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-6",
+    "parent_action": "AC004",
+    "canonical_name": "Studying",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-7",
+    "parent_action": "AC004",
+    "canonical_name": "Reading",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-8",
+    "parent_action": "AC004",
+    "canonical_name": "Writing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-9",
+    "parent_action": "AC004",
+    "canonical_name": "Drawing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-10",
+    "parent_action": "AC004",
+    "canonical_name": "Typing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-11",
+    "parent_action": "AC004",
+    "canonical_name": "Using Phone",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC004-12",
+    "parent_action": "AC004",
+    "canonical_name": "Shopping",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005",
+    "parent_action": null,
+    "canonical_name": "Interaction",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005-1",
+    "parent_action": "AC005",
+    "canonical_name": "Holding Object",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005-2",
+    "parent_action": "AC005",
+    "canonical_name": "Hugging",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005-3",
+    "parent_action": "AC005",
+    "canonical_name": "Holding Hands",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005-4",
+    "parent_action": "AC005",
+    "canonical_name": "Patting Head",
+    "aliases": [
+      "Headpat"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005-5",
+    "parent_action": "AC005",
+    "canonical_name": "Carrying",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005-6",
+    "parent_action": "AC005",
+    "canonical_name": "Pushing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC005-7",
+    "parent_action": "AC005",
+    "canonical_name": "Pulling",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC006",
+    "parent_action": null,
+    "canonical_name": "Combat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC006-1",
+    "parent_action": "AC006",
+    "canonical_name": "Attacking",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC006-2",
+    "parent_action": "AC006",
+    "canonical_name": "Blocking",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC006-3",
+    "parent_action": "AC006",
+    "canonical_name": "Aiming",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC006-4",
+    "parent_action": "AC006",
+    "canonical_name": "Shooting",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC006-5",
+    "parent_action": "AC006",
+    "canonical_name": "Swinging Weapon",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC006-6",
+    "parent_action": "AC006",
+    "canonical_name": "Defending",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC007",
+    "parent_action": null,
+    "canonical_name": "Magic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC007-1",
+    "parent_action": "AC007",
+    "canonical_name": "Casting Spell",
+    "aliases": [
+      "Spellcasting"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC007-2",
+    "parent_action": "AC007",
+    "canonical_name": "Channeling",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC007-3",
+    "parent_action": "AC007",
+    "canonical_name": "Summoning",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC007-4",
+    "parent_action": "AC007",
+    "canonical_name": "Charging Magic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC008",
+    "parent_action": null,
+    "canonical_name": "Performance",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC008-1",
+    "parent_action": "AC008",
+    "canonical_name": "Dancing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC008-2",
+    "parent_action": "AC008",
+    "canonical_name": "Playing Instrument",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC008-3",
+    "parent_action": "AC008",
+    "canonical_name": "Performing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC008-4",
+    "parent_action": "AC008",
+    "canonical_name": "Posing",
+    "aliases": [
+      "Modeling"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC009",
+    "parent_action": null,
+    "canonical_name": "Sports",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC009-1",
+    "parent_action": "AC009",
+    "canonical_name": "Exercising",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC009-2",
+    "parent_action": "AC009",
+    "canonical_name": "Lifting Weights",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC009-3",
+    "parent_action": "AC009",
+    "canonical_name": "Practicing",
+    "aliases": [
+      "Training"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC010",
+    "parent_action": null,
+    "canonical_name": "Romance",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC010-1",
+    "parent_action": "AC010",
+    "canonical_name": "Kissing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC010-2",
+    "parent_action": "AC010",
+    "canonical_name": "Cuddling",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC010-3",
+    "parent_action": "AC010",
+    "canonical_name": "Embracing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC010-4",
+    "parent_action": "AC010",
+    "canonical_name": "Dancing Together",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011",
+    "parent_action": null,
+    "canonical_name": "Sexual",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-1",
+    "parent_action": "AC011",
+    "canonical_name": "Deep Kiss",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-2",
+    "parent_action": "AC011",
+    "canonical_name": "Embracing",
+    "aliases": [
+      "Intimate Hug"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-3",
+    "parent_action": "AC011",
+    "canonical_name": "Caressing",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-4",
+    "parent_action": "AC011",
+    "canonical_name": "Fondling",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-5",
+    "parent_action": "AC011",
+    "canonical_name": "Masturbating",
+    "aliases": [
+      "Solo"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-6",
+    "parent_action": "AC011",
+    "canonical_name": "Fellatio",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-7",
+    "parent_action": "AC011",
+    "canonical_name": "Cunnilingus",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-8",
+    "parent_action": "AC011",
+    "canonical_name": "Anilingus",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-9",
+    "parent_action": "AC011",
+    "canonical_name": "Handjob",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-10",
+    "parent_action": "AC011",
+    "canonical_name": "Footjob",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-11",
+    "parent_action": "AC011",
+    "canonical_name": "Fingering",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-12",
+    "parent_action": "AC011",
+    "canonical_name": "Tribadism",
+    "aliases": [
+      "Scissoring"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-13",
+    "parent_action": "AC011",
+    "canonical_name": "Vaginal Intercourse",
+    "aliases": [
+      "Vaginal Sex"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-14",
+    "parent_action": "AC011",
+    "canonical_name": "Anal Intercourse",
+    "aliases": [
+      "Anal Sex"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-15",
+    "parent_action": "AC011",
+    "canonical_name": "Ejaculating",
+    "aliases": [
+      "Climax"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-16",
+    "parent_action": "AC011",
+    "canonical_name": "Facial",
+    "aliases": [
+      "Ejaculation on Face"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-17",
+    "parent_action": "AC011",
+    "canonical_name": "Bukkake",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-18",
+    "parent_action": "AC011",
+    "canonical_name": "Creampie",
+    "aliases": [
+      "Internal Ejaculation"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-19",
+    "parent_action": "AC011",
+    "canonical_name": "Paizuri",
+    "aliases": [
+      "Breastjob"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "AC011-20",
+    "parent_action": "AC011",
+    "canonical_name": "Grinding",
+    "aliases": [
+      "Frottage"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "RT001",
+    "parent_action": "RT001",
+    "canonical_name": "Safe",
+    "aliases": [
+      "SFW"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "RT002",
+    "parent_action": "RT002",
+    "canonical_name": "Suggestive",
+    "aliases": [
+      "Ecchi"
+    ],
+    "verified": true
+  },
+  {
+    "tag_id": "RT003",
+    "parent_action": "RT003",
+    "canonical_name": "Explicit",
+    "aliases": [
+      "NSFW",
+      "Hentai"
+    ],
+    "verified": true
+  }
+]

@@ -19,7 +19,9 @@ import java.util.Map;
 @androidx.media3.common.util.UnstableApi
 public final class FgTeraboxMediaDataSource implements DataSource {
     private final Uri contentUri;
-    private final FgTeraboxClient cloud;
+    private FgTeraboxClient cloud;
+    private final Context app;
+    private String openedScope;
     private String cloudPath;
     private long position;
     private long remaining=C.LENGTH_UNSET;
@@ -28,7 +30,7 @@ public final class FgTeraboxMediaDataSource implements DataSource {
 
     public FgTeraboxMediaDataSource(Context context,Uri uri){
         contentUri=uri;
-        cloud=new FgTeraboxClient(context.getApplicationContext());
+        app=context.getApplicationContext();
     }
     @Override public long open(DataSpec spec)throws IOException {
         try{
@@ -37,6 +39,8 @@ public final class FgTeraboxMediaDataSource implements DataSource {
             if(stream!=null){stream.close();stream=null;}
             closed=false;
             cloudPath=FgTeraboxDocumentsProvider.cloudPath(contentUri);
+            if(cloud==null){cloud=FgTeraboxDocumentsProvider.clientForUri(app,contentUri);openedScope=cloud.metadataScope();}
+            cloud.requireScope(openedScope);
             position=spec.position;
             remaining=spec.length;
             if(position<0)throw new IOException("Invalid media position");
@@ -45,6 +49,7 @@ public final class FgTeraboxMediaDataSource implements DataSource {
                 if(length>=0)remaining=Math.max(0,length-position);
             }
             stream=cloud.openRangeStream(cloudPath,position);
+            cloud.requireScope(openedScope);
             return remaining;
         }catch(Exception e){throw new IOException("Cannot open TeraBox media",e);}
     }
@@ -53,7 +58,9 @@ public final class FgTeraboxMediaDataSource implements DataSource {
         if(length==0)return 0;
         if(remaining==0)return C.RESULT_END_OF_INPUT;
         int requested=remaining<0?length:(int)Math.min((long)length,remaining);
+        cloud.requireScope(openedScope);
         int count=stream.read(destination,offset,requested);
+        cloud.requireScope(openedScope);
         if(count<0)return C.RESULT_END_OF_INPUT;
         position+=count;
         if(remaining>=0)remaining-=count;
