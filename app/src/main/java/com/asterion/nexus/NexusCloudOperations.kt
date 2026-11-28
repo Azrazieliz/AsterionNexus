@@ -22,7 +22,8 @@ object NexusCloudOperations {
         fun same(other:Remote)=account==other.account&&fsId==other.fsId&&bytes==other.bytes&&
             (md5.isEmpty()||other.md5.isEmpty()||md5==other.md5)
     }
-    data class Move(val id:String,val original:Remote,val target:String,val state:String,val updated:Long,val error:String)
+    data class ArtworkBinding(val imageId:Int,val sourceUri:String,val sha:String,val sourceFolder:String,val sourceRelative:String,val destinationRelative:String)
+    data class Move(val id:String,val original:Remote,val target:String,val state:String,val updated:Long,val error:String,val artwork:ArtworkBinding?=null)
     private fun path(input:String):String{
         require(input.length in 2..4096&&input.startsWith("/")&&!input.endsWith("/")&&!input.contains('\\'))
         require(input.drop(1).split('/').all{it.isNotBlank()&&it!="."&&it!=".."&&it.none{c->c.isISOControl()}})
@@ -57,6 +58,8 @@ object NexusCloudOperations {
             .put("fs_id",move.original.fsId).put("source",move.original.path).put("bytes",move.original.bytes)
             .put("md5",move.original.md5).put("target",move.target).put("state",move.state)
             .put("updated",move.updated).put("error",move.error.take(100))
+        move.artwork?.let{a->value.put("artwork",JSONObject().put("image_id",a.imageId).put("uri",a.sourceUri).put("sha",a.sha)
+            .put("source_folder",a.sourceFolder).put("source_relative",a.sourceRelative).put("destination_relative",a.destinationRelative))}
         val file=journal(context,move.id);val out=file.startWrite()
         try{out.write(value.toString().toByteArray(Charsets.UTF_8));file.finishWrite(out)}
         catch(e:Exception){file.failWrite(out);throw e}
@@ -69,7 +72,9 @@ object NexusCloudOperations {
         check(j.getInt("version")==1&&j.getString("id")==id)
         return Move(id,Remote(j.getString("account"),j.getLong("fs_id"),path(j.getString("source")),
             j.getLong("bytes"),j.getString("md5")),path(j.getString("target")),j.getString("state"),
-            j.getLong("updated"),j.optString("error"))
+            j.getLong("updated"),j.optString("error"),j.optJSONObject("artwork")?.let{a->
+                ArtworkBinding(a.getInt("image_id"),a.getString("uri"),a.getString("sha"),a.getString("source_folder"),
+                    a.getString("source_relative"),a.getString("destination_relative"))})
     }
     fun history(context:Context,limit:Int=60):List<Move>{
         require(limit in 1..200)
@@ -86,6 +91,16 @@ object NexusCloudOperations {
             NduCloudQueue(context).use{it.relocateVerified(account.scope,remote.fsId,from,to,remote.bytes)}
         }
         FgTeraboxSearchIndex(context,client,remote.account,null).use{it.noteMoved(remote.account,from,to)}
+        move.artwork?.let{a->
+            val source=a.sourceUri
+            val destination=com.openlocal.office.core.FgTeraboxDocumentsProvider.uriForAccount(remote.account,move.target,remote.bytes).toString()
+            val undo=to==remote.path
+            val folder=if(undo)a.sourceFolder else com.openlocal.office.core.FgTeraboxDocumentsProvider.folderUriForAccount(remote.account,to.substringBeforeLast('/').ifEmpty{"/"}).toString()
+            com.ailm.android.runtime.StandaloneRuntime.initialize(context.applicationContext)
+            check(com.ailm.android.runtime.StandaloneRuntime.nexusCommitCloudArtworkPath(a.imageId,
+                if(undo)destination else source,if(undo)source else destination,folder,to.substringBeforeLast('/').substringAfterLast('/'),
+                to.substringAfterLast('/'),if(undo)a.sourceRelative else a.destinationRelative,a.sha,remote.bytes)){"Core catalog reconciliation required"}
+        }
     }
     /** An automatic cycle never repeats a prior operation, including an
      * unresolved request or owner rollback. Read every journal, not just the UI page. */
@@ -99,7 +114,7 @@ object NexusCloudOperations {
         return ids
     }
     /** The source identity shown in the confirmation is re-read before mutation. */
-    @Synchronized fun move(context:Context,expected:Remote,directory:String,name:String,automatic:Boolean=false):Move{
+    @Synchronized fun move(context:Context,expected:Remote,directory:String,name:String,automatic:Boolean=false,artwork:ArtworkBinding?=null):Move{
         val destination=target(directory,name)
         require(destination!=expected.path){"Source and destination are identical"}
         // Root is a valid same-account destination; the server must fail on conflicts.
@@ -110,7 +125,12 @@ object NexusCloudOperations {
             check(expected.md5.isNotEmpty()&&current.md5==expected.md5){"Automatic routing requires matching remote checksum"}
             check(current.fsId !in priorMoves(context,current.account)){"Prior move requires explicit owner review"}
         }
-        var entry=persist(context,Move(UUID.randomUUID().toString(),current,destination,"PREPARED",System.currentTimeMillis(),""))
+        artwork?.let{
+            require(it.imageId>0&&it.sha.matches(Regex("[a-f0-9]{64}")))
+            val selected=com.openlocal.office.core.FgTeraboxDocumentsProvider.scopedFile(Uri.parse(it.sourceUri))
+            check(selected.scope==current.account&&selected.path==current.path&&selected.size==current.bytes)
+        }
+        var entry=persist(context,Move(UUID.randomUUID().toString(),current,destination,"PREPARED",System.currentTimeMillis(),"",artwork))
         val job="nexus-cloud-move:"+entry.id
         val registry=NexusRegistry(context)
         registry.job(job,"QUEUED",0,null)
@@ -129,12 +149,31 @@ object NexusCloudOperations {
         val wanted=if(undo)move.original.path else move.target
         val former=if(undo)move.target else move.original.path
         val actual=runCatching{inspect(client,move.original.account,wanted)}.getOrNull()
-        if(actual==null||!move.original.same(actual))
+        if(actual==null||!move.original.same(actual)||(move.original.md5.isNotEmpty()&&move.original.md5!=actual.md5))
             return state(context,move,if(undo)"UNDO_UNKNOWN" else "UNKNOWN","Destination identity not confirmed")
         val duplicate=runCatching{inspect(client,move.original.account,former)}.getOrNull()
         if(duplicate!=null&&move.original.same(duplicate))
             return state(context,move,if(undo)"UNDO_UNKNOWN" else "UNKNOWN","Identity reported at both paths")
-        note(context,client,move,former,wanted)
+        // Prove the old path is absent, or occupied by a different identity.
+        // An exception from fileDetails alone may be an outage, not absence.
+        if(duplicate==null){
+            try{
+                val parent=former.substringBeforeLast('/').ifEmpty{"/"}
+                var complete=false
+                for(page in 1..100){
+                    val rows=client.listPage(parent,page)
+                    for(i in 0 until rows.length()){
+                        val row=rows.optJSONObject(i)?:continue
+                        if(row.optString("path")==former&&row.optLong("fs_id",-1)==move.original.fsId)
+                            return state(context,move,if(undo)"UNDO_UNKNOWN" else "UNKNOWN","Old path still lists moved identity")
+                    }
+                    if(rows.length()<FgTeraboxClient.pageSize()){complete=true;break}
+                }
+                if(!complete)return state(context,move,if(undo)"UNDO_UNKNOWN" else "UNKNOWN","Old folder listing incomplete")
+            }catch(e:Exception){return state(context,move,if(undo)"UNDO_UNKNOWN" else "UNKNOWN","Old folder unavailable")}
+        }
+        try{note(context,client,move,former,wanted)}
+        catch(e:Exception){return state(context,move,if(undo)"UNDO_UNKNOWN" else "UNKNOWN","Verified remote move; catalog reconciliation required")}
         NexusRegistry(context).job("nexus-cloud-move:"+move.id,"INDEXED",move.original.bytes,null)
         return state(context,move,if(undo)"ROLLED_BACK" else "MOVED")
     }
