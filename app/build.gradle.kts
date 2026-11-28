@@ -334,3 +334,35 @@ val requireCoreReleaseModel = tasks.register("requireCoreReleaseModel") {
     }
 }
 tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(requireCoreReleaseModel) }
+
+/** Production release requires the actual offline reading model, not an empty
+ * app claiming OCR capability. Debug/source builds remain independent. */
+val requireBookOcrReleaseModel = tasks.register("requireBookOcrReleaseModel") {
+    val bundle = rootProject.file("fusion/src/main/assets/bundled_ppocrv5_cjk.zip")
+    inputs.file(bundle).optional()
+    doLast {
+        require(bundle.isFile && bundle.length() > 1_000_000L) {
+            "Verified PP-OCRv5 model missing: run scripts/prepare_nexus_ocr.py"
+        }
+        ZipFile(bundle).use { zip ->
+            val meta = zip.getEntry("metadata.json")
+            require(meta != null && meta.size in 1..100_000)
+            val descriptor = zip.getInputStream(meta).bufferedReader().use { it.readText() }
+            require(descriptor.contains("asterion-ppocrv5-cjk") &&
+                descriptor.contains("3b76726c3606c4af92f5133b359ed14e0d30a455") &&
+                descriptor.contains("reference_smoke") && descriptor.contains("artifact_sha256"))
+            for (name in listOf("det.onnx","rec.onnx","dict.txt")) {
+                val entry = zip.getEntry(name)
+                require(entry != null && entry.size in 1..100_000_000)
+                val md = MessageDigest.getInstance("SHA-256")
+                zip.getInputStream(entry).use { input ->
+                    val b = ByteArray(131072)
+                    while (true) { val n = input.read(b); if (n < 0) break; if(n>0)md.update(b,0,n) }
+                }
+                val digest = md.digest().joinToString("") { "%02x".format(it) }
+                require(descriptor.contains("\"$name\": \"$digest\"")) { "OCR artifact hash mismatch: $name" }
+            }
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(requireBookOcrReleaseModel) }
