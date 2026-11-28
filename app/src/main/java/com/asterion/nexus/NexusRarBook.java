@@ -54,14 +54,49 @@ public final class NexusRarBook implements Closeable {
         if(n.endsWith(".avif"))return "image/avif";
         return null;
     }
-    public NexusRarBook(File source)throws Exception{
+    private static int u16(RandomAccessFile r)throws IOException{
+        return r.readUnsignedByte()|(r.readUnsignedByte()<<8);
+    }
+    private static long u32(RandomAccessFile r)throws IOException{
+        return (long)u16(r)|((long)u16(r)<<16);
+    }
+    /** Bound every physical header before Junrar allocates its header list.
+     * This adapter intentionally admits ordinary RAR4, not SFX/RAR5/recovery
+     * extensions. Large-header and multipart archives require a separate path. */
+    static void preflight(File source)throws IOException{
         require(source.isFile()&&source.length()>7&&source.length()<=MAX_ARCHIVE,"RAR source unavailable or exceeds 1 GiB");
-        // RAR4 has a known CRC32 member contract. RAR5 and SFX are not silently
-        // admitted through this adapter until their separate acceptance tests exist.
-        try(InputStream input=new FileInputStream(source)){
+        try(RandomAccessFile file=new RandomAccessFile(source,"r")){
             byte[] marker={0x52,0x61,0x72,0x21,0x1a,0x07,0x00};
-            for(byte b:marker)require(input.read()==(b&255),"Unsupported RAR generation; RAR4 required");
+            for(byte b:marker)require(file.read()==(b&255),"Unsupported RAR generation; RAR4 required");
+            long position=7, length=file.length();int headers=0;boolean main=false,end=false;
+            while(position<length){
+                if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("RAR opening cancelled");
+                require(++headers<=MAX_ENTRIES+2&&length-position>=7,"RAR header count or bounds invalid");
+                file.seek(position);u16(file);
+                int type=file.readUnsignedByte(),flags=u16(file),size=u16(file);
+                require(size>=7&&size<=length-position,"RAR header length invalid");
+                if(!main){
+                    require(type==0x73&&size>=13&&(flags&0x89)==0&&(flags&0x8000)==0,"Unsupported main RAR header");
+                    main=true;
+                }else if(type==0x74){
+                    require(size>=32&&(flags&0x8000)!=0&&(flags&0x0117)==0,"Unsupported file RAR header");
+                }else if(type==0x7b){
+                    require((flags&0x8000)==0,"Unsupported end header");
+                    end=true;
+                }else throw new IOException("Unsupported RAR extension header");
+                long packed=0;
+                if((flags&0x8000)!=0){
+                    require(size>=11,"Missing RAR packed size");packed=u32(file);
+                }
+                require(packed<=length-position-size,"RAR member exceeds source bounds");
+                position+=size+packed;
+                if(end){require(position==length,"Trailing data after RAR end");break;}
+            }
+            require(main&&end,"RAR archive is incomplete");
         }
+    }
+    public NexusRarBook(File source)throws Exception{
+        preflight(source);
         archive=new Archive(source,ArchiveOptions.builder().maxDictionarySize(32L*1024*1024).build());
         try{
             require(archive.getMainHeader()!=null&&!archive.getMainHeader().isMultiVolume()
