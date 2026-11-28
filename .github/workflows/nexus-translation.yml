@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/prepare_nexus_translation.py'
       - 'app/src/main/cpp/nexus_sentencepiece.cpp'
+      - 'app/src/main/cpp/CMakeLists.txt'
+      - 'app/src/main/java/com/asterion/nexus/NexusRasterEdition.kt'
       - 'app/src/main/java/com/asterion/nexus/NexusMarianEngine.kt'
       - 'app/src/main/java/com/asterion/nexus/NexusTranslationQueue.kt'
       - '.github/workflows/nexus-translation.yml'
