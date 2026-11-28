@@ -164,7 +164,7 @@ public final class NexusBookIndex {
                 mark(pending.sha,"failed",error.getClass().getSimpleName(),-1,-1);
             }
         }
-        return seedMore||cjkMore||translationMore||hasQueued();
+        return seedMore||cjkMore||translationMore||seedTranslations()||hasQueued();
     }
     private static boolean interrupted(AtomicBoolean stop){
         return stop.get()||Thread.currentThread().isInterrupted();
