@@ -43,3 +43,12 @@ Authority: docs/00–16, especially owner-confirmed docs/16, and spec/acceptance
 - 21 additional JUnit test methods cover archive safety, recovery, CJK index terms and visual similarity math. These fixtures are committed, not certified executed.
 - Specification runs 46133608268 and 46133945687 passed on intermediate heads. Native runs 46133608311 and 46133945681 were cancelled/superseded by subsequent commits. Final implementation head before this audit update: 151d20416f7c623291a36c454de63baf42b5fb60. Final-head native regression is not yet verified.
 - No PC/phone work, physical acceptance, signed release, provider/account verification, or claims of complete implementation were made. PR #2 stays draft and unmerged.
+
+
+## Media operations continuation
+
+- Native media inspection: verified source hash, image geometry/color/animation metadata, track codecs/dimensions/audio properties, bounded packet probes and three representative video frame decode probes. JSON receipts explicitly distinguish representative inspection from complete decode validation.
+- Native derived still images: bounded aspect-preserving no-upscale resize and PNG/WebP-lossless/JPEG output, independent decode/readback verification, deterministic operation identity and registered provenance. Animation flattening is rejected; JPEG is rejected when alpha may be lost. Derived stills are converted to sRGB; EXIF stays with the original. Poster extraction uses a requested position and closest sync frame, not exact-time decoding.
+- Selected AAC extraction: one explicit audio track, lossless M4A remux, complete packet and relative timestamp hash comparison, codec configuration and registry readback verification. Unsupported codecs, encrypted or nonmonotonic samples fail closed. No general transcoding or codec conversion claim.
+- Shared opened-file details expose these actions without adding navigation destinations. Output remains local and verified; no automatic cloud publication or source deletion by these operations. Six geometry/identity regression fixtures added. Android execution and full-format tests outstanding.
+- Development batch staged separately to avoid cancelling the existing compile repeatedly, then promoted by fast-forward only. No user device operations or signed deployment.
