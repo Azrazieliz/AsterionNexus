@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items as staggeredItems
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -86,7 +89,7 @@ internal fun NexusCloudMediaPane(category:String,query:String,previewEnabled:Boo
         })
     }.toMap()}
     DisposableEffect(indexes){onDispose{token.incrementAndGet();indexes.values.forEach{it.close()}}}
-    val kind=when(category){"Books"->"books";"Videos"->"video";else->"assets"}
+    val kind=when(category){"Gallery"->"image";"Books"->"books";"Videos"->"video";else->"assets"}
     fun load(reset:Boolean){
         val request=if(reset)token.incrementAndGet() else token.get()
         for((scope,index) in indexes){
@@ -128,6 +131,11 @@ internal fun NexusCloudMediaPane(category:String,query:String,previewEnabled:Boo
             Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center){
                 if(pending.values.any{it}||building.values.any{it})CircularProgressIndicator(color=NexusVisual.silver)
                 else Text(if(accounts.isEmpty())"Connect TeraBox in Library" else "No indexed files in this category",color=NexusVisual.muted)
+            }
+        }else if(category=="Gallery"){
+            LazyVerticalStaggeredGrid(columns=StaggeredGridCells.Adaptive(140.dp),modifier=Modifier.weight(1f),
+                contentPadding=PaddingValues(5.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalItemSpacing=4.dp){
+                staggeredItems(rows,key={it.key}){item->CloudGalleryTile(item){onOpen(item.uri,item.mime,item.name,-1)}}
             }
         }else if(category=="Books"){
             val pager=rememberPagerState(pageCount={rows.size})
@@ -198,5 +206,24 @@ private fun CloudPoster(item:CloudMedia,book:Boolean){
     Box(Modifier.fillMaxSize().background(NexusVisual.imageBackdrop),contentAlignment=Alignment.Center){
         if(bitmap!=null)Image(bitmap!!.asImageBitmap(),item.name,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
         else Text(if(book)"Cover unavailable" else item.name.substringAfterLast('.', "FILE").uppercase(),color=NexusVisual.muted)
+    }
+}
+
+@Composable
+private fun CloudGalleryTile(item:CloudMedia,onOpen:()->Unit){
+    val ctx=LocalContext.current
+    val bitmap by produceState<Bitmap?>(null,item.key,item.modified){
+        value=withContext(Dispatchers.IO){runCatching{
+            val client=FgTeraboxClient.forScope(ctx,item.scope)
+            client.requireScope(item.scope)
+            val image=client.openThumbnail(item.path,item.parent,item.listingPage).use{BitmapFactory.decodeStream(it)}
+            client.requireScope(item.scope);image
+        }.getOrNull()}
+    }
+    val image=bitmap
+    Box(Modifier.fillMaxWidth().aspectRatio(image?.let{it.width.toFloat()/it.height.coerceAtLeast(1)}?.coerceIn(0.35f,3.0f)?:0.8f)
+        .background(NexusVisual.imageBackdrop).clickable(onClick=onOpen),contentAlignment=Alignment.Center){
+        if(image!=null)Image(image.asImageBitmap(),item.name,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+        else Text(item.name,modifier=Modifier.padding(8.dp),maxLines=3,overflow=TextOverflow.Ellipsis,color=NexusVisual.muted)
     }
 }
