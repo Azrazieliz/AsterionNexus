@@ -46,7 +46,7 @@ def normalize_graph(src, dst):
     # Names are an adapter contract, never a change to model computation.
     old = graph.input[0].name
     if old != "x":
-        assert "x" not in {v for n in graph.node for v in n.input+n.output}
+        assert "x" not in {v for n in graph.node for v in list(n.input)+list(n.output)}
         graph.input[0].name = "x"
         for n in graph.node:
             for i, v in enumerate(n.input):
@@ -101,7 +101,7 @@ def main():
         det=ort.InferenceSession(str(work/"det.onnx"),sess_options=opts,providers=["CPUExecutionProvider"])
         rec=ort.InferenceSession(str(work/"rec.onnx"),sess_options=opts,providers=["CPUExecutionProvider"])
         evidence=[]
-        for expected,index in [("今日は雨です",0),("今天下雨",2),("今天下雨",3)]:
+        for expected,index in [("今日は雨です",0),("今天下雨",2),("學習中文",3)]:
             font=ImageFont.truetype(FONT,40,index=index)
             im=Image.new("RGB",(320,96),"white")
             ImageDraw.Draw(im).text((12,14),expected,font=font,fill="black")
