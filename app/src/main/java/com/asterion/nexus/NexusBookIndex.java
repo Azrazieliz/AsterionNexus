@@ -95,9 +95,10 @@ public final class NexusBookIndex {
             helper.getWritableDatabase().insertWithOnConflict("books",null,row,SQLiteDatabase.CONFLICT_IGNORE);
         }finally{helper.close();}
     }
-    public void schedule(){
+    public void schedule(){schedule(false);}
+    void schedule(boolean continuation){
         JobScheduler scheduler=(JobScheduler)app.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        if(scheduler==null||scheduler.getPendingJob(JOB_ID)!=null)return;
+        if(scheduler==null||(!continuation&&scheduler.getPendingJob(JOB_ID)!=null))return;
         JobInfo job=new JobInfo.Builder(JOB_ID,new ComponentName(app,NexusBookIndexJob.class))
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_NONE)
             .setPersisted(true)
@@ -127,14 +128,19 @@ public final class NexusBookIndex {
         Pending pending=nextPending();
         if(pending==null)return seedMore||cjkMore;
         NexusRegistry.Item source=new NexusRegistry(app).find(pending.sha);
-        if(source==null){mark(pending.sha,"failed","Original registry item is unavailable",-1,-1);return hasQueued();}
+        if(source==null){mark(pending.sha,"failed","Original registry item is unavailable",-1,-1);return seedMore||cjkMore||hasQueued();}
         if(!supported(source.mime)){
             mark(pending.sha,"unsupported","No verified local-text reader",-1,-1);
-            return hasQueued();
+            return seedMore||cjkMore||hasQueued();
         }
         mark(pending.sha,"running","",pending.next,-1);
         try{
-            if(!new NexusRegistry(app).verifyOriginal(source))throw new IOException("Recorded source bytes failed verification");
+            // Ingestion already verified the full source; do not rehash a
+            // multi-GiB book on every two-page OCR continuation. Check the
+            // immutable registered file exists, and hash at start/end.
+            NexusRegistry registry=new NexusRegistry(app);
+            registry.original(source);
+            if(pending.next==0&&!registry.verifyOriginal(source))throw new IOException("Recorded source bytes failed verification");
             if(source.mime.equals("application/epub+zip"))indexEpub(pending,stop);
             else if("text/plain".equalsIgnoreCase(source.mime))indexPlainText(pending,stop);
             else if("application/pdf".equalsIgnoreCase(source.mime))indexPdf(pending,stop);
@@ -195,7 +201,7 @@ public final class NexusBookIndex {
                 i++;
             }
             if(i==0)throw new IOException("Empty text");
-            mark(p.sha,"complete","",i,i);
+            finishCoverage(p.sha,i);
         }
     }
     private void indexPdf(Pending p,AtomicBoolean stop)throws Exception {
@@ -272,12 +278,14 @@ public final class NexusBookIndex {
         if(result.getText().length()>MAX_TEXT_CHARS)throw new IllegalArgumentException("OCR text budget exceeded");
         record(sha,page,title,result.getText(),count,"native_ocr",result.getModelId(),result.getModelVersion(),coverage);
     }
-    private void finishCoverage(String sha,int count){
+    private void finishCoverage(String sha,int count)throws IOException{
+        NexusRegistry registry=new NexusRegistry(app);
+        if(!registry.verifyOriginal(registry.find(sha)))throw new IOException("Source failed final integrity verification");
         DB helper=new DB(app);
         int uncertain;
         try(Cursor c=helper.getReadableDatabase().rawQuery(
-            "SELECT count(*) FROM chapters WHERE sha=? AND (coverage!='native_text' OR characters=0)",new String[]{sha})){
-            uncertain=c.moveToFirst()?c.getInt(0):count;
+            "SELECT count(*),sum(CASE WHEN coverage='native_text' AND characters>0 THEN 1 ELSE 0 END) FROM chapters WHERE sha=?",new String[]{sha})){
+            uncertain=c.moveToFirst()?Math.max(0,count-c.getInt(1)):count;
         }finally{helper.close();}
         mark(sha,uncertain==0?"complete":"partial",uncertain==0?"":uncertain+" pages/sections have unvalidated OCR or incomplete text coverage",count,count);
     }
