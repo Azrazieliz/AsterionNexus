@@ -31,7 +31,9 @@ object NexusBookOcr {
                 if(total==0L)throw IOException("Empty page")
             }
             StandaloneRuntime.initialize(app)
-            val answer=StandaloneRuntime.runOcrPipeline(mapOf(
+            val bundled=StandaloneRuntime.ensureBundledBookOcr()
+            val preferred=if(bundled)mapOf<String,Any>("model_id" to "asterion-ppocrv5-cjk","version" to "5.0.1") else emptyMap()
+            val answer=StandaloneRuntime.runOcrPipeline(preferred+mapOf(
                 "image_path" to file.absolutePath,
                 "priority" to 5,
                 "max_retries" to 0,
