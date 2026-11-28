@@ -29,7 +29,7 @@ public final class NexusRounderPlaybackActivity extends Activity {
             video,()->finish(),null,()->NexusFileDetails.show(this,uri,getIntent().getType(),label==null?"Media":label));
         long position=getIntent().getLongExtra("nexus_position_ms",0L);
         if(saved!=null)position=saved.getLong("playback_position",position);
-        else if(position<=0&&sha!=null)position=getPreferences(MODE_PRIVATE).getLong("position:"+sha,0L);
+        else if(position<=0&&sha!=null)position=Math.max(0L,new NexusRegistry(this).playbackPosition(sha));
         if(position>0)player.seekToPosition(position);
         setContentView(player.getView());
     }
@@ -38,7 +38,7 @@ public final class NexusRounderPlaybackActivity extends Activity {
         long duration=player.durationMs(),position=player.positionMs();
         if(duration<=0||position<0||position>duration)return;
         long remaining=duration-position;
-        getPreferences(MODE_PRIVATE).edit().putLong("position:"+sha,remaining<=Math.min(3000L,duration/20L)?0L:position).apply();
+        try{new NexusRegistry(this).notePlaybackProgress(sha,remaining<=Math.min(3000L,duration/20L)?0L:position,duration);}catch(RuntimeException ignored){/* Media remains playable if checkpoint storage is unavailable. */}
     }
     @Override public void onResume(){super.onResume();handler.removeCallbacks(checkpoint);handler.postDelayed(checkpoint,15000L);}
     @Override public void onPause(){handler.removeCallbacks(checkpoint);saveProgress();if(player!=null)player.pausePlayback();super.onPause();}
