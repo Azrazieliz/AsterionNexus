@@ -127,7 +127,11 @@ internal object NexusRasterEdition{
                 val markup=pageMarkup(i,recognized,language){value->checkStop();translate(value)}
                 val page=File(work,"raster-"+i+".png")
                 val text=File(work,"raster-"+i+".xhtml")
-                atomic(page,png);atomic(text,markup.toByteArray(Charsets.UTF_8))
+                val markupBytes=markup.toByteArray(Charsets.UTF_8)
+                val existing=work.listFiles()?.filter{it.name.startsWith("raster-")&&(it.name.endsWith(".png")||it.name.endsWith(".xhtml"))&&it!=page&&it!=text}?.sumOf{it.length()}?:0L
+                require(existing+png.size+markupBytes.size<=MAX_TOTAL){"Raster edition expansion budget exceeded"}
+                require(work.usableSpace>png.size.toLong()+markupBytes.size+64L*1024*1024){"Insufficient working storage"}
+                atomic(page,png);atomic(text,markupBytes)
                 atomic(File(work,"raster-"+i+".json"),JSONObject().put("source",item.sha256).put("page",i)
                     .put("model",model).put("ocr",recognized.modelId+":"+recognized.modelVersion)
                     .put("regions",recognized.regions.size).put("detected",recognized.boxesDetected)
@@ -145,6 +149,7 @@ internal object NexusRasterEdition{
                 total+=png.length()+xhtml.length()
                 require(total<=MAX_TOTAL){"Raster edition expansion budget exceeded"}
             }
+            require(work.usableSpace>total+64L*1024*1024){"Insufficient edition output storage"}
             val out=File(work,"edition.epub")
             ZipOutputStream(BufferedOutputStream(FileOutputStream(out))).use{zip->
                 fun add(name:String,text:String){zip.putNextEntry(ZipEntry(name));zip.write(text.toByteArray(Charsets.UTF_8));zip.closeEntry()}
@@ -163,7 +168,7 @@ internal object NexusRasterEdition{
                     nav.append("<li><a href='page-").append(i).append(".xhtml'>Page ").append(i+1).append("</a></li>")
                 }
                 add("EPUB/nav.xhtml","<?xml version='1.0'?><html xmlns='http://www.w3.org/1999/xhtml' xmlns:epub='http://www.idpf.org/2007/ops'><head><title>Contents</title></head><body><nav epub:type='toc'><ol>"+nav+"</ol></nav></body></html>")
-                val stamp=java.time.Instant.now().toString().substringBefore('.')+"Z"
+                val stamp=java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS).toString()
                 add("EPUB/package.opf","<?xml version='1.0'?><package xmlns='http://www.idpf.org/2007/opf' version='3.0' unique-identifier='id'><metadata xmlns:dc='http://purl.org/dc/elements/1.1/'><dc:identifier id='id'>urn:sha256:"+item.sha256+"</dc:identifier><dc:title>"+esc(item.displayName+" — English annotated draft")+"</dc:title><dc:language>en</dc:language><meta property='dcterms:modified'>"+stamp+"</meta></metadata><manifest><item id='nav' href='nav.xhtml' media-type='application/xhtml+xml' properties='nav'/>"+manifest+"</manifest><spine>"+spine+"</spine></package>")
             }
             val verified=NexusZipExtraction.inspect(out)
