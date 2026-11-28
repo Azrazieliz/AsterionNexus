@@ -1,0 +1,59 @@
+name: Nexus offline translation candidate validation
+on:
+  pull_request:
+    paths:
+      - 'scripts/prepare_nexus_translation.py'
+      - 'app/src/main/cpp/nexus_sentencepiece.cpp'
+      - 'app/src/main/java/com/asterion/nexus/NexusMarianEngine.kt'
+      - 'app/src/main/java/com/asterion/nexus/NexusTranslationQueue.kt'
+      - '.github/workflows/nexus-translation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nexus-translation-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  native-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Fetch and verify exact model artifacts and execute reference inference
+        run: |
+          python -m pip install 'huggingface_hub==0.30.2' 'numpy==1.26.4' 'onnxruntime==1.22.1' 'sentencepiece==0.2.0'
+          python scripts/prepare_nexus_translation.py
+      - name: Install Android SDK and pinned NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "ndk;26.3.11579264" "cmake;3.22.1"
+      - name: Restore accepted Downloader engine asset
+        run: bash scripts/restore_downloader_wheel.sh
+      - name: Compile Android candidate with native tokenizer and actual weights
+        run: gradle --no-daemon --max-workers=2 :app:assembleDebug
+      - name: Verify the packaged native library and model assets
+        run: |
+          python - <<'PY'
+          import zipfile
+          with zipfile.ZipFile("app/build/outputs/apk/debug/app-debug.apk") as apk:
+              names=set(apk.namelist())
+              assert "lib/arm64-v8a/libnexus_sentencepiece.so" in names
+              for language in ("ja","ko","zh"):
+                  for name in ("manifest.json","encoder.onnx","decoder.onnx","source.spm","target.spm","vocab.json","config.json"):
+                      assert f"assets/translation-models/{language}/{name}" in names
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexus-translation-reference-smoke-not-device-certification
+          path: nexus_translation_smoke.json
+          retention-days: 7
