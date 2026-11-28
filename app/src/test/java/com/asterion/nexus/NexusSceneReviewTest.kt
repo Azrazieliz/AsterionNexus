@@ -20,7 +20,7 @@ class NexusSceneReviewTest {
     @Test fun adjacentRecapSuggestsCutOnlyWithInteriorWitness(){
         val sequence=(0..9).map{frame(it*2000L,if(it%2==0)30 else 180)}
         val before=sequence.map{it.copy(time=it.time+100000)}+listOf(frame(120000,240),frame(122000,240),frame(124000,240),frame(126000,240))
-        val after=sequence+listOf(frame(20000,240),frame(22000,240))
+        val after=sequence+listOf(frame(20000,0),frame(22000,0))
         val g=NexusSceneReview.adjacent(listOf(emptyList(),after),listOf(before,emptyList())).single()
         assertEquals(0,g.retainedIndex)
         assertTrue(g.label.contains("recap"))

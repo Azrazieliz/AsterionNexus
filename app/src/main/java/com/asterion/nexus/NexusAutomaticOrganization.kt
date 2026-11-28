@@ -132,7 +132,7 @@ object NexusAutomaticOrganization {
                                     if(entries.length()<FgTeraboxClient.pageSize()){complete=true;break}
                                 }
                                 if(!complete){review++;continue}
-                                outputName=NexusCanonicalNaming.candidate(identity,name,siblings)
+                                outputName=NexusCanonicalNaming.candidate(identity,name,siblings,false)
                             }
                             if(stop()||!settings.getBoolean(base+":enabled",false)){completed=false;break}
                             val receipt=NexusCloudOperations.move(c,current,route.destination,outputName,true)

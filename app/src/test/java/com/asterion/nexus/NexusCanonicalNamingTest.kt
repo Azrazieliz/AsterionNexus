@@ -14,4 +14,9 @@ class NexusCanonicalNamingTest{
         assertTrue(runCatching{NexusCanonicalNaming.prefix(NexusCanonicalNaming.Identity("character_model",character="Unverified"))}.isFailure)
         assertTrue(runCatching{NexusCanonicalNaming.prefix(NexusCanonicalNaming.Identity("object_model",objectName="../Object"))}.isFailure)
     }
+
+    @Test fun destinationNameIsNotMistakenForTheSource(){
+        val i=NexusCanonicalNaming.Identity("object_model",objectName="Object")
+        assertEquals("Object 2.stl",NexusCanonicalNaming.candidate(i,"Object 1.stl",listOf("Object 1.stl"),false))
+    }
 }

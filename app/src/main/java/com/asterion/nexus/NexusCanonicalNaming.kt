@@ -39,11 +39,11 @@ internal object NexusCanonicalNaming{
             else->name.substringAfterLast('.',"").also{require(it.matches(Regex("[A-Za-z0-9]{1,12}"))){"Original extension unavailable"}}
         }
     }
-    fun candidate(i:Identity,name:String,siblings:List<String>):String{
+    fun candidate(i:Identity,name:String,siblings:List<String>,sameDirectory:Boolean=true):String{
         val stem=prefix(i);val ext=extension(name)
         val matching=Regex("^"+Regex.escape(stem)+" ([1-9][0-9]*)\\."+Regex.escape(ext)+"$",RegexOption.IGNORE_CASE)
         // Do not renumber an already canonical, collision-free filename.
-        if(matching.matches(name)&&siblings.count{it.equals(name,true)}==1)return name
+        if(sameDirectory&&matching.matches(name)&&siblings.count{it.equals(name,true)}==1)return name
         val next=siblings.mapNotNull{matching.matchEntire(it)?.groupValues?.get(1)?.toIntOrNull()}.maxOrNull()?:0
         check(next<Int.MAX_VALUE){"Canonical sequence exhausted"}
         return (stem+" "+(next+1)+"."+ext).also{require(it.toByteArray(Charsets.UTF_8).size<=255){"Filename too long"}}
