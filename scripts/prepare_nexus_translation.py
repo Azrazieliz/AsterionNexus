@@ -86,24 +86,45 @@ def smoke(directory, language):
         input_ids = np.array([ids + [eos]], dtype=np.int64)
         mask = np.ones_like(input_ids)
         hidden, = encoder.run(["last_hidden_state"], {"input_ids": input_ids, "attention_mask": mask})
-        tokens = [pad]
+        # Rank by sequence likelihood, not fixture words.
+        width = 4
+        beams = [([pad], 0.0)]
+        completed = []
         for _ in range(max(48, min(384, input_ids.shape[1] * 4 + 32))):
-            scores, = decoder.run(["logits"], {
-                "input_ids": np.array([tokens], dtype=np.int64),
-                "encoder_attention_mask": mask,
-                "encoder_hidden_states": hidden,
-            })
-            logits = scores[0, -1].copy()
-            logits[pad] = logits[unknown] = -np.inf
-            best = int(np.argmax(logits))
-            if not np.isfinite(logits[best]):
-                raise RuntimeError("Non-finite reference inference")
-            tokens.append(best)
-            if best == eos:
+            candidates = []
+            for prefix, total in beams:
+                scores, = decoder.run(["logits"], {
+                    "input_ids": np.array([prefix], dtype=np.int64),
+                    "encoder_attention_mask": mask,
+                    "encoder_hidden_states": hidden,
+                })
+                logits = scores[0, -1].astype(np.float64)
+                maximum = np.max(logits)
+                normalizer = maximum + np.log(np.exp(logits - maximum).sum())
+                logits[pad] = logits[unknown] = -np.inf
+                if len(prefix) == 1:
+                    logits[eos] = -np.inf
+                top = np.argsort(-logits, kind="stable")[:width]
+                for token in top:
+                    if not np.isfinite(logits[token]):
+                        continue
+                    candidate = (prefix + [int(token)], total + float(logits[token] - normalizer))
+                    if token == eos:
+                        completed.append(candidate)
+                    else:
+                        candidates.append(candidate)
+            rank = lambda pair: pair[1] / (len(pair[0]) - 1)
+            completed = sorted(completed, key=rank, reverse=True)[:width]
+            beams = sorted(candidates, key=lambda pair: pair[1], reverse=True)[:width]
+            if not beams:
                 break
-        if tokens[-1] != eos:
+            if len(completed) >= width and max(rank(pair) for pair in beams) <= rank(completed[-1]):
+                break
+        if not completed:
             raise RuntimeError("Reference inference did not complete")
+        tokens = completed[0][0]
         result = tgt.decode([reverse[i] for i in tokens[1:-1]])
+        print(f"{language}: {text!r} -> {result!r}", flush=True)
         if not result.strip() or result == text or not all(word in result.lower() for word in expected):
             raise RuntimeError(f"Reference semantic smoke failed for {language}: {result!r}")
         results.append({"input": text, "output": result, "source_ids": ids, "target_ids": tokens})
@@ -126,7 +147,7 @@ def prepare_language(language):
             shutil.copyfile(source, work / output)
         results = smoke(work, language)
         manifest = {"language": language, "revision": revision, "repo": repo,
-                    "reference_smoke_passed": True, "quality_certified": False,
+                    "reference_smoke_passed": True, "quality_certified": False, "decode_policy": "beam4-v1",
                     "sha256": {name: hash_file(work / name) for name in FILES}}
         (work / "manifest.json").write_text(json.dumps(manifest, indent=2))
         dest = ASSETS / language
@@ -154,5 +175,15 @@ if __name__ == "__main__":
     parser.add_argument("--languages", nargs="+", choices=list(REVISIONS), default=list(REVISIONS))
     args = parser.parse_args()
     prepare_spm()
-    evidence = {language: prepare_language(language) for language in args.languages}
-    (ROOT / "nexus_translation_smoke.json").write_text(json.dumps(evidence, indent=2, ensure_ascii=False))
+    evidence = {}
+    failed = []
+    for language in args.languages:
+        try:
+            evidence[language] = prepare_language(language)
+        except Exception as exc:
+            evidence[language] = {"error": str(exc), "reference_smoke_passed": False}
+            failed.append(language)
+        finally:
+            (ROOT / "nexus_translation_smoke.json").write_text(json.dumps(evidence, indent=2, ensure_ascii=False))
+    if failed:
+        raise SystemExit("Unvalidated translation languages: " + ", ".join(failed))
