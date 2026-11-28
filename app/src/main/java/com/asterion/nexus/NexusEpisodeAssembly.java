@@ -88,9 +88,13 @@ public final class NexusEpisodeAssembly {
     }
     private static long transfer(MediaExtractor extractor,Layout l,MediaMuxer muxer,int[] output,long offset,
                                  Evidence evidence)throws Exception{
+        return transfer(extractor,l,muxer,output,offset,evidence,0,Long.MAX_VALUE);
+    }
+    private static long transfer(MediaExtractor extractor,Layout l,MediaMuxer muxer,int[] output,long offset,
+                                 Evidence evidence,long keepFrom,long keepUntil)throws Exception{
         for(int k=0;k<2;k++)if(l.tracks[k]>=0)extractor.selectTrack(l.tracks[k]);
         long start=extractor.getSampleTime();require(start>=0,"Empty media");
-        long[] last={-1,-1},delta={0,0},first={-1,-1};
+        long[] last={-1,-1},delta={0,0},first={-1,-1},keptFirst={-1,-1},keptLast={-1,-1},keptDelta={0,0};
         ByteBuffer data=ByteBuffer.allocateDirect(1024*1024);
         MediaCodec.BufferInfo info=new MediaCodec.BufferInfo();
         while(extractor.getSampleTrackIndex()>=0){
@@ -108,12 +112,20 @@ public final class NexusEpisodeAssembly {
             }
             if(last[k]>=0)delta[k]=time-last[k];
             last[k]=time;
-            if(data.capacity()<size)data=ByteBuffer.allocateDirect((int)size);
-            data.clear();int read=extractor.readSampleData(data,0);require(read==size,"Sample truncated");
-            evidence.add(k,data,read);
-            if(muxer!=null){
-                info.set(0,read,Math.addExact(offset,time),(flags&MediaExtractor.SAMPLE_FLAG_SYNC)!=0?MediaCodec.BUFFER_FLAG_KEY_FRAME:0);
-                data.position(0);data.limit(read);muxer.writeSampleData(output[k],data,info);
+            if(time>=keepFrom&&time<keepUntil){
+                if(keptFirst[k]<0){
+                    keptFirst[k]=time;
+                    if(k==0)require((flags&MediaExtractor.SAMPLE_FLAG_SYNC)!=0,"Cut is not a video random-access point");
+                }
+                if(keptLast[k]>=0)keptDelta[k]=time-keptLast[k];
+                keptLast[k]=time;
+                if(data.capacity()<size)data=ByteBuffer.allocateDirect((int)size);
+                data.clear();int read=extractor.readSampleData(data,0);require(read==size,"Sample truncated");
+                evidence.add(k,data,read);
+                if(muxer!=null){
+                    info.set(0,read,Math.addExact(offset,time-keepFrom),(flags&MediaExtractor.SAMPLE_FLAG_SYNC)!=0?MediaCodec.BUFFER_FLAG_KEY_FRAME:0);
+                    data.position(0);data.limit(read);muxer.writeSampleData(output[k],data,info);
+                }
             }
             extractor.advance();
         }
@@ -127,7 +139,95 @@ public final class NexusEpisodeAssembly {
         }
         if(l.tracks[1]>=0)require(Math.abs((last[0]+delta[0])-(last[1]+delta[1]))<=500000,
             "Track durations differ excessively");
-        return end;
+        if(keepFrom==0&&keepUntil==Long.MAX_VALUE)return end;
+        long retainedEnd=0;
+        for(int k=0;k<2;k++)if(l.tracks[k]>=0){
+            require(keptFirst[k]>=0&&keptDelta[k]>0,"No usable samples after repeated edge cut");
+            require(keptFirst[k]-keepFrom<=100000,"Repeated edge cut would desynchronize the tracks");
+            long measured=keptLast[k]+keptDelta[k];
+            retainedEnd=Math.max(retainedEnd,measured);
+            if(keepUntil!=Long.MAX_VALUE)require(Math.abs(measured-keepUntil)<=100000,"Repeated edge boundary is not aligned");
+        }
+        if(l.tracks[1]>=0)require(Math.abs((keptLast[0]+keptDelta[0])-(keptLast[1]+keptDelta[1]))<=100000,
+            "Repeated edge cut would change A/V synchronization");
+        return Math.max(retainedEnd,Math.min(end,keepUntil))-keepFrom;
+    }
+
+    private static NexusRepeatedEdges.Episode scanEdges(File file,Layout l)throws Exception{
+        long duration=0;
+        for(MediaFormat format:l.formats)if(format!=null&&format.containsKey(MediaFormat.KEY_DURATION))
+            duration=Math.max(duration,format.getLong(MediaFormat.KEY_DURATION));
+        // No audio means exact audio+video evidence cannot be established.
+        if(duration<=0||l.tracks[1]<0)return new NexusRepeatedEdges.Episode(Math.max(1,duration),Collections.emptyList());
+        long origin;
+        tryExtractor: {
+            MediaExtractor both=open(file);
+            try{for(int track:l.tracks)if(track>=0)both.selectTrack(track);origin=both.getSampleTime();}
+            finally{both.release();}
+        }
+        if(origin<0)return new NexusRepeatedEdges.Episode(duration,Collections.emptyList());
+        ArrayList<Long> boundaries=new ArrayList<>();
+        MediaExtractor video=open(file);
+        try{
+            video.selectTrack(l.tracks[0]);
+            while(video.getSampleTrackIndex()>=0){
+                long t=video.getSampleTime()-origin;
+                if(t>=0&&t<duration&&(video.getSampleFlags()&MediaExtractor.SAMPLE_FLAG_SYNC)!=0){
+                    if(boundaries.isEmpty()||t>boundaries.get(boundaries.size()-1))boundaries.add(t);
+                    if(boundaries.size()>20000)return new NexusRepeatedEdges.Episode(duration,Collections.emptyList());
+                }
+                video.advance();
+            }
+        }finally{video.release();}
+        if(boundaries.isEmpty())return new NexusRepeatedEdges.Episode(duration,Collections.emptyList());
+        boundaries.add(duration);
+        int n=boundaries.size()-1;
+        MessageDigest[][] hash=new MessageDigest[2][n];
+        long[][] count=new long[2][n];
+        for(int i=0;i<n;i++)if(boundaries.get(i+1)<=NexusRepeatedEdges.MAX||
+                boundaries.get(i)>=duration-NexusRepeatedEdges.MAX){
+            for(int k=0;k<2;k++)hash[k][i]=MessageDigest.getInstance("SHA-256");
+        }
+        ByteBuffer sample=ByteBuffer.allocateDirect(1024*1024);
+        ByteBuffer meta=ByteBuffer.allocate(16);
+        for(int k=0;k<2;k++){
+            MediaExtractor ex=open(file);
+            try{
+                ex.selectTrack(l.tracks[k]);
+                int i=0;long last=-1;
+                while(ex.getSampleTrackIndex()>=0){
+                    long time=ex.getSampleTime()-origin;
+                    if(time<0||time<=last)return new NexusRepeatedEdges.Episode(duration,Collections.emptyList());
+                    last=time;
+                    while(i+1<n&&time>=boundaries.get(i+1))i++;
+                    MessageDigest digest=hash[k][i];
+                    if(digest!=null&&time>=boundaries.get(i)&&time<boundaries.get(i+1)){
+                        long size=ex.getSampleSize();
+                        int flags=ex.getSampleFlags();
+                        if(size<=0||size>MAX_SAMPLE||(flags&(MediaExtractor.SAMPLE_FLAG_ENCRYPTED|MediaExtractor.SAMPLE_FLAG_PARTIAL_FRAME))!=0)
+                            return new NexusRepeatedEdges.Episode(duration,Collections.emptyList());
+                        if(sample.capacity()<size)sample=ByteBuffer.allocateDirect((int)size);
+                        sample.clear();
+                        int read=ex.readSampleData(sample,0);
+                        if(read!=size)return new NexusRepeatedEdges.Episode(duration,Collections.emptyList());
+                        meta.clear();meta.putLong(time-boundaries.get(i)).putInt(read).putInt(flags);
+                        digest.update(meta.array());sample.position(0);sample.limit(read);digest.update(sample);count[k][i]++;
+                    }
+                    ex.advance();
+                }
+            }finally{ex.release();}
+        }
+        ArrayList<NexusRepeatedEdges.Span> spans=new ArrayList<>();
+        for(int i=0;i<n;i++){
+            String fingerprint=null;
+            if(hash[0][i]!=null&&hash[1][i]!=null&&count[0][i]>0&&count[1][i]>0){
+                MessageDigest digest=MessageDigest.getInstance("SHA-256");
+                digest.update(hash[0][i].digest());digest.update(hash[1][i].digest());
+                fingerprint=android.util.Base64.encodeToString(digest.digest(),android.util.Base64.NO_WRAP);
+            }
+            spans.add(new NexusRepeatedEdges.Span(boundaries.get(i),boundaries.get(i+1),fingerprint));
+        }
+        return new NexusRepeatedEdges.Episode(duration,spans);
     }
     private static void journal(File file,JSONObject project)throws Exception{
         AtomicFile atomic=new AtomicFile(file);FileOutputStream stream=atomic.startWrite();
@@ -141,7 +241,7 @@ public final class NexusEpisodeAssembly {
         Context app=context.getApplicationContext();NexusRegistry registry=new NexusRegistry(app);
         File projects=new File(app.getFilesDir(),"nexus-assemblies");
         require(projects.isDirectory()||projects.mkdirs(),"Assembly storage unavailable");
-        String identity="assembly-v1:"+name+":"+String.join(",",ids);
+        String identity="assembly-v2:"+name+":"+String.join(",",ids);
         String projectId=NexusOriginalStore.sourceKey(identity);
         File manifest=new File(projects,projectId+".json");
         if(manifest.isFile()){
@@ -154,11 +254,12 @@ public final class NexusEpisodeAssembly {
         JSONArray sources=new JSONArray();ArrayList<File> inputs=new ArrayList<>();
         long bytes=0;
         JSONObject project=new JSONObject().put("project_id",projectId).put("title",name)
-            .put("policy","preserve_every_sample").put("state","QUEUED").put("sources",sources);
+            .put("policy","exact_repeated_edges_only").put("state","QUEUED").put("sources",sources);
         journal(manifest,project);registry.job(identity,"QUEUED",0,null);
         File output=null;MediaMuxer muxer=null;boolean started=false;
         try{
             Layout expected=null;
+            ArrayList<NexusRepeatedEdges.Episode> episodeEdges=new ArrayList<>();
             for(String sha:ids){
                 NexusRegistry.Item item=registry.find(sha);
                 require(item!=null&&item.mime.startsWith("video/"),"Verified local episode unavailable");
@@ -168,8 +269,11 @@ public final class NexusEpisodeAssembly {
                 MediaExtractor extractor=open(original);
                 try{Layout l=layout(extractor);if(expected==null)expected=l;else compatible(expected,l);}
                 finally{extractor.release();}
+                try{episodeEdges.add(scanEdges(original,expected));}
+                catch(Exception uncertain){episodeEdges.add(new NexusRepeatedEdges.Episode(1,Collections.emptyList()));}
                 sources.put(new JSONObject().put("sha256",sha).put("name",item.displayName).put("bytes",item.length));
             }
+            List<NexusRepeatedEdges.Cut> cuts=NexusRepeatedEdges.plan(episodeEdges);
             require(projects.getUsableSpace()>Math.addExact(Math.multiplyExact(bytes,2),64L*1024*1024),"Insufficient free space for verified output");
             output=File.createTempFile("assembly-",".mp4",projects);
             muxer=new MediaMuxer(output.getAbsolutePath(),MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
@@ -186,7 +290,12 @@ public final class NexusEpisodeAssembly {
                 try{
                     Layout l=layout(extractor);compatible(expected,l);
                     sources.getJSONObject(i).put("start_us",offset);
-                    offset=Math.addExact(offset,transfer(extractor,l,muxer,tracks,offset,evidence));
+                    NexusRepeatedEdges.Cut cut=cuts.get(i);
+                    long from=cut.start,until=cut.end==episodeEdges.get(i).duration?Long.MAX_VALUE:cut.end;
+                    sources.getJSONObject(i).put("source_keep_from_us",from)
+                        .put("source_keep_until_us",until==Long.MAX_VALUE?JSONObject.NULL:until)
+                        .put("cut_evidence",from>0||until!=Long.MAX_VALUE?"exact_audio_video_packet_match_all_episodes":"no_proven_repeated_edge");
+                    offset=Math.addExact(offset,transfer(extractor,l,muxer,tracks,offset,evidence,from,until));
                     sources.getJSONObject(i).put("end_us",offset);
                 }finally{extractor.release();}
             }

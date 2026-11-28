@@ -29,7 +29,7 @@ fun NexusEpisodeAssemblyPane(onRefresh:()->Unit){
     }
     Column(Modifier.fillMaxSize().padding(12.dp)){
         Text("Assemble episodes",style=MaterialTheme.typography.titleLarge)
-        Text("Select verified local episodes in playback order. This lossless mode retains every scene; automatic duplicate-scene cuts are not enabled.")
+        Text("Select verified local episodes in playback order. Identical audio/video opening and ending segments shared by at least three episodes may be removed; the first opening, final ending and all uncertain footage are retained.")
         OutlinedTextField(title,{title=it},label={Text("Series title")},singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!busy)
         OutlinedTextField(query,{query=it;page=0},label={Text("Find local episodes")},singleLine=true,modifier=Modifier.fillMaxWidth(),enabled=!busy)
         Text("Selected: "+chosen.size+" · order of selection",modifier=Modifier.padding(vertical=4.dp))
