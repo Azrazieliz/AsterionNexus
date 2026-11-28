@@ -24,9 +24,10 @@ import kotlin.math.abs
 /** Explicit non-destructive EDL, MediaCodec/Media3 export and independently probed output. */
 @androidx.annotation.OptIn(UnstableApi::class)
 object NexusVideoExport {
-    data class Clip(val sha:String,val startMs:Long,val endMs:Long)
-    data class Profile(val width:Int,val height:Int,val bitrate:Int,val hevc:Boolean,val mute:Boolean)
-    data class Source(val item:NexusRegistry.Item,val duration:Long,val audio:Boolean)
+    data class Clip(val sha:String,val startMs:Long,val endMs:Long,val audioTrack:Int=-2)
+    data class Profile(val width:Int,val height:Int,val bitrate:Int,val hevc:Boolean,val mute:Boolean,val omitOtherTracks:Boolean=false)
+    data class AudioTrack(val index:Int,val language:String,val mime:String)
+    data class Source(val item:NexusRegistry.Item,val duration:Long,val videoTrack:Int,val audioTracks:List<AudioTrack>,val otherTracks:Int){val audio:Boolean get()=audioTracks.isNotEmpty()}
     fun source(context:Context,sha:String):Source {
         val registry=NexusRegistry(context)
         val item=registry.find(sha)?:error("Original unavailable")
@@ -34,21 +35,26 @@ object NexusVideoExport {
         val file=registry.original(item)
         check(registry.verifyOriginal(item)){"Source hash mismatch"}
         val extractor=MediaExtractor()
-        var audio=0;var video=0;var duration=0L
+        val audio=mutableListOf<AudioTrack>();var video=-1;var duration=0L;var other=0
         try{
             extractor.setDataSource(file.absolutePath)
             for(i in 0 until extractor.trackCount){
                 val format=extractor.getTrackFormat(i)
                 val mime=format.getString("mime").orEmpty()
                 when{
-                    mime.startsWith("video/")->{video++;duration=format.getLong("durationUs")/1000}
-                    mime.startsWith("audio/")->audio++
-                    else->error("Additional tracks need explicit mapping; source preserved")
+                    mime.startsWith("video/")->{require(video<0){"Multiple video tracks require dedicated mapping"};video=i;duration=if(format.containsKey("durationUs"))format.getLong("durationUs")/1000 else 0}
+                    mime.startsWith("audio/")->audio.add(AudioTrack(i,format.getString("language").orEmpty().ifBlank{"und"},mime))
+                    else->other++
                 }
             }
         }finally{extractor.release()}
-        require(video==1&&audio<=1&&duration>0){"Export requires one video and at most one audio track"}
-        return Source(item,duration,audio==1)
+        if(duration<=0){
+            val retriever=MediaMetadataRetriever()
+            try{retriever.setDataSource(file.absolutePath);duration=retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?:0}
+            finally{retriever.release()}
+        }
+        require(video>=0&&duration>0){"One decodable video track required"}
+        return Source(item,duration,video,audio,other)
     }
     private fun save(file:File,data:JSONObject){
         val atomic=AtomicFile(file);val stream=atomic.startWrite()
@@ -66,16 +72,18 @@ object NexusVideoExport {
             Math.addExact(total,clip.endMs-clip.startMs)
         }
         require(duration<=12L*60*60*1000){"Timeline exceeds 12 hours"}
-        require(profile.mute||sources.map{it.audio}.distinct().size==1){"Mixed silent and audio clips require explicit mute or audio mapping"}
+        require(profile.omitOtherTracks||sources.none{it.otherTracks>0}){"Explicitly acknowledge subtitles/other tracks retained in originals"}
+        val selected=clips.zip(sources).map{(clip,source)->NexusTrackMapping.resolve(source.audioTracks.map{it.index},clip.audioTrack,profile.mute)}
+        val hasAudio=selected.any{it>=0}
         val edl=JSONArray()
-        clips.forEach{edl.put(JSONObject().put("sha256",it.sha).put("start_ms",it.startMs).put("end_ms",it.endMs))}
-        val spec=JSONObject().put("version",1).put("title",title).put("clips",edl)
+        clips.forEachIndexed{i,clip->edl.put(JSONObject().put("sha256",clip.sha).put("start_ms",clip.startMs).put("end_ms",clip.endMs).put("audio_track",selected[i]))}
+        val spec=JSONObject().put("version",2).put("title",title).put("clips",edl)
             .put("width",profile.width).put("height",profile.height).put("bitrate",profile.bitrate)
-            .put("hevc",profile.hevc).put("mute",profile.mute).put("duration_ms",duration)
+            .put("hevc",profile.hevc).put("mute",profile.mute).put("omit_other_tracks",profile.omitOtherTracks).put("duration_ms",duration)
         require(reviewEvidence.length<=128*1024){"Review log too large"}
         val review=JSONArray(reviewEvidence)
         if(review.length()>0)spec.put("review_evidence",review)
-        val identity="video-edl-v1:"+NexusOriginalStore.sourceKey(spec.toString())
+        val identity="video-edl-v2:"+NexusOriginalStore.sourceKey(spec.toString())
         val dir=File(context.filesDir,"nexus-video-projects")
         check(dir.isDirectory||dir.mkdirs())
         val receipt=File(dir,identity.substringAfter(':')+".json")
@@ -90,6 +98,7 @@ object NexusVideoExport {
         check(dir.usableSpace>Math.addExact(Math.multiplyExact(estimate,3),64L*1024*1024)){"Insufficient export storage"}
         val output=File(dir,identity.substringAfter(':')+".partial.mp4")
         if(output.exists())check(output.delete()){"Old partial export cannot be cleared"}
+        val stageDir=File(dir,identity.substringAfter(':')+".staging")
         val worker=HandlerThread("Nexus video codec").apply{start()}
         val handler=Handler(worker.looper)
         val done=CountDownLatch(1)
@@ -101,18 +110,37 @@ object NexusVideoExport {
             registry.job(identity,"QUEUED",0,null)
             save(receipt,spec.put("state","PROCESSING"))
             registry.job(identity,"RECEIVING",0,null)
+            if(stageDir.exists())check(stageDir.deleteRecursively()){"Old staging files cannot be cleared"}
+            val stageKeys=clips.indices.filter{selected[it]>=0&&sources[it].audioTracks.size>1}
+                .distinctBy{sources[it].item.sha256 to selected[it]}
+            val stagingBytes=stageKeys.fold(0L){total,i->Math.addExact(total,sources[i].item.length)}
+            check(stagingBytes<=8L*1024*1024*1024){"Selected-track staging exceeds 8 GiB; choose a smaller project"}
+            check(dir.usableSpace>Math.addExact(Math.multiplyExact(estimate,3),Math.addExact(stagingBytes,64L*1024*1024))){"Insufficient space for selected track staging"}
+            val staged=mutableMapOf<Pair<String,Int>,File>()
+            if(stageKeys.isNotEmpty()){
+                check(stageDir.mkdirs())
+                stageKeys.forEach{i->
+                    stopped(cancel)
+                    val source=sources[i];val key=source.item.sha256 to selected[i]
+                    val target=File(stageDir,source.item.sha256+"-"+selected[i]+".mp4")
+                    NexusTrackMapping.stage(registry.original(source.item),target,source.videoTrack,selected[i],cancel)
+                    staged[key]=target
+                }
+            }
             handler.post {
                 try{
                     if(cancel.get()||abort.get())throw IOException("Export cancelled")
-                    val edited=clips.zip(sources).map{(clip,source)->
-                        val item=MediaItem.Builder().setUri(android.net.Uri.fromFile(registry.original(source.item)))
+                    val edited=clips.mapIndexed{i,clip->
+                        val source=sources[i]
+                        val input=staged[source.item.sha256 to selected[i]]?:registry.original(source.item)
+                        val item=MediaItem.Builder().setUri(android.net.Uri.fromFile(input))
                             .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
                                 .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build()).build()
-                        EditedMediaItem.Builder(item).setRemoveAudio(profile.mute)
+                        EditedMediaItem.Builder(item).setRemoveAudio(selected[i]<0)
                             .setEffects(Effects(emptyList(),listOf(Presentation.createForWidthAndHeight(profile.width,profile.height,Presentation.LAYOUT_SCALE_TO_FIT))))
                             .build()
                     }
-                    val sequence=if(!profile.mute&&sources.first().audio) EditedMediaItemSequence.withAudioAndVideoFrom(edited) else EditedMediaItemSequence.withVideoFrom(edited)
+                    val sequence=if(hasAudio) EditedMediaItemSequence.withAudioAndVideoFrom(edited) else EditedMediaItemSequence.withVideoFrom(edited)
                     val composition=Composition.Builder(sequence)
                         .setTransmuxAudio(false).setTransmuxVideo(false).build()
                     val encoder=DefaultEncoderFactory.Builder(context)
@@ -138,7 +166,7 @@ object NexusVideoExport {
             stopped(cancel);error.get()?.let{throw IOException("Codec export failed: "+it.message,it)}
             check(output.isFile&&output.length()>0){"Empty export"}
             registry.job(identity,"BYTES_COMPLETE",output.length(),null)
-            validate(output,duration,profile,mime,!profile.mute&&sources.first().audio)
+            validate(output,duration,profile,mime,hasAudio)
             sources.forEach{stopped(cancel);check(registry.verifyOriginal(it.item)){"Original changed during export"}}
             registry.job(identity,"VERIFIED",output.length(),null)
             val item=output.inputStream().use{registry.ingest(it,title.trim().removeSuffix(".mp4")+".mp4","video/mp4","nexus-video-edit","device",identity,output.length(),null)}
@@ -154,7 +182,7 @@ object NexusVideoExport {
             handler.post{runCatching{transformer.get()?.cancel()};worker.quitSafely()}
             // Never remove a file while codec cancellation may still write to it.
             worker.join(10000)
-            if(!worker.isAlive)output.delete()
+            if(!worker.isAlive){output.delete();stageDir.deleteRecursively()}
         }
     }
     private fun validate(file:File,duration:Long,profile:Profile,mime:String,audio:Boolean){
