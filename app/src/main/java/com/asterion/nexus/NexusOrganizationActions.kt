@@ -37,15 +37,16 @@ object NexusOrganizationActions{
     private fun account(a:Activity,scope:String,label:String){
         run(a,"Load organization settings",{NexusAutomaticOrganization.sources(a,scope)}){sources->
             val options=sources.map{it.name+" · "+if(it.enabled)"Enabled" else "Paused"}.toMutableList()
-            options.add("Run enabled sources now");options.add("Move history and rollback")
+            options.add("Run enabled sources now");options.add("Move history and rollback");options.add("Last cycle status")
             AlertDialog.Builder(a).setTitle(label)
                 .setItems(options.toTypedArray()){_,i->
                     when(i){
                         sources.size->cycle(a,scope,label)
                         sources.size+1->NexusCloudActions.history(a)
+                        sources.size+2->AlertDialog.Builder(a).setTitle("Last organization cycle").setMessage(NexusAutomaticOrganization.lastStatus(a,scope)).setPositiveButton("Close",null).show()
                         else->edit(a,scope,label,sources[i])
                     }
-                }.setMessage(NexusAutomaticOrganization.lastStatus(a,scope))
+                }
                 .setNegativeButton("Close",null).show()
         }
     }
