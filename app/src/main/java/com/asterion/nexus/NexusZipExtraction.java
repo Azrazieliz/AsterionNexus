@@ -142,12 +142,15 @@ public final class NexusZipExtraction {
     /** Validate every member into a new private staging directory before any
      * output is handed to the registry. Caller owns cleanup of that directory. */
     public static List<Verified> stage(File source,File staging,Plan plan)throws IOException{
+        return stage(source,staging,plan,()->false);
+    }
+    public static List<Verified> stage(File source,File staging,Plan plan,java.util.function.BooleanSupplier cancelled)throws IOException{
         require(staging.isDirectory()&&staging.list()!=null&&staging.list().length==0,"Staging must be empty");
         require(staging.getUsableSpace()>plan.bytes+32L*1024*1024,"Insufficient extraction space");
         List<Verified> result=new ArrayList<>();
         try(ZipFile zip=new ZipFile(source)){
             for(Entry entry:plan.files){
-                interrupt();
+                interrupt();if(cancelled.getAsBoolean())throw new InterruptedIOException("Extraction cancelled");
                 ZipEntry current=zip.getEntry(entry.zip.getName());
                 require(current!=null&&current.getSize()==entry.length&&current.getCrc()==entry.crc,"ZIP changed after preview");
                 File output=File.createTempFile("entry-",".part",staging);
@@ -159,7 +162,7 @@ public final class NexusZipExtraction {
                 try(InputStream input=zip.getInputStream(current);FileOutputStream out=new FileOutputStream(output)){
                     byte[] buf=new byte[65536];
                     for(int n;(n=input.read(buf))!=-1;){
-                        interrupt();if(n==0)continue;
+                        interrupt();if(cancelled.getAsBoolean())throw new InterruptedIOException("Extraction cancelled");if(n==0)continue;
                         require(n<=entry.length-total,"ZIP member exceeds declared length");
                         out.write(buf,0,n);crc.update(buf,0,n);hash.update(buf,0,n);total+=n;
                     }
