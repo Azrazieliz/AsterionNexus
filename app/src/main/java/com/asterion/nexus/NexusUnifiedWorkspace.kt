@@ -191,6 +191,11 @@ private fun NexusUnifiedSearch(
     var hits by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
     var providerErrors by remember{mutableStateOf<List<String>>(emptyList())}
     var providerCount by remember{mutableIntStateOf(0)}
+    var searchPage by remember{mutableIntStateOf(0)}
+    var completedQuery by remember{mutableStateOf("")}
+    var completedMode by remember{mutableIntStateOf(-1)}
+    var providerFilter by remember{mutableStateOf("")}
+    var moreOnline by remember{mutableStateOf(false)}
     var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
     val generation=remember{AtomicInteger()}
     val cloudAccounts=remember(ctx){FgTeraboxClient.accounts(ctx)}
@@ -246,11 +251,46 @@ private fun NexusUnifiedSearch(
     DisposableEffect(cloudIndexes,safIndex){
         onDispose{generation.incrementAndGet();cloudIndexes.forEach{it.close()};safIndex.close()}
     }
+    suspend fun providerPage(query:String,mode:Int,page:Int,token:Int){
+        val response=withContext(Dispatchers.IO){AsterionSearchHub.searchForNexus(ctx as Activity,query,mode,page)}
+        if(token!=generation.get())return
+        providerCount=response.optInt("searched")
+        val errors=response.optJSONArray("errors")?:JSONArray()
+        providerErrors=(0 until errors.length()).map{errors.optString(it)}.filter{it.isNotBlank()}
+        val a=response.optJSONArray("items")?:JSONArray()
+        val incoming=(0 until a.length()).mapNotNull{i->
+            val j=a.optJSONObject(i)?:return@mapNotNull null
+            val url=j.optString("url")
+            if(!url.startsWith("https://")&&!url.startsWith("magnet:"))return@mapNotNull null
+            NexusUnifiedEntry(j.optString("title",url),j.optString("detail",""),
+                j.optString("source","Web"),web=url,preview=j.optString("thumbnail").takeIf{it.isNotBlank()},
+                area=when(mode){3->"GAMES";4->"BOOKS";else->"VIDEOS"},
+                kind=j.optString("kind").ifBlank{if(mode==0)"video" else ""},
+                filename=j.optString("filename").takeIf{it.isNotBlank()})
+        }
+        val prior=hits.mapNotNull{it.web}.toSet()
+        moreOnline=mode==0&&page<1000&&incoming.any{it.web !in prior}
+        hits=(hits+incoming).distinctBy{if(it.web!=null)"web:"+it.web else it.account+":"+(it.path?:it.uri?.toString()?:it.title)+":"+it.chapter}
+        searchPage=page
+        completedQuery=query;completedMode=mode
+    }
+    fun nextPage(){
+        if(loading||!moreOnline||!online||term.trim()!=completedQuery||onlineMode!=completedMode)return
+        val token=generation.get()
+        loading=true
+        scope.launch{
+            try{providerPage(completedQuery,completedMode,searchPage+1,token);if(token==generation.get())status="Found "+hits.size+" matches · page "+(searchPage+1)}
+            catch(t:Exception){if(token==generation.get())status="Next page unavailable: "+t.message.orEmpty().take(120)}
+            finally{if(token==generation.get())loading=false}
+        }
+    }
     fun execute(){
         val query=term.trim()
         if(query.length !in 2..180){status="Enter 2–180 characters";return}
         val token=generation.incrementAndGet()
-        loading=true;hits=emptyList();providerErrors=emptyList();providerCount=0;status="Searching Nexus sources"
+        loading=true;hits=emptyList();providerErrors=emptyList();providerCount=0;searchPage=0;moreOnline=false;providerFilter="";completedQuery="";completedMode=-1;status="Searching Nexus sources"
+        val requestedMode=onlineMode
+        val requestedOnline=online
         scope.launch{
             try{
                 val originals=withContext(Dispatchers.IO){
@@ -290,32 +330,7 @@ private fun NexusUnifiedSearch(
                     safIndex.search(tree,query,"all",0,token)
                 }
                 cloudIndexes.forEach{index->index.ensure(false);index.search(query,"all",0,token)}
-                if(online){
-                    val response=withContext(Dispatchers.IO){
-                        AsterionSearchHub.searchForNexus(ctx as Activity,query,onlineMode,0)
-                    }
-                    if(token==generation.get()){
-                        val incoming=mutableListOf<NexusUnifiedEntry>()
-                        providerCount=response.optInt("searched")
-                        val errors=response.optJSONArray("errors")?:JSONArray()
-                        providerErrors=(0 until errors.length()).map{errors.optString(it)}.filter{it.isNotBlank()}
-                        val a=response.optJSONArray("items")?:JSONArray()
-                        for(i in 0 until a.length()){
-                            val j=a.optJSONObject(i)?:continue
-                            val url=j.optString("url")
-                            if(url.startsWith("https://")||url.startsWith("http://")||
-                                url.startsWith("magnet:"))
-                                incoming.add(NexusUnifiedEntry(
-                                    j.optString("title",url),j.optString("detail",""),
-                                    j.optString("source","Web"),web=url,
-                                    preview=j.optString("thumbnail").takeIf{it.isNotBlank()},
-                                    area=when(onlineMode){3->"GAMES";4->"BOOKS";else->"VIDEOS"},
-                                    kind=j.optString("kind").ifBlank{if(onlineMode==0)"video" else ""},
-                                    filename=j.optString("filename").takeIf{it.isNotBlank()}))
-                        }
-                        hits=hits+incoming
-                    }
-                }
+                if(requestedOnline)providerPage(query,requestedMode,0,token)
                 if(token==generation.get())status="Found "+hits.size+" matches"
             }catch(t:Exception){
                 if(token==generation.get())status="Partial search failure: "+
@@ -348,8 +363,15 @@ private fun NexusUnifiedSearch(
                 if(expanded)Text(providerErrors.joinToString("\n"),color=C_MUTED,fontSize=11.sp,maxLines=15)
             }
         }
+        if(hits.isNotEmpty()){
+            val providers=hits.map{it.source}.distinct().sorted()
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+                FilterChip(selected=providerFilter.isBlank(),onClick={providerFilter=""},label={Text("All sources")})
+                providers.forEach{provider->FilterChip(selected=providerFilter==provider,onClick={providerFilter=provider},label={Text(provider)})}
+            }
+        }
         LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
-            items(hits){item->UnifiedEntryCard(item){
+            items(hits.filter{providerFilter.isBlank()||it.source==providerFilter}){item->UnifiedEntryCard(item){
                 if(item.web!=null){selected=item}
                 else if(item.path!=null){
                     if(!item.folder&&item.account.isNotBlank()&&item.size>=0)
@@ -359,6 +381,9 @@ private fun NexusUnifiedSearch(
                 }else if(item.folder)status="Open authorized folders from Library / TeraBox"
                 else if(item.uri!=null)onOpen(item.uri,item.mime,item.title,item.chapter)
             }}
+            if(online&&moreOnline&&term.trim()==completedQuery&&onlineMode==completedMode)item{
+                UnifiedButton(if(loading)"Loading…" else "Load next provider page",!loading){nextPage()}
+            }
         }
     }
     selected?.let{chosen->
