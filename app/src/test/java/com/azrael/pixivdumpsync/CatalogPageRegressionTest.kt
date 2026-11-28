@@ -17,4 +17,16 @@ class CatalogPageRegressionTest {
         assertEquals(outcome,CatalogDiscovery.pageSlice(outcome,0))
         assertEquals(outcome,CatalogDiscovery.pageSlice(outcome,1))
     }
+
+    @Test fun recentTransferLimitDoesNotHideOtherStates(){
+        fun row(state:String,id:Int)=UnifiedDownloadsUi.NexusQueueEntry(
+            "$state:$id","fixture","Fixture $id","",state,null,0L,-1L,null,null,null,null,"*/*")
+        val rows=(1..800).map{row("DONE",it)}+
+            (1..200).map{row("QUEUED",it)}+listOf(row("FAILED",1),row("HELD",1),row("ACTIVE",1))
+        val selected=UnifiedDownloadsUi.boundedNexusRows(rows)
+        assertEquals(203,selected.size)
+        assertEquals(100,selected.count{it.state=="DONE"})
+        assertEquals(100,selected.count{it.state=="QUEUED"})
+        assertEquals(setOf("FAILED","HELD","ACTIVE"),selected.filter{it.state !in setOf("DONE","QUEUED")}.map{it.state}.toSet())
+    }
 }
