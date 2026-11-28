@@ -293,11 +293,12 @@ object NexusCollectionActions{
         worker.execute{
             val result=runCatching{
                 val ctx=activity.applicationContext
-                val sha=if(NexusArchiveOperation.available(ctx,uri))uri.lastPathSegment else null
-                val core=if(mime.startsWith("image/")){
-                    StandaloneRuntime.initialize(ctx);StandaloneRuntime.nexusArtworkId(uri.toString(),sha)
+                val remote=uri.authority==com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY
+                val sha=if(NexusArchiveOperation.available(ctx,uri))uri.lastPathSegment else if(remote)NexusCloudIdentity.known(ctx,uri) else null
+                val core=if(mime.startsWith("image/")&&(!remote||sha!=null)){
+                    StandaloneRuntime.initialize(ctx);StandaloneRuntime.nexusArtworkId(if(remote)"" else uri.toString(),sha)
                 }else null
-                check(core!=null||sha!=null){"Verified item required; pin cloud originals first"}
+                check(core!=null||sha!=null){"Verified item required; verify cloud identity in file details first"}
                 val collections=LocalDatabase(ctx).use{FusionSmartCollections(it).list(200).filter{c->c.kind=="manual"}}
                 Triple(core,sha,collections)
             }
