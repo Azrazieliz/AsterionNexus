@@ -85,6 +85,15 @@ object NexusFileDetails {
         val status=TextView(activity).apply{text="Reading file metadata…"}
         val slider=SeekBar(activity).apply{max=100;progress=50;isEnabled=false}
         body.addView(info);body.addView(status);body.addView(slider)
+        if(NexusArchiveOperation.available(activity,uri)){
+            body.addView(android.widget.Button(activity).apply{
+                text="Verify or recover original"
+                setOnClickListener{
+                    activity.startActivity(android.content.Intent(activity,NexusRecoveryActivity::class.java)
+                        .putExtra("sha256",uri.lastPathSegment))
+                }
+            })
+        }
         var target:Target?=null
         var selected:Int?=null
         var saving=false
