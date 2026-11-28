@@ -138,16 +138,21 @@ def prepare_language(language):
     if info.sha != revision:
         raise RuntimeError("Unexpected Hub revision")
     metadata = {x.rfilename: x for x in info.siblings}
+    # Korean and Chinese quantized candidates failed the unchanged fidelity gate.
+    # Evaluate full precision graphs, not lower the test standard.
+    artifacts = dict(FILES)
+    if language in ("ko", "zh"):
+        artifacts.update({"encoder.onnx": "onnx/encoder_model.onnx", "decoder.onnx": "onnx/decoder_model.onnx"})
     ASSETS.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=ASSETS) as work:
         work = pathlib.Path(work)
-        for output, name in FILES.items():
+        for output, name in artifacts.items():
             source = pathlib.Path(hf_hub_download(repo, name, revision=revision))
             verify_hub_file(source, metadata[name])
             shutil.copyfile(source, work / output)
         results = smoke(work, language)
         manifest = {"language": language, "revision": revision, "repo": repo,
-                    "reference_smoke_passed": True, "quality_certified": False, "decode_policy": "beam4-v1",
+                    "reference_smoke_passed": True, "quality_certified": False, "decode_policy": "beam4-v1", "precision": "fp32" if language in ("ko", "zh") else "int8",
                     "sha256": {name: hash_file(work / name) for name in FILES}}
         (work / "manifest.json").write_text(json.dumps(manifest, indent=2))
         dest = ASSETS / language
