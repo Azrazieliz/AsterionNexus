@@ -103,6 +103,10 @@ object NexusFileDetails {
         }
         if(NexusArchiveOperation.available(activity,uri)){
             body.addView(android.widget.Button(activity).apply{
+                text="Local storage and cloud copy"
+                setOnClickListener{NexusRetentionActions.show(activity,uri)}
+            })
+            body.addView(android.widget.Button(activity).apply{
                 text="Send to specialist"
                 setOnClickListener{NexusPartnerActions.show(activity,uri)}
             })
