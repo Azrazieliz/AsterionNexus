@@ -15,7 +15,7 @@ public final class NexusRegistry {
     private static final String DB_NAME="nexus_registry_v1.sqlite";
 
     private static final class Database extends SQLiteOpenHelper {
-        Database(Context app){super(app,DB_NAME,null,6);setWriteAheadLoggingEnabled(true);}
+        Database(Context app){super(app,DB_NAME,null,7);setWriteAheadLoggingEnabled(true);}
         @Override public void onConfigure(SQLiteDatabase db){
             super.onConfigure(db);db.setForeignKeyConstraintsEnabled(true);
         }
@@ -25,7 +25,7 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX idx_nexus_library_names ON locations(display_name COLLATE NOCASE)");
             db.execSQL("CREATE INDEX idx_nexus_library_sources ON locations(source_kind,account_key)");
             db.execSQL("CREATE TABLE jobs(job_key TEXT PRIMARY KEY,stage TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,error_code TEXT)");
-            createFileRatings(db);createRemoteLocations(db);createCollections(db);createEvictions(db);createPlayback(db);
+            createFileRatings(db);createRemoteLocations(db);createCollections(db);createEvictions(db);createPlayback(db);createBookmarks(db);
         }
         private void createFileRatings(SQLiteDatabase db){
             db.execSQL("CREATE TABLE IF NOT EXISTS file_ratings(sha256 TEXT PRIMARY KEY CHECK(length(sha256)=64),score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),updated_at INTEGER NOT NULL)");
@@ -50,11 +50,14 @@ public final class NexusRegistry {
             db.execSQL("CREATE TABLE IF NOT EXISTS local_evictions(sha256 TEXT PRIMARY KEY REFERENCES originals(sha256),account TEXT NOT NULL,fs_id INTEGER NOT NULL,remote_md5 TEXT NOT NULL,bytes INTEGER NOT NULL,verified_at INTEGER NOT NULL,state TEXT NOT NULL CHECK(state IN ('PREPARED','EVICTED')))");
         }
         @Override public void onUpgrade(SQLiteDatabase db,int old,int current){
-            if(old<1||current!=6||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
+            if(old<1||current!=7||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
             if(old==1)createFileRatings(db);
             if(old<3)createRemoteLocations(db);
             if(old<4)createCollections(db);
-            createEvictions(db);createPlayback(db);
+            createEvictions(db);createPlayback(db);createBookmarks(db);
+        }
+        private void createBookmarks(SQLiteDatabase db){
+            db.execSQL("CREATE TABLE IF NOT EXISTS reader_bookmarks(sha256 TEXT PRIMARY KEY REFERENCES originals(sha256),chapter INTEGER NOT NULL CHECK(chapter>=0),fraction REAL NOT NULL CHECK(fraction>=0 AND fraction<=1),updated_at INTEGER NOT NULL,legacy_export TEXT,legacy_key TEXT,UNIQUE(legacy_export,legacy_key))");
         }
         private void createPlayback(SQLiteDatabase db){
             db.execSQL("CREATE TABLE IF NOT EXISTS playback_progress(sha256 TEXT PRIMARY KEY REFERENCES originals(sha256),position_ms INTEGER NOT NULL,duration_ms INTEGER NOT NULL,updated_at INTEGER NOT NULL,CHECK(position_ms>=0 AND duration_ms>0 AND position_ms<duration_ms))");
@@ -386,6 +389,60 @@ public final class NexusRegistry {
         Database helper=new Database(app);
         try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT position_ms FROM playback_progress WHERE sha256=?",new String[]{sha})){
             return c.moveToFirst()?c.getLong(0):-1L;
+        }finally{helper.close();}
+    }
+    public static final class Bookmark{
+        public final int chapter;public final double fraction;
+        Bookmark(int chapter,double fraction){this.chapter=chapter;this.fraction=fraction;}
+    }
+    public Bookmark bookmark(String sha){
+        requireRatingIdentity(sha);
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT chapter,fraction FROM reader_bookmarks WHERE sha256=?",new String[]{sha})){
+            return c.moveToFirst()?new Bookmark(c.getInt(0),c.getDouble(1)):null;
+        }finally{helper.close();}
+    }
+    private static void validateBookmark(int chapter,double fraction){
+        if(chapter<0||chapter>1000000||!Double.isFinite(fraction)||fraction<0||fraction>1)
+            throw new IllegalArgumentException("Invalid reader bookmark");
+    }
+    public void saveBookmark(String sha,int chapter,double fraction){
+        requireRatingIdentity(sha);validateBookmark(chapter,fraction);
+        Database helper=new Database(app);
+        try{
+            SQLiteDatabase db=helper.getWritableDatabase();
+            ContentValues row=new ContentValues();
+            row.put("chapter",chapter);row.put("fraction",fraction);row.put("updated_at",System.currentTimeMillis());
+            if(db.update("reader_bookmarks",row,"sha256=?",new String[]{sha})==0){
+                row.put("sha256",sha);db.insertOrThrow("reader_bookmarks",null,row);
+            }
+        }finally{helper.close();}
+    }
+    public void bindRounderBookmark(String exportSha,String key,String sha,int chapter,double fraction){
+        requireRatingIdentity(exportSha);requireRatingIdentity(sha);validateBookmark(chapter,fraction);
+        if(key==null||key.length()>1024||!key.startsWith("fg.book.preferences.v2.")||!key.endsWith(".position"))
+            throw new IllegalArgumentException("Invalid legacy bookmark key");
+        Database helper=new Database(app);
+        try{
+            ContentValues row=new ContentValues();
+            row.put("sha256",sha);row.put("chapter",chapter);row.put("fraction",fraction);
+            row.put("legacy_export",exportSha);row.put("legacy_key",key);row.put("updated_at",System.currentTimeMillis());
+            // No overwrite of an existing bookmark or previously bound legacy key.
+            helper.getWritableDatabase().insertOrThrow("reader_bookmarks",null,row);
+        }finally{helper.close();}
+    }
+    public String rounderBookmarkBinding(String exportSha,String key){
+        requireRatingIdentity(exportSha);
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT sha256 FROM reader_bookmarks WHERE legacy_export=? AND legacy_key=?",new String[]{exportSha,key})){
+            return c.moveToFirst()?c.getString(0):null;
+        }finally{helper.close();}
+    }
+    public boolean hasRounderBindings(String exportSha){
+        requireRatingIdentity(exportSha);
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT 1 FROM reader_bookmarks WHERE legacy_export=? LIMIT 1",new String[]{exportSha})){
+            return c.moveToFirst();
         }finally{helper.close();}
     }
     public void noteReadingProgress(String sha,int position,int total){
