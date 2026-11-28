@@ -143,6 +143,40 @@ class LocalAiManager(
     }
 
     /** Defer model extraction until the gallery has actually become visible. */
+    /** Install only the release-bundled, reference-tested OCR graph package.
+     * User-installed models remain untouched. Called from the book worker. */
+    @Synchronized
+    fun ensureBundledBookOcr(): Boolean {
+        ensureInitialized()
+        val id = "asterion-ppocrv5-cjk"
+        val version = "5.0.1"
+        if (modelTaskExecutionReadiness(id, version, "ocr")["ready"] == true) return true
+        val asset = "bundled_ppocrv5_cjk.zip"
+        if (appContext.assets.list("")?.contains(asset) != true) return false
+        val dir = File(appContext.filesDir, "bundled-model-staging").apply { mkdirs() }
+        val staged = File(dir, asset)
+        val part = File(dir, "$asset.part")
+        return try {
+            part.delete()
+            appContext.assets.open(asset).use { input ->
+                part.outputStream().use { output -> input.copyTo(output) }
+            }
+            check(part.length() > 1_000_000L)
+            staged.delete()
+            check(part.renameTo(staged))
+            val result = importLocalModel(mapOf("model_id" to id, "version" to version,
+                "display_name" to "PP-OCRv5 CJK mobile", "source_path" to staged.absolutePath,
+                "source_uri" to "apk-assets://$asset"))
+            result["ok"] == true && modelTaskExecutionReadiness(id, version, "ocr")["ready"] == true
+        } catch (e: Exception) {
+            Log.w(TAG, "Bundled book OCR unavailable", e)
+            false
+        } finally {
+            part.delete()
+            staged.delete()
+        }
+    }
+
     fun requestBundledArtworkTaggerInstallation() {
         if (!initialized || bundledTaggerInstallRequested) return
         synchronized(this) {
