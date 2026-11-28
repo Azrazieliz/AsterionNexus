@@ -11,11 +11,16 @@ import java.util.UUID
 class FusionSmartCollections(private val database:LocalDatabase){
     data class Rule(val kind:String,val value:String,val minRating:Int=-1){
         init{
-            require(kind in setOf("character","series","tag","artist","manual_rating"))
+            require(kind in setOf("character","series","tag","artist","manual_rating","media_type","local_rating","offline_pin","continue_reading","related_output"))
             require(value.length<=128&&!value.any{it.isISOControl()})
-            if(kind=="manual_rating")require(value.isEmpty()&&minRating in 0..100)
-            else require(value.isNotBlank()&&minRating in -1..100)
+            when(kind){
+                "manual_rating","local_rating"->require(value.isEmpty()&&minRating in 0..100)
+                "media_type"->require(value in setOf("image","video","audio","books","assets")&&minRating==-1)
+                "offline_pin","continue_reading","related_output"->require(value.isEmpty()&&minRating==-1)
+                else->require(value.isNotBlank()&&minRating in -1..100)
+            }
         }
+        val coreRule:Boolean get()=kind in setOf("character","series","tag","artist","manual_rating")
         fun json()=JSONObject().put("version","nexus.smart.v1").put("kind",kind).put("value",value)
             .put("minimum_manual_rating",minRating).toString()
         companion object{
@@ -59,7 +64,7 @@ class FusionSmartCollections(private val database:LocalDatabase){
         val title=name.trim()
         require(title.length in 1..100&&!title.any{it.isISOControl()})
         val db=database.writableDatabase
-        if(rule!=null&&rule.kind!="manual_rating"){
+        if(rule!=null&&rule.coreRule&&rule.kind!="manual_rating"){
             val (table,id,_)=catalog(rule.kind)
             require(db.rawQuery("SELECT 1 FROM "+table+" WHERE "+id+"=?",arrayOf(rule.value)).use{it.moveToFirst()}){"Canonical identity no longer exists"}
         }
@@ -111,6 +116,7 @@ class FusionSmartCollections(private val database:LocalDatabase){
         val db=database.readableDatabase
         val collection=get(db,id)
         check(collection.supported){"Existing collection rule format is not supported by this viewer"}
+        if(collection.kind!="manual"&&collection.rule?.coreRule==false)return Page(emptyList(),null)
         val (where,args)=if(collection.kind=="manual")
             "i.image_id IN (SELECT image_id FROM fusion_collection_images WHERE collection_id=?)" to listOf(id)
         else predicate(collection.rule!!)
