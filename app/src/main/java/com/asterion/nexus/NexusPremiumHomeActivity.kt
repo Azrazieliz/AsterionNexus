@@ -279,6 +279,7 @@ private fun NexusHome(
     onLibraryRefresh:()->Unit,
     onWorkspaceOpen:(Uri,String,String,Int)->Unit
 ){
+    val activity=LocalContext.current as Activity
     val destinations=listOf("Library","Organising","Downloading")
     val contexts=mapOf(
         "Library" to listOf("TeraBox","Gallery","Books","Videos","Collections","Assets/Files"),
@@ -332,6 +333,8 @@ private fun NexusHome(
                     Box{
                         TextButton(onClick={showMore=true}){Text("⋮",fontSize=22.sp)}
                         DropdownMenu(expanded=showMore,onDismissRequest={showMore=false}){
+                            if(destination=="Organising")DropdownMenuItem(text={Text("Cloud move history")},onClick={showMore=false;NexusCloudActions.history(activity)})
+                            if(destination=="Library")DropdownMenuItem(text={Text("Offline pins")},onClick={showMore=false;NexusCloudActions.pins(activity)})
                             DropdownMenuItem(text={Text("Runtime diagnostics")},onClick={
                                 showMore=false;onRoute("Intelligence")
                             })
