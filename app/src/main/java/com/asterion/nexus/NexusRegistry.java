@@ -205,6 +205,16 @@ public final class NexusRegistry {
             throw new IOException("Verified original unavailable or modified");
         return file;
     }
+    public boolean verifyOriginal(Item item)throws IOException{
+        if(item==null||!item.sha256.matches("[0-9a-f]{64}"))throw new IOException("Invalid original identity");
+        return NexusOriginalStore.matches(new File(new File(privateRoot,"originals"),item.sha256),item.length,item.sha256);
+    }
+    public NexusOriginalStore.Recovery recoverOriginal(Item item,InputStream replacement)throws IOException{
+        if(item==null)throw new IOException("Unknown verified original");
+        Item recorded=find(item.sha256);
+        if(recorded==null||recorded.length!=item.length)throw new IOException("Original identity no longer recorded");
+        return NexusOriginalStore.recoverExact(replacement,privateRoot,recorded.length,recorded.sha256);
+    }
     public void job(String sourceIdentifier,String stage,long received,String errorCode){
         if(!Set.of("QUEUED","RECEIVING","BYTES_COMPLETE","VERIFIED","INDEXED","FAILED")
             .contains(stage))throw new IllegalArgumentException("Unknown job stage");
