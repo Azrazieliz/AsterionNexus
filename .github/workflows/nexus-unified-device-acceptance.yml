@@ -4,7 +4,11 @@ on:
   push:
     branches: [work/nexus-harmonization-20261126, work/nexus-completion-20261128b]
     paths:
-      - app/src/main/java/com/asterion/nexus/**
+      - app/src/main/java/**
+      - app/src/test/**
+      - fusion/src/main/**
+      - rounder/src/main/**
+      - app/build.gradle.kts
       - app/src/androidTest/**
       - scripts/prepare_nexus_media_fixtures.py
       - .github/workflows/nexus-unified-device-acceptance.yml
