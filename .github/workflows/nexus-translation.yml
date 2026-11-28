@@ -15,6 +15,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   native-candidate:
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ja, ko, zh]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -32,7 +36,7 @@ jobs:
       - name: Fetch and verify exact model artifacts and execute reference inference
         run: |
           python -m pip install 'huggingface_hub==0.30.2' 'numpy==1.26.4' 'onnxruntime==1.22.1' 'sentencepiece==0.2.0'
-          python scripts/prepare_nexus_translation.py
+          python scripts/prepare_nexus_translation.py --languages ${{ matrix.language }}
       - name: Install Android SDK and pinned NDK
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
@@ -48,13 +52,13 @@ jobs:
           with zipfile.ZipFile("app/build/outputs/apk/debug/app-debug.apk") as apk:
               names=set(apk.namelist())
               assert "lib/arm64-v8a/libnexus_sentencepiece.so" in names
-              for language in ("ja","ko","zh"):
+              for language in ("${{ matrix.language }}",):
                   for name in ("manifest.json","encoder.onnx","decoder.onnx","source.spm","target.spm","vocab.json","config.json"):
                       assert f"assets/translation-models/{language}/{name}" in names
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: nexus-translation-reference-smoke-not-device-certification
+          name: nexus-translation-${{ matrix.language }}-reference-smoke-not-device-certification
           path: nexus_translation_smoke.json
           retention-days: 7
