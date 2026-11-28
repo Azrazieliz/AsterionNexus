@@ -107,6 +107,10 @@ object NexusFileDetails {
                 text="Pin offline"
                 setOnClickListener{NexusCloudActions.pin(activity,uri,title?: "File",type)}
             })
+            if(NexusCanonicalNaming.available(type,title.orEmpty()))body.addView(android.widget.Button(activity).apply{
+                text="Confirm identity and organise"
+                setOnClickListener{NexusCanonicalNaming.show(activity,uri,title?:"File",type)}
+            })
             body.addView(android.widget.Button(activity).apply{
                 text="Move or rename"
                 setOnClickListener{NexusCloudActions.move(activity,uri)}

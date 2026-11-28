@@ -302,7 +302,7 @@ private fun NexusUnifiedSearch(
             var galleryMore=false
             runCatching{
                 StandaloneRuntime.initialize(ctx)
-                val response=StandaloneRuntime.advancedSearch(mapOf("full_text" to query,"page" to page+1,"page_size" to 100,"sort_by" to "filename","sort_direction" to "asc"))
+                val response=runCatching{StandaloneRuntime.advancedSearch(mapOf("full_text" to query,"page" to page+1,"page_size" to 100,"sort_by" to "filename","sort_direction" to "asc"))}.getOrElse{mapOf("items" to StandaloneRuntime.searchByFilename(query,page+1,100))}
                 val items=(response["items"] as? List<*>).orEmpty().filterIsInstance<Map<*,*>>()
                 galleryMore=items.size==100
                 items.forEach{item->

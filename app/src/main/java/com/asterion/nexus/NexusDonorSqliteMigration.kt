@@ -177,16 +177,16 @@ internal class NexusDonorSqliteMigration(private val context:Context){
                         // ledger fields intentionally omit URLs, cursors and secrets.
                         val history=ContentValues(legacy)
                         history.keySet().toList().filter{it in setOf("url","address","source","photo_url","preview","cursor","live_cursor")}.forEach{history.remove(it)}
-                        var snapshot:String?=null
+                        var insertedSnapshot:String?=null
                         val active=activeRow(s,t,legacy,source,db)
                         if(active==null)held++ else if(snapshot(db,t,key)!=null)skipped++ else{
                             db.insertOrThrow(t.name,null,active)
-                            snapshot=snapshot(db,t,key)?:error("Inserted record missing")
+                            insertedSnapshot=snapshot(db,t,key)?:error("Inserted record missing")
                             inserted++
                         }
-                        val keyJson=org.json.JSONArray(key.toList()).toString()
+                        val keyJson=org.json.JSONArray(if(insertedSnapshot!=null)key.toList() else key.map{NexusOriginalStore.sourceKey(it)}).toString()
                         db.insertOrThrow("nexus_donor_import_rows",null,ContentValues().apply{
-                            put("digest",staged.digest);put("table_name",t.name);put("row_key",keyJson);put("history",json(history));put("inserted_snapshot",snapshot)
+                            put("digest",staged.digest);put("table_name",t.name);put("row_key",keyJson);put("history",json(history));put("inserted_snapshot",insertedSnapshot)
                         })
                     }
                     val report=JSONObject().put("seen",seen).put("inserted",inserted).put("held",held).put("skipped",skipped)

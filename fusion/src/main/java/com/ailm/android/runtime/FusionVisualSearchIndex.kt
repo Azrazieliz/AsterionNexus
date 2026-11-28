@@ -54,17 +54,25 @@ internal class FusionVisualSearchIndex(private val db: SQLiteDatabase) {
     /** Recover still-valid whole-image vectors from the old training cache,
      * without requesting additional inference or changing its eviction policy. */
     fun recoverCached() {
+        var after=0
+        while(!Thread.currentThread().isInterrupted){
+            val next=recoverCachedPage(after) ?: break
+            if(next<=after)break
+            after=next
+        }
+    }
+    private fun recoverCachedPage(after:Int):Int? {
         val rows = mutableListOf<Triple<Int, Pair<String,String>, ByteArray>>()
         db.rawQuery("""SELECT c.image_id,c.source_hash,c.encoder_hash,c.feature
             FROM fusion_visual_feature_cache c
             JOIN fusion_image_fingerprints f ON f.image_id=c.image_id AND f.sha256=c.source_hash
             LEFT JOIN fusion_visual_search_index s ON s.image_id=c.image_id
-            WHERE c.subject_index=-1 AND s.image_id IS NULL
-            LIMIT 2048""".trimIndent(),null).use { cur ->
+            WHERE c.subject_index=-1 AND s.image_id IS NULL AND c.image_id>?
+            ORDER BY c.image_id LIMIT 2048""".trimIndent(),arrayOf(after.toString())).use { cur ->
             while(cur.moveToNext()) rows += Triple(cur.getInt(0),
                 cur.getString(1) to cur.getString(2),cur.getBlob(3))
         }
-        if(rows.isEmpty())return
+        if(rows.isEmpty())return null
         db.beginTransactionNonExclusive()
         try {
             for ((id, hashes, bytes) in rows) {
@@ -75,6 +83,7 @@ internal class FusionVisualSearchIndex(private val db: SQLiteDatabase) {
             }
             db.setTransactionSuccessful()
         } finally {db.endTransaction()}
+        return rows.last().first
     }
 
     /** Stream only same-encoder, active, fingerprint-consistent records.
