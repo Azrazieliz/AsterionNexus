@@ -3,6 +3,7 @@ package com.asterion.nexus
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ContentResolver
+import android.database.ContentObserver
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -27,6 +28,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,6 +49,7 @@ import com.ailm.android.runtime.LocalDatabase
 import com.ailm.android.runtime.FusionDatabaseRepository
 import com.azrael.pixivdumpsync.AsterionSearchHub
 import com.azrael.pixivdumpsync.UnifiedDownloadsUi
+import com.azrael.pixivdumpsync.DownloadStateSignals
 import com.azrael.pixivdumpsync.SourceIndex
 import com.azrael.pixivdumpsync.ApprovedCosplayActions
 import com.azrael.pixivdumpsync.AuthenticatedItemDownloader
@@ -67,6 +70,9 @@ import com.azrael.pixivdumpsync.NovelEpubService
 import com.azrael.pixivdumpsync.NovelEpubParser
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withTimeoutOrNull
 import com.asterion.videoflow.NexusWebAcquisition
 import com.openlocal.office.core.FgSearchIndex
 import com.openlocal.office.core.FgTeraboxClient
@@ -667,29 +673,51 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
     val ctx=LocalContext.current as Activity
     val scope=rememberCoroutineScope()
     var entries by remember{mutableStateOf<List<UnifiedDownloadsUi.NexusQueueEntry>>(emptyList())}
+    var totals by remember{mutableStateOf<Map<String,UnifiedDownloadsUi.NexusQueueTotals>?>(null)}
+    var showCounts by remember{mutableStateOf(false)}
+    var issueDetails by remember{mutableStateOf<UnifiedDownloadsUi.NexusQueueEntry?>(null)}
     var filter by remember{mutableStateOf("Unfinished")}
     var status by remember{mutableStateOf("Reading saved transfer receipts")}
     var refreshing by remember{mutableStateOf(false)}
+    var loaded by remember{mutableStateOf(false)}
+    var latestReadOk by remember{mutableStateOf(false)}
     var pendingRemove by remember{mutableStateOf<UnifiedDownloadsUi.NexusQueueEntry?>(null)}
     var powered by remember{mutableStateOf(com.azrael.pixivdumpsync.AppPower.enabled(ctx))}
-    fun refresh(){
-        scope.launch{
-            refreshing=true
-            runCatching{withContext(Dispatchers.IO){
-                UnifiedDownloadsUi.snapshotForNexus(ctx)
-            }}.onSuccess{
-                entries=it
-                status=it.size.toString()+" native transfer records"
-            }.onFailure{
-                status="Transfer queue unavailable: "+it.message.orEmpty().take(120)
-            }
-            refreshing=false
+    val requests=remember{Channel<Unit>(Channel.CONFLATED)}
+    fun refresh(){requests.trySend(Unit)}
+    DisposableEffect(ctx,requests){
+        val observer=object:ContentObserver(Handler(Looper.getMainLooper())){
+            override fun onChange(selfChange:Boolean){requests.trySend(Unit)}
+        }
+        val registered=runCatching{
+            ctx.contentResolver.registerContentObserver(DownloadStateSignals.uri(ctx),true,observer)
+        }.isSuccess
+        onDispose{
+            if(registered)runCatching{ctx.contentResolver.unregisterContentObserver(observer)}
         }
     }
-    LaunchedEffect(Unit){
+    LaunchedEffect(ctx,requests){
+        // Exactly one outstanding database read; events arriving during it
+        // coalesce. A missed native notification is recovered by 3s polling.
         while(true){
-            refresh()
-            delay(10000L)
+            refreshing=true
+            try{
+                val snapshot=withContext(Dispatchers.IO){
+                    val rows=UnifiedDownloadsUi.snapshotForNexus(ctx)
+                    val counts=runCatching{UnifiedDownloadsUi.totalsForNexus(ctx)}.getOrNull()
+                    rows to counts
+                }
+                entries=snapshot.first
+                totals=snapshot.second
+                loaded=true;latestReadOk=true
+                status="Showing "+entries.size+" recent transfer records"
+            }catch(cancel:CancellationException){throw cancel}
+            catch(error:Exception){
+                latestReadOk=false
+                status=if(loaded)"Refresh failed · showing previous records" else "Transfer queue unavailable"
+            }finally{refreshing=false}
+            withTimeoutOrNull(3000L){requests.receive()}
+            delay(300L)
         }
     }
     val visible=remember(entries,filter){
@@ -708,6 +736,7 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
             verticalAlignment=Alignment.CenterVertically){
             Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.weight(1f),
                 maxLines=2)
+            TextButton(onClick={showCounts=true;refresh()}){Text("Counts")}
             UnifiedButton(if(refreshing)"Reading…" else "Refresh",!refreshing){refresh()}
         }
         Row(verticalAlignment=Alignment.CenterVertically){
@@ -742,10 +771,18 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
                             color=C_MUTED,fontSize=12.sp,
                             maxLines=3,overflow=TextOverflow.Ellipsis,
                             modifier=Modifier.padding(top=6.dp))
-                        item.progress?.let{value->
+                        val bytePercent=if(item.expected>0&&item.transferred>=0)
+                            (100.0*item.transferred/item.expected).toInt().coerceIn(0,100) else null
+                        if(item.transferred>0||item.expected>0){
+                            fun mib(bytes:Long)=String.format(java.util.Locale.ROOT,"%.1f MiB",bytes/1048576.0)
+                            Text(mib(item.transferred.coerceAtLeast(0L))+
+                                if(item.expected>0)" / "+mib(item.expected) else " received",
+                                color=C_TEXT,fontSize=12.sp,modifier=Modifier.padding(top=7.dp))
+                        }
+                        (bytePercent?:item.progress)?.let{value->
                             val percent=value.coerceIn(0,100)
-                            Text(percent.toString()+"%",color=C_TEXT,fontSize=12.sp,
-                                modifier=Modifier.padding(top=7.dp))
+                            Text(if(bytePercent!=null)"$percent% of bytes" else "Stage progress · $percent%",
+                                color=C_TEXT,fontSize=12.sp,modifier=Modifier.padding(top=5.dp))
                             LinearProgressIndicator(
                                 progress={percent/100f},
                                 modifier=Modifier.fillMaxWidth().padding(top=5.dp),
@@ -768,6 +805,9 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
                                     refresh()
                                 }
                             }
+                            if(item.state in setOf("FAILED","HELD")){
+                                TextButton(onClick={issueDetails=item}){Text("Details")}
+                            }
                             if(item.remove!=null){
                                 UnifiedButton(if(item.state=="DONE")"Hide" else "Remove"){
                                     pendingRemove=item
@@ -778,10 +818,33 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
                 }
             }
             if(visible.isEmpty())item{
-                Text("No "+filter.lowercase()+" transfers",color=C_MUTED,fontSize=13.sp,
+                Text(if(!loaded&&refreshing)"Reading transfer records…"
+                    else if(!latestReadOk)"Transfer records unavailable"
+                    else "No "+filter.lowercase()+" recent transfers",color=C_MUTED,fontSize=13.sp,
                     modifier=Modifier.fillMaxWidth().padding(top=22.dp))
             }
         }
+    }
+    if(showCounts){
+        AlertDialog(onDismissRequest={showCounts=false},title={Text("Source ledger counts")},
+            text={
+                Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement=Arrangement.spacedBy(10.dp)){
+                    Text("Full source records, separate from the recent list. Local and remote receipts are not added together.",fontSize=12.sp)
+                    val counts=totals
+                    if(counts==null)Text("Counts unavailable")
+                    else counts.toSortedMap().forEach{(source,count)->
+                        Text(source,fontWeight=FontWeight.Medium)
+                        Text("Saved ${count.saved} · Failed ${count.failed} · Queued ${count.queued} · Active ${count.active} · Paused ${count.paused}",fontSize=12.sp)
+                    }
+                }
+            },confirmButton={TextButton(onClick={showCounts=false}){Text("Close")}})
+    }
+    issueDetails?.let{selected->
+        AlertDialog(onDismissRequest={issueDetails=null},title={Text(selected.title)},
+            text={Text(selected.source+"\n\n"+selected.detail,
+                modifier=Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState()))},
+            confirmButton={TextButton(onClick={issueDetails=null}){Text("Close")}})
     }
     pendingRemove?.let{selected->
         AlertDialog(onDismissRequest={pendingRemove=null},
