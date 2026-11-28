@@ -290,6 +290,8 @@ private fun NexusHome(
     var organisingContext by rememberSaveable { mutableStateOf("Activity") }
     var downloadingContext by rememberSaveable { mutableStateOf("Search") }
     var showMore by remember { mutableStateOf(false) }
+    var showMigration by remember { mutableStateOf(false) }
+    if(showMigration)NexusMigrationDialog{showMigration=false}
     var cloudMedia by rememberSaveable { mutableStateOf(true) }
     val destination=when(section){
         "Organize","Intelligence","Activity","Taxonomy","Review","Asterion Bridges"->"Organising"
@@ -335,6 +337,7 @@ private fun NexusHome(
                         DropdownMenu(expanded=showMore,onDismissRequest={showMore=false}){
                             if(destination=="Organising")DropdownMenuItem(text={Text("Cloud move history")},onClick={showMore=false;NexusCloudActions.history(activity)})
                             if(destination=="Library")DropdownMenuItem(text={Text("Offline pins")},onClick={showMore=false;NexusCloudActions.pins(activity)})
+                            if(destination=="Organising")DropdownMenuItem(text={Text("Migrate donor data")},onClick={showMore=false;showMigration=true})
                             DropdownMenuItem(text={Text("Runtime diagnostics")},onClick={
                                 showMore=false;onRoute("Intelligence")
                             })
