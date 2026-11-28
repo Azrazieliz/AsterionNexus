@@ -127,6 +127,7 @@ public final class NexusArchiveOperation {
                     }
                     if(!NexusOriginalStore.matches(registry.original(result),result.length,result.sha256))
                         throw new IOException("Registered member readback failed");
+                    registry.linkDerivative(result.sha256,original.sha256,"extracted_from",job+":"+file.entry.path);
                     registered++;bytes+=result.length;
                     entries.getJSONObject(registered-1).put("registered",true);
                     // On interruption the existing canonical origin identity makes retry idempotent.
