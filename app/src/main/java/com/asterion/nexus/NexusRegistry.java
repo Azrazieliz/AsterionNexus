@@ -124,7 +124,7 @@ public final class NexusRegistry {
         String needle=query==null?"":query.toLowerCase(Locale.ROOT);
         needle=needle.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
         String book="(o.mime LIKE '%pdf%' OR o.mime LIKE '%epub%' OR "+
-                "o.mime LIKE '%comic%' OR o.mime LIKE '%wordprocessingml%')";
+                "o.mime LIKE '%comic%' OR o.mime LIKE '%wordprocessingml%' OR o.mime='text/plain')";
         String restriction;
         switch(category==null?"All":category){
             case "Images":restriction=" AND o.mime LIKE 'image/%'";break;

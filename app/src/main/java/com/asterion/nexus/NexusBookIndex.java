@@ -49,7 +49,7 @@ public final class NexusBookIndex {
     }
     public NexusBookIndex(Context context){app=context.getApplicationContext();}
     public static boolean supported(String mime){
-        return "text/plain".equalsIgnoreCase(mime) || "application/epub+zip".equalsIgnoreCase(mime) ||
+        return "application/pdf".equalsIgnoreCase(mime) || "text/plain".equalsIgnoreCase(mime) || "application/epub+zip".equalsIgnoreCase(mime) ||
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(mime);
     }
     /** Job creation does not read media or block the initiating acquisition. */
@@ -100,6 +100,7 @@ public final class NexusBookIndex {
         try{
             if(source.mime.equals("application/epub+zip"))indexEpub(pending,stop);
             else if("text/plain".equalsIgnoreCase(source.mime))indexPlainText(pending,stop);
+            else if("application/pdf".equalsIgnoreCase(source.mime))indexPdf(pending,stop);
             else indexDocx(pending,stop);
         }catch(Exception error){
             if(stop.get()||Thread.currentThread().isInterrupted()){
@@ -139,7 +140,15 @@ public final class NexusBookIndex {
                     .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT))){
             char[] chars=new char[32768];
             int i=0,n;
-            while((n=reader.read(chars))!=-1){
+            while(true){
+                n=0;
+                while(n<chars.length){
+                    if(interrupted(stop)){mark(p.sha,"queued","",-1,-1);return;}
+                    int read=reader.read(chars,n,chars.length-n);
+                    if(read<0)break;
+                    n+=read;
+                }
+                if(n==0)break;
                 if(interrupted(stop)){mark(p.sha,"queued","",-1,-1);return;}
                 if(i>=MAX_CHAPTERS)throw new IOException("Text exceeds chapter budget");
                 if(i>=p.next)record(p.sha,i,"Text section "+(i+1),new String(chars,0,n),0);
@@ -147,6 +156,37 @@ public final class NexusBookIndex {
             }
             if(i==0)throw new IOException("Empty text");
             mark(p.sha,"complete","",i,i);
+        }
+    }
+    private void indexPdf(Pending p,AtomicBoolean stop)throws Exception {
+        if(android.os.Build.VERSION.SDK_INT<35){
+            mark(p.sha,"unsupported","PDF text extraction requires Android 15 or the installed offline OCR engine",-1,-1);
+            return;
+        }
+        try(android.os.ParcelFileDescriptor fd=app.getContentResolver().openFileDescriptor(NexusLibraryProvider.uriFor(app,p.sha),"r")){
+            if(fd==null)throw new IOException("PDF original unavailable");
+            try(android.graphics.pdf.PdfRenderer pdf=new android.graphics.pdf.PdfRenderer(fd)){
+                int count=pdf.getPageCount();
+                if(count<=0||count>MAX_CHAPTERS)throw new IOException("PDF page count invalid");
+                for(int i=p.next;i<count;i++){
+                    if(interrupted(stop)){mark(p.sha,"queued","",i,count);return;}
+                    StringBuilder body=new StringBuilder();
+                    try(android.graphics.pdf.PdfRenderer.Page page=pdf.openPage(i)){
+                        for(android.graphics.pdf.content.PdfPageTextContent part:page.getTextContents()){
+                            body.append(part.getText()).append('\n');
+                            if(body.length()>MAX_TEXT_CHARS)throw new IOException("PDF page text budget exceeded");
+                        }
+                    }
+                    record(p.sha,i,"Page "+(i+1),body.toString().trim(),count);
+                }
+                DB helper=new DB(app);
+                int missing;
+                try(Cursor c=helper.getReadableDatabase().rawQuery(
+                    "SELECT count(*) FROM chapters WHERE sha=? AND characters=0",new String[]{p.sha})){
+                    missing=c.moveToFirst()?c.getInt(0):count;
+                }finally{helper.close();}
+                mark(p.sha,missing==0?"complete":"partial",missing==0?"":missing+" pages have no extractable text; offline OCR not completed",count,count);
+            }
         }
     }
     private static byte[] readDocx(File f,int limit)throws IOException {

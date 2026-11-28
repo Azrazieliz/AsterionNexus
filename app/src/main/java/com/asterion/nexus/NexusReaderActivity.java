@@ -41,6 +41,7 @@ public final class NexusReaderActivity extends Activity {
     private String sourceKey;
     private byte[] document;
     private String plainText;
+    private JSONArray archiveEntries;
     private TextView layoutButton;
     private int layoutMode=0;
     private int renderGeneration=0;
@@ -119,7 +120,7 @@ public final class NexusReaderActivity extends Activity {
                         if(index<0||index>=count)return denied();
                         if(mode==1){
                             byte[] data=Base64.decode(UniversalReader.pdfPage(NexusReaderActivity.this,source,index,1280),Base64.DEFAULT);
-                            return new WebResourceResponse("image/png",null,new ByteArrayInputStream(data));
+                            return new WebResourceResponse("image/jpeg",null,new ByteArrayInputStream(data));
                         }
                         BookArchive b=book;
                         if(b==null)return denied();
@@ -185,7 +186,10 @@ public final class NexusReaderActivity extends Activity {
                 count=(RichDocxPreview.blockCount(document)+35)/36;
             } else {
                 book=new BookArchive(this,source,mode==0);
-                if(mode==2)count=book.imageCount();
+                if(mode==2){
+                    count=book.imageCount();
+                    if(count==0){archiveEntries=book.fileList();mode=5;count=(archiveEntries.length()+99)/100;}
+                }
                 else count=book.chapterCount();
             }
             if(count<=0)throw new IOException("No readable pages in this source");
@@ -217,7 +221,7 @@ public final class NexusReaderActivity extends Activity {
         getPreferences(Context.MODE_PRIVATE).edit().putInt(sourceKey,current).apply();
     }
     private void switchLayout(){
-        if(count<=0)return;
+        if(count<=0||mode==5)return;
         if(count>10000){position.setText("Continuous layout limited to 10,000 pages");return;}
         layoutMode=(layoutMode+1)%3;
         layoutButton.setText(layoutMode==0?"Pages":layoutMode==1?"Vertical":"Horizontal");
@@ -254,6 +258,16 @@ public final class NexusReaderActivity extends Activity {
                         web.setVisibility(View.GONE);image.setVisibility(View.VISIBLE);
                         image.setImageBitmap(bmp);
                     });
+                } else if(mode==5){
+                    StringBuilder listing=new StringBuilder("<html><meta name='viewport' content='width=device-width, initial-scale=1'><body style='padding:14px;font:16px sans-serif;overflow-wrap:anywhere'><h2>Archive contents</h2>");
+                    int end=Math.min(archiveEntries.length(),(index+1)*100);
+                    for(int i=index*100;i<end;i++){
+                        JSONObject entry=archiveEntries.getJSONObject(i);
+                        listing.append("<p>").append(safeHtml(entry.optString("name"))).append("<br><small>")
+                            .append(entry.optLong("size",-1)).append(" bytes</small></p>");
+                    }
+                    listing.append("</body></html>");
+                    showHtml(listing.toString(),"https://fg-assets.invalid/",index,generation);
                 } else if(mode==4){
                     int start=index*32768,end=Math.min(plainText.length(),start+32768);
                     showHtml("<html><meta name='viewport' content='width=device-width, initial-scale=1'><body style='white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;font:18px/1.6 sans-serif'>"+safeHtml(plainText.substring(start,end))+"</body></html>","https://fg-assets.invalid/",index,generation);

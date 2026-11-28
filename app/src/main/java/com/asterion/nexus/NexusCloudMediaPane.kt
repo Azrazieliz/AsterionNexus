@@ -80,7 +80,7 @@ internal fun NexusCloudMediaPane(category:String,query:String,previewEnabled:Boo
                     building[account.scope]=response.optBoolean("building")
                     errors[account.scope]=response.optString("error")
                 }
-                pending[account.scope]=false
+                if(runCatching{JSONObject(raw).optInt("token")==token.get()}.getOrDefault(false))pending[account.scope]=false
             }}
             override fun onProgress(raw:String){}
         })
