@@ -66,7 +66,11 @@ def smoke(directory, language):
     vocabulary = json.loads((directory / "vocab.json").read_text())
     reverse = {value: key for key, value in vocabulary.items()}
     config = json.loads((directory / "config.json").read_text())
-    eos, pad, unknown = config["eos_token_id"], config["decoder_start_token_id"], vocabulary["<unk>"]
+    eos, start, unknown = config["eos_token_id"], config.get("nexus_decoder_start",config["decoder_start_token_id"]), vocabulary["<unk>"]
+    pad=config.get("nexus_pad",start)
+    source_prefix=config.get("nexus_source_prefix",[])
+    target_prefix=[start]+config.get("nexus_target_prefix",[])
+    suppressed=set(config.get("nexus_suppressed_ids",[]))|{pad,unknown}
     src = spm.SentencePieceProcessor(model_file=str(directory / "source.spm"))
     tgt = spm.SentencePieceProcessor(model_file=str(directory / "target.spm"))
     opts = ort.SessionOptions()
@@ -83,12 +87,12 @@ def smoke(directory, language):
         ids = [vocabulary.get(piece, unknown) for piece in src.encode(text, out_type=str)]
         if not ids or unknown in ids:
             raise RuntimeError("Unknown source tokens in reference fixture")
-        input_ids = np.array([ids + [eos]], dtype=np.int64)
+        input_ids = np.array([source_prefix + ids + [eos]], dtype=np.int64)
         mask = np.ones_like(input_ids)
         hidden, = encoder.run(["last_hidden_state"], {"input_ids": input_ids, "attention_mask": mask})
         # Rank by sequence likelihood, not fixture words.
         width = 4
-        beams = [([pad], 0.0)]
+        beams = [(target_prefix, 0.0)]
         completed = []
         for _ in range(max(48, min(384, input_ids.shape[1] * 4 + 32))):
             candidates = []
@@ -101,8 +105,8 @@ def smoke(directory, language):
                 logits = scores[0, -1].astype(np.float64)
                 maximum = np.max(logits)
                 normalizer = maximum + np.log(np.exp(logits - maximum).sum())
-                logits[pad] = logits[unknown] = -np.inf
-                if len(prefix) == 1:
+                for token in suppressed: logits[token] = -np.inf
+                if len(prefix) == len(target_prefix):
                     logits[eos] = -np.inf
                 top = np.argsort(-logits, kind="stable")[:width]
                 for token in top:
@@ -113,7 +117,7 @@ def smoke(directory, language):
                         completed.append(candidate)
                     else:
                         candidates.append(candidate)
-            rank = lambda pair: pair[1] / (len(pair[0]) - 1)
+            rank = lambda pair: pair[1] / max(1,len(pair[0]) - len(target_prefix))
             completed = sorted(completed, key=rank, reverse=True)[:width]
             beams = sorted(candidates, key=lambda pair: pair[1], reverse=True)[:width]
             if not beams:
@@ -123,7 +127,7 @@ def smoke(directory, language):
         if not completed:
             raise RuntimeError("Reference inference did not complete")
         tokens = completed[0][0]
-        result = tgt.decode([reverse[i] for i in tokens[1:-1]])
+        result = tgt.decode([reverse[i] for i in tokens[len(target_prefix):-1]])
         print(f"{language}: {text!r} -> {result!r}", flush=True)
         if not result.strip() or result == text or not all(word in result.lower() for word in expected):
             raise RuntimeError(f"Reference semantic smoke failed for {language}: {result!r}")
