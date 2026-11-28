@@ -88,7 +88,7 @@ class NexusVideoEditActivity:Activity(){
         status=heading("Verifying sources…");layout.addView(status)
         exportButton=Button(this).apply{text="Export independent MP4";isEnabled=false;setOnClickListener{startExport()}}
         layout.addView(exportButton)
-        highlightButton=Button(this).apply{text="Suggest 60-second motion montage";isEnabled=false;setOnClickListener{suggestHighlights()}}
+        highlightButton=Button(this).apply{text="Suggest motion montage";isEnabled=false;setOnClickListener{suggestHighlights()}}
         layout.addView(highlightButton)
         cancelButton=Button(this).apply{text="Cancel export";isEnabled=false;setOnClickListener{cancel.set(true);isEnabled=false}}
         layout.addView(cancelButton)
@@ -103,7 +103,7 @@ class NexusVideoEditActivity:Activity(){
             }
             runOnUiThread{
                 if(isDestroyed||isFinishing)return@runOnUiThread
-                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=items.size==1}
+                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=true}
                     .onFailure{status.text="Cannot edit: "+it.message}
             }
         }
@@ -178,23 +178,42 @@ class NexusVideoEditActivity:Activity(){
     }
     override fun onPause(){saveDraft();super.onPause()}
     private fun suggestHighlights(){
-        if(running||!ready||rows.size!=1)return
+        if(running||!ready||rows.isEmpty())return
         sync()
-        val source=rows.first().source
-        running=true;renderRows();exportButton.isEnabled=false;highlightButton.isEnabled=false
-        status.text="Analyzing decoded frames…"
-        worker.execute{
-            val result=runCatching{NexusHighlightPlanner.suggest(applicationContext,source,60000)}
-            runOnUiThread{
-                if(isDestroyed||isFinishing)return@runOnUiThread
-                running=false
-                result.onSuccess{windows->
-                    rows.clear();rows.addAll(windows.map{Row(source,it.start.toString(),it.end.toString())})
-                    status.text="Motion-based montage suggested; review clip boundaries before export"
-                }.onFailure{status.text="Montage unavailable: "+it.message}
-                renderRows();exportButton.isEnabled=true;highlightButton.isEnabled=rows.size==1
+        val snapshot=rows.map{it.copy()}
+        val ranges=runCatching{snapshot.map{
+            val start=it.start.toLong();val end=it.end.toLong()
+            require(start>=0&&end>start&&end<=it.source.duration)
+            NexusHighlightPlanner.Range(it.source,start,end)
+        }}.getOrElse{status.text="Correct clip boundaries before suggesting a montage";return}
+        val settings=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(24,12,24,12)}
+        val length=EditText(this).apply{hint="Total seconds (5–300)";inputType=InputType.TYPE_CLASS_NUMBER;setText("60")}
+        val pace=Spinner(this).apply{adapter=ArrayAdapter(this@NexusVideoEditActivity,android.R.layout.simple_spinner_dropdown_item,listOf("Fast · 2 seconds","Balanced · 5 seconds","Slow · 10 seconds","Extended · 15 seconds"));setSelection(1)}
+        settings.addView(length);settings.addView(pace)
+        val dialog=android.app.AlertDialog.Builder(this).setTitle("Motion montage").setView(settings).setMessage("Analyze selected ranges and replace the timeline with suggested clips. Review before export.")
+            .setPositiveButton("Analyze",null).setNegativeButton("Cancel",null).create()
+        dialog.setOnShowListener{
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener{
+                val seconds=length.text.toString().toLongOrNull()
+                if(seconds==null||seconds !in 5L..300L){length.error="Enter 5–300 seconds";return@setOnClickListener}
+                val clip=listOf(2000L,5000L,10000L,15000L)[pace.selectedItemPosition]
+                dialog.dismiss();running=true;renderRows();exportButton.isEnabled=false;highlightButton.isEnabled=false
+                status.text="Analyzing decoded frames across ${ranges.size} selected clips…"
+                worker.execute{
+                    val result=runCatching{NexusHighlightPlanner.suggestMontage(applicationContext,ranges,seconds*1000,clip)}
+                    runOnUiThread{
+                        if(isDestroyed||isFinishing)return@runOnUiThread
+                        running=false
+                        result.onSuccess{windows->
+                            rows.clear();rows.addAll(windows.map{Row(snapshot[it.sourceIndex].source,it.window.start.toString(),it.window.end.toString())})
+                            status.text="Motion-based montage suggested; review clip boundaries before export"
+                        }.onFailure{status.text="Montage unavailable: "+it.message}
+                        renderRows();saveDraft();exportButton.isEnabled=true;highlightButton.isEnabled=rows.isNotEmpty()
+                    }
+                }
             }
         }
+        dialog.show()
     }
     private fun startExport(){
         sync()
@@ -213,7 +232,7 @@ class NexusVideoEditActivity:Activity(){
             }
             runOnUiThread{
                 if(isDestroyed||isFinishing)return@runOnUiThread
-                running=false;renderRows();exportButton.isEnabled=true;highlightButton.isEnabled=rows.size==1;cancelButton.isEnabled=false
+                running=false;renderRows();exportButton.isEnabled=true;highlightButton.isEnabled=rows.isNotEmpty();cancelButton.isEnabled=false
                 result.onSuccess{item->
                     status.text=NexusCloudPublication.status(applicationContext,item)
                     android.app.AlertDialog.Builder(this).setTitle("Video output").setMessage(item.displayName+"\nOriginals retained.")
