@@ -1178,9 +1178,7 @@ object UnifiedDownloadsUi {
     /** Preserve each state's recent records independently. A large saved
      * history or cloud publication queue must not hide failed/active jobs. */
     internal fun boundedNexusRows(rows:List<NexusQueueEntry>):List<NexusQueueEntry> =
-        listOf("ACTIVE","FAILED","HELD","QUEUED","PAUSED","DONE").flatMap{state->
-            rows.filter{it.state==state}.take(100)
-        }
+        NexusQueueRowLimiter.bounded(rows) { it.state }
 
     data class NexusQueueTotals(val saved:Int,val failed:Int,val queued:Int,val active:Int,val paused:Int)
 
