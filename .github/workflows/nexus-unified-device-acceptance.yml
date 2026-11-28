@@ -94,6 +94,7 @@ jobs:
             grep -F 'AST_SIM: PYTHON_RUNTIME_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: EMBEDDED_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: DONOR_MIGRATION_OK' nexus-android-instrumentation.txt
+            grep -F 'AST_SIM: CORE_LEGACY_RECOVERY_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: MEDIA_EXPORT_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: GLTF_RENDER_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: PASS' nexus-android-instrumentation.txt
