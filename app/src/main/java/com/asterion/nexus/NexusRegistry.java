@@ -72,7 +72,9 @@ public final class NexusRegistry {
             else if(filename.endsWith(".cbz"))
                 type="application/vnd.comicbook+zip";
             else if(filename.endsWith(".pdf"))type="application/pdf";
+            else if(filename.endsWith(".cbr"))type="application/vnd.comicbook-rar";
         }
+        type=canonicalComicMime(displayName,type);
         NexusOriginalStore.VerifiedFile bytes=NexusOriginalStore.ingest(
                 input,privateRoot,expectedLength,expectedSha);
         long now=System.currentTimeMillis();
@@ -124,7 +126,7 @@ public final class NexusRegistry {
         String needle=query==null?"":query.toLowerCase(Locale.ROOT);
         needle=needle.replace("\\","\\\\").replace("%","\\%").replace("_","\\_");
         String book="(o.mime LIKE '%pdf%' OR o.mime LIKE '%epub%' OR "+
-                "o.mime LIKE '%comic%' OR o.mime LIKE '%wordprocessingml%' OR o.mime='text/plain')";
+                "o.mime LIKE '%comic%' OR o.mime='application/x-cbz' OR o.mime='application/x-cbr' OR LOWER(l.display_name) LIKE '%.cbr' OR o.mime LIKE '%wordprocessingml%' OR o.mime='text/plain')";
         String restriction;
         switch(category==null?"All":category){
             case "Images":restriction=" AND o.mime LIKE 'image/%'";break;
@@ -180,7 +182,7 @@ public final class NexusRegistry {
                 if(c.moveToFirst())ceiling=Math.max(after,c.getLong(0));
             }
             long cursor=after;
-            try(Cursor c=db.rawQuery("SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.id>? AND l.id<=? AND o.mime IN ('application/pdf','text/plain','application/epub+zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.comicbook+zip','application/x-cbz') ORDER BY l.id LIMIT ?",
+            try(Cursor c=db.rawQuery("SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.id>? AND l.id<=? AND (o.mime IN ('application/pdf','text/plain','application/epub+zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.comicbook+zip','application/x-cbz','application/vnd.comicbook-rar','application/x-cbr') OR LOWER(l.display_name) LIKE '%.cbr') ORDER BY l.id LIMIT ?",
                 new String[]{Long.toString(after),Long.toString(ceiling),Integer.toString(limit)})){
                 while(c.moveToNext()){Item row=item(c);items.add(row);cursor=row.locationId;}
             }
@@ -197,8 +199,16 @@ public final class NexusRegistry {
             return c.moveToFirst()?item(c):null;
         }finally{helper.close();}
     }
+    static String canonicalComicMime(String name,String mime){
+        String lower=name==null?"":name.toLowerCase(Locale.ROOT);
+        if(lower.endsWith(".cbr")&&Set.of("application/octet-stream","application/x-rar-compressed","application/vnd.rar","application/x-cbr").contains(mime))
+            return "application/vnd.comicbook-rar";
+        if(lower.endsWith(".cbz")&&Set.of("application/octet-stream","application/zip","application/x-cbz").contains(mime))
+            return "application/vnd.comicbook+zip";
+        return mime;
+    }
     private static Item item(Cursor c){
-        return new Item(c.getLong(0),c.getString(1),c.getString(2),c.getString(3),
+        return new Item(c.getLong(0),c.getString(1),c.getString(2),canonicalComicMime(c.getString(2),c.getString(3)),
                 c.getString(4),c.getString(5),c.getLong(6));
     }
     private static void requireRatingIdentity(String sha){
