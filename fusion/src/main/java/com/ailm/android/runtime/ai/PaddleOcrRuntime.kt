@@ -256,7 +256,7 @@ internal class PaddleOcrRuntime(
                 val recognizerInput = try {
                     prepareRecognizer(crop)
                 } finally {
-                    crop.recycle()
+                    if(crop!==source)crop.recycle()
                 }
                 val outputs = OnnxRuntimeClient.runDetailedWithSession(recognizerSession, listOf(recognizerInput))
                 val recognizerOutput = outputs["fetch_name_0"]
@@ -275,7 +275,7 @@ internal class PaddleOcrRuntime(
                     classCount = classCount,
                     dictionary = dictionary,
                 )
-                if (decoded.text.isNotBlank() && (decoded.confidence !in 0f..1f || decoded.confidence >= 0.5f)) {
+                if (decoded.text.isNotBlank() && (decoded.confidence.isFinite() && decoded.confidence in 0.5f..1f)) {
                     lines += mapOf(
                         "text" to decoded.text,
                         "confidence" to decoded.confidence,
@@ -307,6 +307,8 @@ internal class PaddleOcrRuntime(
                         "text" to text,
                         "lines" to lines,
                         "boxes_detected" to boxes.size,
+                        "source_width" to source.width,
+                        "source_height" to source.height,
                     ),
                 ),
             )
