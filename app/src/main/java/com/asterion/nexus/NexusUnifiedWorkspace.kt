@@ -714,6 +714,7 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
             }catch(cancel:CancellationException){throw cancel}
             catch(error:Exception){
                 latestReadOk=false
+                totals=null
                 status=if(loaded)"Refresh failed · showing previous records" else "Transfer queue unavailable"
             }finally{refreshing=false}
             withTimeoutOrNull(3000L){requests.receive()}
@@ -791,14 +792,14 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp),
                             modifier=Modifier.padding(top=10.dp)){
                             if(item.state=="DONE"&&!item.savedUri.isNullOrBlank()){
-                                UnifiedButton("Open"){
+                                UnifiedButton("Open",latestReadOk){
                                     runCatching{onOpen(Uri.parse(item.savedUri),
                                         item.mime,item.title,-1)}
                                         .onFailure{status="Cannot open file: "+
                                             it.message.orEmpty().take(110)}
                                 }
                             }else if(item.perform!=null&&!item.actionLabel.isNullOrBlank()){
-                                UnifiedButton(item.actionLabel){
+                                UnifiedButton(item.actionLabel,latestReadOk){
                                     runCatching{item.perform.invoke()}
                                         .onFailure{status="Action failed: "+
                                             it.message.orEmpty().take(110)}
@@ -854,7 +855,10 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
             confirmButton={
                 TextButton(onClick={
                     pendingRemove=null
-                    runCatching{selected.remove?.invoke()}
+                    val action=entries.firstOrNull{it.key==selected.key&&it.state==selected.state}?.remove
+                    if(!latestReadOk||action==null){
+                        status="Transfer changed · refresh before removing"
+                    }else runCatching{action.invoke()}
                         .onFailure{status="Removal failed: "+it.message.orEmpty().take(110)}
                     refresh()
                 }){Text("Continue")}
