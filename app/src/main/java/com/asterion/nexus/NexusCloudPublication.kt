@@ -130,7 +130,10 @@ object NexusCloudPublication {
         // On retry, credit a pre-existing final path only if its actual
         // remote whole-file hash matches the original.
         val existing=runCatching{client.verifyExisting(context,uri,safeName,folder,::stop)}.getOrNull()
-        if(existing?.hashVerified==true)return existing
+        if(existing?.hashVerified==true){
+            recordLocation(context,item,account.browserScope,existing)
+            return existing
+        }
         check(!stop()){"Publication cancelled"}
         val browserScope=account.browserScope
         check(!stop()){"Cloud account authorization changed"}
@@ -148,6 +151,12 @@ object NexusCloudPublication {
         val final=client.verifyExisting(context,uri,safeName,folder,::stop)
             ?:throw IllegalStateException("Remote final file not verified")
         check(final.hashVerified||final.fsId==staged.fsId){"Remote final identity cannot be linked to staged bytes"}
+        recordLocation(context,item,account.browserScope,final)
         return final
+    }
+    private fun recordLocation(context:Context,item:NexusRegistry.Item,scope:String,receipt:NduRemoteReceipt){
+        val md5=receipt.remoteMd5.orEmpty().lowercase(java.util.Locale.ROOT)
+            .takeIf{it.matches(Regex("[0-9a-f]{32}"))}.orEmpty()
+        NexusRegistry(context).bindRemote(item,scope,receipt.fsId,receipt.path,receipt.size,md5,false)
     }
 }
