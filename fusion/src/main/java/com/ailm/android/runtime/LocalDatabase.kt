@@ -667,9 +667,20 @@ class LocalDatabase @JvmOverloads constructor(
             existingSql.isNotBlank() ->
                 throw SQLiteException("Unknown existing image_fts virtual table; preserving original data")
             else -> {
-                val supportsFts5 = db.rawQuery(
-                    "SELECT sqlite_compileoption_used('ENABLE_FTS5')", null
-                ).use { cursor -> cursor.moveToFirst() && cursor.getInt(0) == 1 }
+                // Android's SQLite may omit sqlite_compileoption_used()
+                // entirely. PRAGMA compile_options is harmless when diagnostic
+                // support is omitted (empty result); use the universally
+                // supported FTS4 rather than probing FTS5 with destructive DDL.
+                val supportsFts5 = runCatching {
+                    db.rawQuery("PRAGMA compile_options", null).use { cursor ->
+                        var supported = false
+                        while (cursor.moveToNext()) {
+                            if (cursor.getString(0).equals("ENABLE_FTS5", ignoreCase = true))
+                                supported = true
+                        }
+                        supported
+                    }
+                }.getOrDefault(false)
                 if (supportsFts5) {
                     db.execSQL(
                         """
