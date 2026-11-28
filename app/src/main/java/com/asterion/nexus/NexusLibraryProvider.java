@@ -14,10 +14,14 @@ import java.io.IOException;
 public final class NexusLibraryProvider extends ContentProvider {
     @Override public boolean onCreate(){return getContext()!=null;}
     private NexusRegistry.Item find(Uri uri){
-        if(uri==null||uri.getPathSegments().size()!=2||
-           !"original".equals(uri.getPathSegments().get(0)))
+        if(uri==null||uri.getPathSegments().size()!=2)
             throw new IllegalArgumentException("Invalid library URI");
-        NexusRegistry.Item item=new NexusRegistry(getContext()).find(uri.getLastPathSegment());
+        String kind=uri.getPathSegments().get(0);
+        String sha;
+        if("original".equals(kind))sha=uri.getLastPathSegment();
+        else if("grant".equals(kind))sha=NexusPartnerBridge.grantedSha(getContext(),uri.getLastPathSegment(),android.os.Binder.getCallingUid());
+        else throw new IllegalArgumentException("Invalid library URI");
+        NexusRegistry.Item item=new NexusRegistry(getContext()).find(sha);
         if(item==null)throw new IllegalArgumentException("Unknown verified original");
         return item;
     }
