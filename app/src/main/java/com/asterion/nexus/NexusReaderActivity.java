@@ -36,6 +36,7 @@ public final class NexusReaderActivity extends Activity {
     private LinearLayout view;
     private TextView heading,position,prev,next;
     private volatile BookArchive book;
+    private volatile NexusRarBook rar;
     private volatile int count=0,current=0,mode=0;
     private Uri source;
     private String sourceKey;
@@ -76,6 +77,7 @@ public final class NexusReaderActivity extends Activity {
                 ||path.endsWith(".docx"))mode=3;
         else if(path.endsWith(".cbz")||path.endsWith(".zip")||
             "application/zip".equals(type)||"application/vnd.comicbook+zip".equals(type))mode=2;
+        else if(NexusRarBook.supported(type)||path.endsWith(".cbr"))mode=6;
         else if("text/plain".equals(type))mode=4;
         else mode=0;
         getWindow().setStatusBarColor(0xff0e1013);
@@ -90,7 +92,7 @@ public final class NexusReaderActivity extends Activity {
         LinearLayout metadataHeading=new LinearLayout(this);
         metadataHeading.setGravity(Gravity.CENTER_VERTICAL);
         metadataHeading.addView(heading,new LinearLayout.LayoutParams(0,dp(45),1));
-        if(mode==1||mode==2){
+        if(mode==1||mode==2||mode==6){
             layoutButton=button("Pages",()->switchLayout());
             metadataHeading.addView(layoutButton,new LinearLayout.LayoutParams(-2,-2));
         }
@@ -118,12 +120,18 @@ public final class NexusReaderActivity extends Activity {
                     return denied();
                 try{
                     String path=uri.getPath();
-                    if(path!=null&&path.startsWith("/nexus-page/")&&(mode==1||mode==2)){
+                    if(path!=null&&path.startsWith("/nexus-page/")&&(mode==1||mode==2||mode==6)){
                         int index=Integer.parseInt(path.substring("/nexus-page/".length()));
                         if(index<0||index>=count)return denied();
                         if(mode==1){
                             byte[] data=Base64.decode(UniversalReader.pdfPage(NexusReaderActivity.this,source,index,1280),Base64.DEFAULT);
                             return new WebResourceResponse("image/jpeg",null,new ByteArrayInputStream(data));
+                        }
+                        if(mode==6){
+                            NexusRarBook currentRar=rar;
+                            if(currentRar==null)return denied();
+                            return new WebResourceResponse(currentRar.mime(index),null,
+                                new ByteArrayInputStream(currentRar.page(index)));
                         }
                         BookArchive b=book;
                         if(b==null)return denied();
@@ -178,6 +186,15 @@ public final class NexusReaderActivity extends Activity {
         try{
             if(mode==1){
                 count=UniversalReader.pdfPages(this,source);
+            } else if(mode==6){
+                if(!NexusArchiveOperation.available(this,source))
+                    throw new IOException("Import a verified offline CBR before reading");
+                NexusRegistry registry=new NexusRegistry(this);
+                NexusRegistry.Item original=registry.find(source.getLastPathSegment());
+                if(original==null||!registry.verifyOriginal(original))throw new IOException("CBR source verification failed");
+                NexusRarBook opened=new NexusRarBook(registry.original(original));
+                if(isDestroyed()){opened.close();return;}
+                rar=opened;count=opened.count();
             } else if(mode==4){
                 byte[] raw=readBounded(source,24*1024*1024);
                 plainText=java.nio.charset.StandardCharsets.UTF_8.newDecoder()
@@ -283,10 +300,10 @@ public final class NexusReaderActivity extends Activity {
                     }
                     html.append("</html>");
                     showHtml(html.toString(),"https://fg-assets.invalid/",index,generation);
-                } else if(mode==2){
-                    String url=book.archiveEntry(index);
+                } else if(mode==2||mode==6){
+                    String url=mode==6?"https://fg-assets.invalid/nexus-page/"+index:book.archiveEntry(index);
                     String html="<html><meta name='viewport' content='width=device-width, initial-scale=1'>"+
-                        "<style>html,body{margin:0;background:#11141a}img{width:100%;height:auto;display:block}</style>"+
+                        "<style>html,body{margin:0;background:#11141a}img{width:100vw;height:100vh;object-fit:contain;display:block}</style>"+
                         "<img src='"+safeHtml(url)+"' alt='Comic page'></html>";
                     showHtml(html,url,index,generation);
                 } else {
@@ -313,6 +330,7 @@ public final class NexusReaderActivity extends Activity {
         work.shutdownNow();
         if(web!=null){web.loadUrl("about:blank");web.destroy();}
         if(book!=null)try{book.close();}catch(Exception ignored){}
+        if(rar!=null)try{rar.close();}catch(Exception ignored){}
         super.onDestroy();
     }
 }
