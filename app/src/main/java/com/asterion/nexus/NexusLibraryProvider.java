@@ -43,9 +43,13 @@ public final class NexusLibraryProvider extends ContentProvider {
         NexusRegistry.Item item;
         try{item=find(uri);}
         catch(IllegalArgumentException problem){throw new FileNotFoundException(problem.getMessage());}
-        try{return ParcelFileDescriptor.open(new NexusRegistry(getContext()).original(item),
-                                            ParcelFileDescriptor.MODE_READ_ONLY);}
-        catch(IOException problem){throw new FileNotFoundException(problem.getMessage());}
+        NexusRegistry registry=new NexusRegistry(getContext());
+        try{
+            if(registry.localPresent(item))return ParcelFileDescriptor.open(registry.original(item),ParcelFileDescriptor.MODE_READ_ONLY);
+            // Partner grants never gain cloud credentials or remote access.
+            if(!"original".equals(uri.getPathSegments().get(0)))throw new IOException("Local granted bytes unavailable");
+            return NexusCloudRetention.openEvicted(getContext(),item);
+        }catch(Exception problem){throw new FileNotFoundException("Verified original unavailable: "+problem.getClass().getSimpleName());}
     }
     @Override public Uri insert(Uri uri,ContentValues values){
         throw new UnsupportedOperationException("Immutable original");
