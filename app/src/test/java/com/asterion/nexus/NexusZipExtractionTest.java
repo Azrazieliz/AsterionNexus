@@ -33,7 +33,7 @@ public final class NexusZipExtractionTest {
         List<NexusZipExtraction.Verified> files=NexusZipExtraction.stage(source,stage,plan);
         assertEquals(3,files.size());
         assertEquals("book/page1.txt",files.get(0).entry.path);
-        assertEquals("payload:book/page1.txt",java.nio.file.Files.readString(files.get(0).file.toPath()));
+        assertEquals("payload:book/page1.txt",new String(java.nio.file.Files.readAllBytes(files.get(0).file.toPath()),java.nio.charset.StandardCharsets.UTF_8));
         for(NexusZipExtraction.Verified file:files){
             assertEquals(stage,file.file.getParentFile());
             assertTrue(NexusOriginalStore.matches(file.file,file.entry.length,file.sha256));
