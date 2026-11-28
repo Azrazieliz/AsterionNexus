@@ -1,0 +1,33 @@
+name: Nexus offline CJK OCR validation
+on:
+  pull_request:
+    paths:
+      - 'scripts/prepare_nexus_ocr.py'
+      - 'fusion/src/main/java/com/ailm/android/runtime/ai/LocalAiManager.kt'
+      - 'app/src/main/java/com/asterion/nexus/NexusBookOcr.kt'
+      - '.github/workflows/nexus-ocr.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ocr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+          python -m pip install 'huggingface_hub==0.30.2' 'numpy==1.26.4' 'onnxruntime==1.22.1' 'onnx==1.18.0' 'Pillow==11.2.1'
+          python scripts/prepare_nexus_ocr.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nexus-PP-OCRv5-reference-verified-not-device-certified
+          path: |
+            fusion/src/main/assets/bundled_ppocrv5_cjk.zip
+            nexus_ocr_smoke.json
+          if-no-files-found: error
+          retention-days: 7
