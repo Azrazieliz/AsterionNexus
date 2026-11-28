@@ -11,12 +11,12 @@ import java.util.UUID
 class FusionSmartCollections(private val database:LocalDatabase){
     data class Rule(val kind:String,val value:String,val minRating:Int=-1){
         init{
-            require(kind in setOf("character","series","tag","artist","manual_rating","media_type","local_rating","offline_pin","continue_reading","related_output"))
+            require(kind in setOf("character","series","tag","artist","manual_rating","media_type","local_rating","offline_pin","continue_reading","continue_watching","related_output"))
             require(value.length<=128&&!value.any{it.isISOControl()})
             when(kind){
                 "manual_rating","local_rating"->require(value.isEmpty()&&minRating in 0..100)
                 "media_type"->require(value in setOf("image","video","audio","books","assets")&&minRating==-1)
-                "offline_pin","continue_reading","related_output"->require(value.isEmpty()&&minRating==-1)
+                "offline_pin","continue_reading","continue_watching","related_output"->require(value.isEmpty()&&minRating==-1)
                 else->require(value.isNotBlank()&&minRating in -1..100)
             }
         }
