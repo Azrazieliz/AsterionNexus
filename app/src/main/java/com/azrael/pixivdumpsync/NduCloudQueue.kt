@@ -54,11 +54,13 @@ class NduCloudQueue(context: Context) :
         db.execSQL("DROP TABLE jobs_legacy")
     }
     @Synchronized fun enqueue(category:String,name:String,uri:Uri) {
+        enqueueScoped(category,name,uri,NduSettings.accountScope(app))
+    }
+    @Synchronized internal fun enqueueScoped(category:String,name:String,uri:Uri,scope:String) {
         require(category in setOf("kuroha","kyora","x","comics","videos",
             "books","games","assets","koikatsu","images","torrents","creators","originals"))
         NduTeraboxClient.safeFileName(name)
         require(uri.scheme=="content") { "Only locally owned files may be queued" }
-        val scope=NduSettings.accountScope(app)
         val row=ContentValues().apply {
             put("account_scope",scope)
             put("category",category);put("name",name);put("content_uri",uri.toString())
@@ -66,8 +68,9 @@ class NduCloudQueue(context: Context) :
         }
         writableDatabase.insertWithOnConflict("jobs",null,row,SQLiteDatabase.CONFLICT_IGNORE)
     }
-    @Synchronized fun nextBatch(limit:Int=100,nexusOnly:Boolean=false):List<Job> {
-        val scope=NduSettings.accountScope(app)
+    @Synchronized fun nextBatch(limit:Int=100,nexusOnly:Boolean=false):List<Job> =
+        nextBatchScoped(NduSettings.accountScope(app),limit,nexusOnly)
+    @Synchronized internal fun nextBatchScoped(scope:String,limit:Int,nexusOnly:Boolean):List<Job> {
         if(scope.isBlank())return emptyList()
         val result=mutableListOf<Job>()
         readableDatabase.query("jobs",
@@ -88,12 +91,13 @@ class NduCloudQueue(context: Context) :
         require(proof.size>0L && proof.fsId>0L && proof.path.endsWith(suffix)){
             "Cloud receipt does not match the queued file"
         }
-        writableDatabase.update("jobs", ContentValues().apply {
+        val changed=writableDatabase.update("jobs", ContentValues().apply {
             put("state","VERIFIED");putNull("last_error")
             put("remote_path",proof.path);put("remote_size",proof.size)
             put("remote_fs_id",proof.fsId);put("remote_md5",proof.remoteMd5)
             put("verified_at",proof.verifiedAt);put("retry_after",0L)
         },"category=? AND content_uri=? AND account_scope=?",arrayOf(job.category,job.uri,job.accountScope))
+        check(changed==1){"Publication receipt did not match exactly one queued job"}
     }
     @Synchronized fun missingRemote(job:Job){
         writableDatabase.update("jobs",ContentValues().apply{
@@ -126,22 +130,23 @@ class NduCloudQueue(context: Context) :
         }
     fun uploadedFor(uri:String):Boolean=receiptFor(uri)!=null
     data class NexusPublication(val uri:String,val name:String,val state:String,
-        val error:String?,val size:Long,val path:String?)
+        val error:String?,val size:Long,val path:String?,val scope:String="")
     fun nexusPublications():List<NexusPublication>{
-        val scope=NduSettings.accountScope(app)
         val rows=mutableListOf<NexusPublication>()
-        readableDatabase.rawQuery("SELECT content_uri,name,state,last_error,remote_size,remote_path FROM jobs WHERE account_scope=? AND account_scope<>'' AND content_uri LIKE ? ORDER BY verified_at DESC,retry_after ASC LIMIT 500",
-            arrayOf(scope,"content://"+app.packageName+".library/original/%")).use{c->
+        readableDatabase.rawQuery("SELECT content_uri,name,state,last_error,remote_size,remote_path,account_scope FROM jobs WHERE account_scope<>'' AND content_uri LIKE ? ORDER BY CASE WHEN state='VERIFIED' THEN 1 ELSE 0 END,retry_after ASC,verified_at DESC LIMIT 500",
+            arrayOf("content://"+app.packageName+".library/original/%")).use{c->
             while(c.moveToNext())rows.add(NexusPublication(c.getString(0),c.getString(1),c.getString(2),
-                c.getString(3),c.getLong(4),c.getString(5)))
+                c.getString(3),c.getLong(4),c.getString(5),c.getString(6)))
         }
         return rows
     }
     fun hasAnyPublication(uri:String):Boolean=readableDatabase.rawQuery("SELECT 1 FROM jobs WHERE content_uri=? LIMIT 1",arrayOf(uri)).use{it.moveToFirst()}
-    fun retryNexus(uri:String){
+    fun retryNexus(uri:String){retryNexusScoped(uri,NduSettings.accountScope(app))}
+    fun retryNexusScoped(uri:String,scope:String){
         writableDatabase.execSQL("UPDATE jobs SET retry_after=0,last_error=NULL WHERE content_uri=? AND account_scope=? AND account_scope<>'' AND state IN ('PENDING','VERIFY_PENDING')",
-            arrayOf(uri,NduSettings.accountScope(app)))
+            arrayOf(uri,scope))
     }
+    internal fun pendingNexus(scope:String):Int=readableDatabase.rawQuery("SELECT COUNT(*) FROM jobs WHERE account_scope=? AND state<>'VERIFIED' AND content_uri LIKE ?",arrayOf(scope,"content://"+app.packageName+".library/original/%")).use{if(it.moveToFirst())it.getInt(0)else 0}
 
     fun status():Status {
         var pending=0;var complete=0;var rechecking=0
