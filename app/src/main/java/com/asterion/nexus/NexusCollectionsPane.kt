@@ -36,10 +36,11 @@ private data class CollectionMedia(val key:String,val uri:Uri,val title:String,v
 private fun registryKind(rule:FusionSmartCollections.Rule?):Pair<String,String>?=when(rule?.kind){
     "media_type"->"media_type" to rule.value
     "local_rating"->"local_rating" to rule.minRating.toString()
-    "offline_pin","continue_reading","related_output"->rule.kind to ""
+    "offline_pin","continue_reading","continue_watching","related_output"->rule.kind to ""
     else->null
 }
 private val builtins=listOf(
+    FusionSmartCollections.Collection("virtual-watching","Continue watching","smart",FusionSmartCollections.Rule("continue_watching",""),true),
     FusionSmartCollections.Collection("virtual-reading","Continue reading","smart",FusionSmartCollections.Rule("continue_reading",""),true),
     FusionSmartCollections.Collection("virtual-pins","Offline pins","smart",FusionSmartCollections.Rule("offline_pin",""),true),
     FusionSmartCollections.Collection("virtual-editions","Related editions and outputs","smart",FusionSmartCollections.Rule("related_output",""),true),
@@ -239,7 +240,7 @@ private fun CreateCollectionDialog(onClose:()->Unit,onCreated:()->Unit){
     var busy by remember{mutableStateOf(false)}
     var status by remember{mutableStateOf("")}
     val canonical=type in setOf("character","series","tag","artist")
-    val types=listOf("manual","character","series","tag","artist","manual_rating","local_rating","media_type","offline_pin","continue_reading","related_output")
+    val types=listOf("manual","character","series","tag","artist","manual_rating","local_rating","media_type","offline_pin","continue_reading","continue_watching","related_output")
     LaunchedEffect(type,query){
         opts=emptyList()
         if(canonical){
