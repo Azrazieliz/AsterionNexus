@@ -42,6 +42,7 @@ public final class NexusReaderActivity extends Activity {
     private String sourceKey;
     private byte[] document;
     private String plainText;
+    private NexusSpreadsheet spreadsheet;
     private JSONArray archiveEntries;
     private TextView layoutButton;
     private int layoutMode=0;
@@ -78,6 +79,7 @@ public final class NexusReaderActivity extends Activity {
         else if(path.endsWith(".cbz")||path.endsWith(".zip")||
             "application/zip".equals(type)||"application/vnd.comicbook+zip".equals(type))mode=2;
         else if(NexusRarBook.supported(type)||path.endsWith(".cbr"))mode=6;
+        else if(NexusSpreadsheet.supported(type,getIntent().getStringExtra("title")))mode=7;
         else if("text/plain".equals(type))mode=4;
         else mode=0;
         getWindow().setStatusBarColor(0xff0e1013);
@@ -195,6 +197,11 @@ public final class NexusReaderActivity extends Activity {
                 NexusRarBook opened=new NexusRarBook(registry.original(original));
                 if(isDestroyed()){opened.close();return;}
                 rar=opened;count=opened.count();
+            } else if(mode==7){
+                String title=getIntent().getStringExtra("title");
+                boolean csv="text/csv".equals(getIntent().getType())||(title!=null&&title.toLowerCase(java.util.Locale.ROOT).endsWith(".csv"));
+                spreadsheet=NexusSpreadsheet.open(readBounded(source,24*1024*1024),csv);
+                count=spreadsheet.count();
             } else if(mode==4){
                 byte[] raw=readBounded(source,24*1024*1024);
                 plainText=java.nio.charset.StandardCharsets.UTF_8.newDecoder()
@@ -232,18 +239,18 @@ public final class NexusReaderActivity extends Activity {
             if(input==null)throw new IOException("Cannot open source");
             byte[] buf=new byte[32768];int n;
             while((n=input.read(buf))!=-1){
-                if(n>limit-out.size())throw new IOException("DOCX exceeds 24 MiB safety limit");
+                if(n>limit-out.size())throw new IOException("Document exceeds 24 MiB safety limit");
                 out.write(buf,0,n);
             }
         }
         return out.toByteArray();
     }
     private void updatePosition(){
-        position.setText((current+1)+" / "+count);
+        position.setText((current+1)+" / "+count+(mode==7&&spreadsheet!=null?" · "+spreadsheet.label(current):""));
         prev.setEnabled(current>0);next.setEnabled(current+1<count);
         prev.setAlpha(current>0?1f:.3f);next.setAlpha(current+1<count?1f:.3f);
         getPreferences(Context.MODE_PRIVATE).edit().putInt(sourceKey,current).apply();
-        if(mode!=5&&count>0&&NexusArchiveOperation.available(this,source)){
+        if(mode!=5&&mode!=7&&count>0&&NexusArchiveOperation.available(this,source)){
             final int p=current,n=count;final String sha=source.getLastPathSegment();
             if(!work.isShutdown())work.execute(()->{
                 try{new NexusRegistry(getApplicationContext()).noteReadingProgress(sha,p,n);}
@@ -299,6 +306,8 @@ public final class NexusReaderActivity extends Activity {
                     }
                     listing.append("</body></html>");
                     showHtml(listing.toString(),"https://fg-assets.invalid/",index,generation);
+                } else if(mode==7){
+                    showHtml(spreadsheet.html(index),"https://fg-assets.invalid/",index,generation);
                 } else if(mode==4){
                     int start=index*32768,end=Math.min(plainText.length(),start+32768);
                     showHtml("<html><meta name='viewport' content='width=device-width, initial-scale=1'><body style='white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;font:18px/1.6 sans-serif'>"+safeHtml(plainText.substring(start,end))+"</body></html>","https://fg-assets.invalid/",index,generation);
