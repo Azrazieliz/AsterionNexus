@@ -30,6 +30,7 @@ object NexusCloudOperations {
     }
     fun target(directory:String,name:String):String{
         require(name.isNotBlank()&&name.length<=255&&!name.contains('/')&&!name.contains('\\')&&name!="."&&name!=".."&&name.none{it.isISOControl()})
+        require(directory.startsWith("/")&&!directory.startsWith("//")){"Absolute cloud directory required"}
         val folder=directory.trimEnd('/')
         return path(folder+"/"+name)
     }
