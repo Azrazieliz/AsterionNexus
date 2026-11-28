@@ -17,7 +17,7 @@ object NduCloudScheduler {
      * 15-minute periodic upload. The platform may defer the job. */
     fun requestImmediate(ctx:Context):Boolean = requestAfter(ctx,1_000L)
     fun requestAfter(ctx:Context,delayMs:Long):Boolean {
-        if(!NduSettings.cloudOnly(ctx) || !NduSettings.configured(ctx) ||
+        if(!NduSettings.cloudOnly(ctx) || !NduSettings.enabled(ctx) ||
             !AppPower.enabled(ctx))return false
         val delay=delayMs.coerceIn(1_000L,60L*60_000L)
         val job=JobInfo.Builder(NOW_ID,
@@ -51,7 +51,7 @@ class NduCloudJobService : JobService() {
     private var running:Future<*>?=null
     override fun onStartJob(params:JobParameters):Boolean {
         if(!NduSettings.cloudOnly(this) ||
-            !NduSettings.configured(this))return false
+            !NduSettings.enabled(this))return false
         running=executor.submit {
             var nextRemoteDue:Long?=null
             try {
@@ -69,7 +69,7 @@ class NduCloudJobService : JobService() {
                     nextRemoteDue=120_000L
                 }
                 // Staged Nexus originals use the existing persistent uploader only.
-                if(com.asterion.nexus.NexusCloudPublication.canPublish(this)){
+                if(NduSettings.uploadAccounts(this).isNotEmpty()){
                     val staged=NduUploadEngine.drain(this,8,8*60_000L,
                         stop={Thread.currentThread().isInterrupted||!AppPower.enabled(this)},nexusOnly=true)
                     if(staged.pending>0)nextRemoteDue=minOf(nextRemoteDue?:120_000L,120_000L)
