@@ -38,6 +38,7 @@ object NexusCloudPublication {
         val uploadScope=NduSettings.activateAccount(context,browserScope)
         check(binding.edit().putString("upload",uploadScope).putString("browser",browserScope).commit()){"Account binding failed"}
         NduSettings.setCloudOnly(context,true);NduSettings.setEnabled(context,true)
+        recoverUnassigned(context)
         NduCloudScheduler.requestImmediate(context)
     }
     @Synchronized fun connect(context:Context,cloud:FgTeraboxClient,input:String){
@@ -55,6 +56,12 @@ object NexusCloudPublication {
             .putString("browser",cloud.metadataScope()).commit()){"Account binding not saved"}
         NduSettings.setCloudOnly(context,true)
         NduSettings.setEnabled(context,true)
+        recoverUnassigned(context)
+        NduCloudScheduler.requestImmediate(context)
+    }
+    private fun recoverUnassigned(context:Context){
+        val uploadScope=NduSettings.currentAccountScope(context)
+        if(!canPublish(context)||uploadScope.isBlank())return
         // Recover only Nexus-selected originals never previously assigned to
         // an account. Old donor rows and other-account jobs remain untouched.
         val registry=NexusRegistry(context)
@@ -64,13 +71,12 @@ object NexusCloudPublication {
                 val page=registry.acquiredPage(offset,200)
                 for(item in page){
                     val uri=NexusLibraryProvider.uriFor(context,item.sha256)
-                    if(!queue.hasAnyPublication(uri.toString()))queue.enqueue(category(item),item.displayName,uri)
+                    if(!queue.hasAnyPublication(uri.toString()))queue.enqueueScoped(category(item),item.displayName,uri,uploadScope)
                 }
                 if(page.size<200)break
                 offset+=page.size
             }
         }
-        NduCloudScheduler.requestImmediate(context)
     }
     private fun category(item:NexusRegistry.Item):String=when{
         item.mime.startsWith("image/")->"images"
@@ -79,11 +85,13 @@ object NexusCloudPublication {
         item.mime.contains("epub")||item.mime.contains("pdf")->"books"
         else->"originals"
     }
-    fun enqueueIfConnected(context:Context,item:NexusRegistry.Item):Boolean{
+    @Synchronized fun enqueueIfConnected(context:Context,item:NexusRegistry.Item):Boolean{
         if(!canPublish(context))return false
         val uri=NexusLibraryProvider.uriFor(context,item.sha256)
         return runCatching{
-            NduCloudQueue(context).use{it.enqueue(category(item),item.displayName,uri)}
+            val scope=NduSettings.currentAccountScope(context)
+            check(scope.isNotBlank())
+            NduCloudQueue(context).use{it.enqueueScoped(category(item),item.displayName,uri,scope)}
             NduCloudScheduler.requestImmediate(context)
             true
         }.getOrDefault(false)
@@ -104,29 +112,37 @@ object NexusCloudPublication {
      */
     fun publish(context:Context,client:NduTeraboxClient,uri:Uri,name:String,folder:String,
                 cancelled:()->Boolean,progress:(Long,Long)->Unit):NduRemoteReceipt{
-        val scope=NduSettings.currentAccountScope(context)
-        fun stop()=cancelled()||!canPublish(context)||scope!=NduSettings.currentAccountScope(context)
+        val browserScope=publicationScope(context)
+        val account=NduSettings.uploadAccount(context,browserScope)?:error("TeraBox publication account unavailable")
+        check(account.scope==NduSettings.currentAccountScope(context)){"TeraBox publication account not aligned"}
+        return publishScoped(context,client,uri,name,folder,account,cancelled,progress)
+    }
+    internal fun publishScoped(context:Context,client:NduTeraboxClient,uri:Uri,name:String,folder:String,
+                account:NduSettings.UploadAccount,cancelled:()->Boolean,progress:(Long,Long)->Unit):NduRemoteReceipt{
+        fun stop()=cancelled()||!NduSettings.enabled(context)||!NduSettings.cloudOnly(context)||!NduSettings.stillAuthorized(context,account)
         check(!stop()){"TeraBox publication account not aligned"}
         val sha=uri.lastPathSegment?:throw IllegalArgumentException("Original identity missing")
         val item=NexusRegistry(context).find(sha)?:throw IllegalArgumentException("Original unavailable")
+        check(NexusRegistry(context).verifyOriginal(item)){"Original bytes no longer match their verified identity"}
         val safeName=NduTeraboxClient.safeFileName(name)
         // On retry, credit a pre-existing final path only if its actual
         // remote whole-file hash matches the original.
         val existing=runCatching{client.verifyExisting(context,uri,safeName,folder,::stop)}.getOrNull()
         if(existing?.hashVerified==true)return existing
         check(!stop()){"Publication cancelled"}
-        val browserScope=publicationScope(context)
-        check(browserScope.isNotBlank()&&!stop()){"Cloud account no longer selected"}
+        val browserScope=account.browserScope
+        check(!stop()){"Cloud account authorization changed"}
         val cloud=FgTeraboxClient.forScope(context,browserScope)
         val stageFolder=NduSettings.validateDirectory(folder+"/Nexus publishing")
         val stageName=sha+"-"+safeName.takeLast(120)
         val staged=runCatching{client.verifyExisting(context,uri,stageName,stageFolder,::stop)}
             .getOrNull()?.takeIf{it.hashVerified}
             ?:client.upload(context,uri,stageName,stageFolder,cancelled=::stop,progress=progress)
-        check(staged.size==item.length){"Remote staging length mismatch"}
+        check(staged.size==item.length&&staged.fsId>0){"Remote staging identity/length mismatch"}
         check(!stop()){"Publication cancelled"}
         cloud.requireScope(browserScope)
         cloud.moveFileChecked(staged.path,folder,safeName,item.length)
+        cloud.requireScope(browserScope)
         check(!stop()){"Publication account changed before receipt"}
         val final=client.verifyExisting(context,uri,safeName,folder,::stop)
             ?:throw IllegalStateException("Remote final file not verified")
