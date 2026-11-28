@@ -45,3 +45,8 @@ __pycache__/
 # Reproducible, verified Core model build output; never commit weights to Git.
 /fusion/src/main/assets/bundled_wd_vit_v3.zip
 /model_inference_smoke.json
+
+# Build-generated pinned translation engines and weights
+/app/src/main/assets/translation-models/
+/app/src/main/cpp/third_party/sentencepiece/
+/nexus_translation_smoke.json
