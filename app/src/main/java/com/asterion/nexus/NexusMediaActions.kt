@@ -56,6 +56,40 @@ object NexusMediaActions {
             }
         }
     }
+    fun audio(activity:Activity,uri:Uri){
+        val progress=AlertDialog.Builder(activity).setTitle("Inspect audio tracks")
+            .setMessage("Checking the original").setCancelable(false).show()
+        worker.execute{
+            val tracks=runCatching{NexusAudioExtraction.tracks(activity.applicationContext,item(activity,uri))}
+            activity.runOnUiThread{
+                if(!active(activity))return@runOnUiThread
+                progress.dismiss()
+                tracks.onSuccess{available->
+                    if(available.isEmpty()){message(activity,"Audio extraction","No supported AAC track. Original retained.");return@onSuccess}
+                    AlertDialog.Builder(activity).setTitle("Select audio track")
+                        .setItems(available.map{it.description}.toTypedArray()){_,which->
+                            val selected=available[which]
+                            val processing=AlertDialog.Builder(activity).setTitle("Extracting AAC")
+                                .setMessage("Preserving and verifying every packet").setCancelable(false).show()
+                            worker.execute{
+                                val result=runCatching{NexusAudioExtraction.extract(activity.applicationContext,item(activity,uri),selected.index)}
+                                activity.runOnUiThread{
+                                    if(active(activity)){
+                                        processing.dismiss()
+                                        result.onSuccess{output->
+                                            AlertDialog.Builder(activity).setTitle("Verified audio output")
+                                                .setMessage(output.displayName+"\nOriginal retained.")
+                                                .setPositiveButton("Open"){_,_->NexusFileOpen.open(activity,NexusLibraryProvider.uriFor(activity,output.sha256),output.mime,output.displayName)}
+                                                .setNegativeButton("Close",null).show()
+                                        }.onFailure{message(activity,"Extraction incomplete",it.message.orEmpty().take(240))}
+                                    }
+                                }
+                            }
+                        }.setNegativeButton("Cancel",null).show()
+                }.onFailure{message(activity,"Audio unavailable",it.message.orEmpty().take(240))}
+            }
+        }
+    }
     fun derivative(activity:Activity,uri:Uri,type:String){
         val poster=type.startsWith("video/")
         val body=LinearLayout(activity).apply{
