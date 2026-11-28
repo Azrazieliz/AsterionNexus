@@ -33,9 +33,12 @@ object NexusAutomaticOrganization {
         }
         return rows
     }
-    @Synchronized fun configure(c:Context,account:String,id:String,root:String,enable:Boolean){
+    fun configure(c:Context,account:String,id:String,root:String,enable:Boolean){
         require(id in setOf("downloader","sound"))
-        scoped(c,account){client,sources->
+        // Pause before waiting on a running cycle. Never change its source root mid-cycle.
+        check(prefs(c).edit().putBoolean(key(account,id)+":enabled",false).commit())
+        if(!enable){NexusOrganizationJob.schedule(c);return}
+        synchronized(this){scoped(c,account){client,sources->
             if(enable){
                 require(root.isNotBlank()){"Choose the actual standalone-file ingress folder"}
                 client.listPage(root,1)
@@ -43,7 +46,7 @@ object NexusAutomaticOrganization {
             }
             check(prefs(c).edit().putBoolean(key(account,id)+":enabled",enable)
                 .remove(key(account,id)+":page").commit())
-        }
+        }}
         NexusOrganizationJob.schedule(c)
     }
     fun anyEnabled(c:Context)=prefs(c).all.any{it.key.endsWith(":enabled")&&it.value==true}
@@ -71,8 +74,21 @@ object NexusAutomaticOrganization {
                     val rows=client.listPage(root,page)
                     var changed=false
                     var completed=true
-                    val names=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)?.optString("path")}
-                        .filter{it.startsWith(root+"/")}.map{it.substringAfterLast('/')}
+                    // A partial page cannot prove that a companion subtitle,
+                    // cue or manifest does not exist on another page. Inspect
+                    // all direct siblings within a bounded snapshot before
+                    // routing sidecar-sensitive media; otherwise leave them.
+                    val names=mutableListOf<String>()
+                    var completeSiblings=false
+                    for(p in 1..10){
+                        if(stop()){completed=false;break}
+                        val list=if(p==page)rows else client.listPage(root,p)
+                        for(k in 0 until list.length()){
+                            val candidate=list.optJSONObject(k)?.optString("path")?:continue
+                            if(candidate.substringBeforeLast('/')==root)names.add(candidate.substringAfterLast('/'))
+                        }
+                        if(list.length()<FgTeraboxClient.pageSize()){completeSiblings=true;break}
+                    }
                     val sidecarStems=names.filter{it.substringAfterLast('.',"").lowercase(Locale.ROOT) in setOf("srt","ass","ssa","vtt","sub","idx","nfo","cue","m3u","m3u8","lrc","xmp","json")}
                         .map{it.substringBeforeLast('.').lowercase(Locale.ROOT)}.toSet()
                     for(i in 0 until rows.length()){
@@ -83,7 +99,9 @@ object NexusAutomaticOrganization {
                         if(path.substringBeforeLast('/')!=root)continue
                         scanned++
                         val name=path.substringAfterLast('/')
-                        if(!standalone(name)||name.substringBeforeLast('.').lowercase(Locale.ROOT) in sidecarStems){review++;continue}
+                        val ext=name.substringAfterLast('.',"").lowercase(Locale.ROOT)
+                        if(!standalone(name)||(!completeSiblings&&ext !in setOf("epub","cbz","cbr","pdf"))||
+                            name.substringBeforeLast('.').lowercase(Locale.ROOT) in sidecarStems){review++;continue}
                         val route=sources.route(path)
                         if(route==null||route.source!=id||path.startsWith(route.destination+"/")){deferred++;continue}
                         try{
