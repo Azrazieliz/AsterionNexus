@@ -15,7 +15,7 @@ object NduUploadEngine {
               stop:()->Boolean={false}, report:(String)->Unit={},
               manual:Boolean=false,nexusOnly:Boolean=false):Result {
         if(!manual && !AppPower.enabled(context)) return Result(0,0,0,"Downloader paused")
-        if(!NduSettings.configured(context)) return Result(0,0,0,"NDUS not configured")
+        if(if(nexusOnly)!NduSettings.enabled(context)||!NduSettings.cloudOnly(context) else !NduSettings.configured(context)) return Result(0,0,0,"TeraBox publication disabled")
         if(!inProgress.compareAndSet(false,true))
             return Result(0,0,0,"Another direct upload is active")
         try {
