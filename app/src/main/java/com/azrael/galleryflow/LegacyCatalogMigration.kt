@@ -161,6 +161,12 @@ class LegacyCatalogMigration(private val context:Context) {
         }
         return v
     }
+    fun receipts():List<Pair<String,String>> = GalleryDb(context).use{helper->
+        helper.readableDatabase.rawQuery("SELECT digest,receipt_json FROM legacy_catalog_migrations ORDER BY applied_at DESC LIMIT 100",null).use{c->
+            buildList{while(c.moveToNext())add(c.getString(0) to c.getString(1))}
+        }
+    }
+
     fun preview(staged:Staged):Report=process(staged,false)
     fun apply(staged:Staged):Report=process(staged,true)
     private fun process(staged:Staged,apply:Boolean):Report{
@@ -214,11 +220,19 @@ class LegacyCatalogMigration(private val context:Context) {
             try{
                 var removed=0L
                 for((name,table) in tables.entries.reversed()){
+                    if(name=="events"||name=="backfill_retries")continue
                     db.rawQuery("SELECT row_key,applied_json FROM legacy_catalog_rows WHERE digest=? AND table_name=? AND applied_json IS NOT NULL",arrayOf(digest,name)).use{c->
                         while(c.moveToNext()){
                             val key=JSONArray(c.getString(0))
                             val keys=Array(key.length()){key.getString(it)}
                             check(snapshot(db,name,table,keys)==c.getString(1)){"Imported catalog has changed; rollback refused"}
+                            if(name=="entities"){
+                                check(!db.rawQuery("SELECT 1 FROM galleries WHERE source=? AND entity_id=? LIMIT 1",keys).use{it.moveToFirst()}){"Later gallery references prevent rollback"}
+                                check(!db.rawQuery("SELECT 1 FROM media WHERE source=? AND entity_id=? LIMIT 1",keys).use{it.moveToFirst()}){"Later media references prevent rollback"}
+                                check(!db.rawQuery("SELECT 1 FROM identity_aliases WHERE source=? AND source_entity_id=? LIMIT 1",keys).use{it.moveToFirst()}){"Later identity references prevent rollback"}
+                                check(!db.rawQuery("SELECT 1 FROM backfill_retries WHERE source=? AND entity_id=? LIMIT 1",keys).use{it.moveToFirst()}){"Later retry references prevent rollback"}
+                            }
+                            if(name=="galleries")check(!db.rawQuery("SELECT 1 FROM media WHERE source=? AND gallery_id=? LIMIT 1",keys).use{it.moveToFirst()}){"Later media references prevent rollback"}
                             check(db.delete(name,where(table),keys)==1)
                             removed++
                         }
