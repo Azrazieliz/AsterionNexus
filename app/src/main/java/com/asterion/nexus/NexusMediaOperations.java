@@ -234,6 +234,7 @@ public final class NexusMediaOperations {
                     outputMime,"nexus-derivative","device",identity,output.length(),sha);
             }
             require(registry.verifyOriginal(result),"Registered derivative integrity mismatch");
+            registry.linkDerivative(result.sha256,item.sha256,"derived_from",identity);
             journal.put("state","INDEXED").put("output_sha256",result.sha256).put("output_bytes",result.length)
                 .put("width",width).put("height",height).put("metadata_policy","Original metadata retained in source; derived image does not copy EXIF");
             write(receipt,journal);registry.job(identity,"INDEXED",result.length,null);
