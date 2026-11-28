@@ -68,13 +68,13 @@ public final class NexusBookIndex {
     public NexusBookIndex(Context context){app=context.getApplicationContext();}
     public static boolean supported(String mime){
         return "application/pdf".equalsIgnoreCase(mime) || "text/plain".equalsIgnoreCase(mime) || "application/epub+zip".equalsIgnoreCase(mime) ||
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(mime)||comic(mime);
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(mime)||comic(mime)||NexusRarBook.supported(mime);
     }
     private static boolean comic(String mime){
         return "application/vnd.comicbook+zip".equalsIgnoreCase(mime)||"application/x-cbz".equalsIgnoreCase(mime);
     }
     private boolean seedExisting(){
-        android.content.SharedPreferences prefs=app.getSharedPreferences("nexus_book_seed_v2",0);
+        android.content.SharedPreferences prefs=app.getSharedPreferences("nexus_book_seed_v3",0);
         NexusRegistry.BookSeedPage page=new NexusRegistry(app).bookCandidatesAfter(prefs.getLong("cursor",0),100);
         for(NexusRegistry.Item item:page.items)enqueueRecord(item);
         if(!prefs.edit().putLong("cursor",page.cursor).commit())throw new IllegalStateException("Book seed cursor not saved");
@@ -144,6 +144,7 @@ public final class NexusBookIndex {
             if(source.mime.equals("application/epub+zip"))indexEpub(pending,stop);
             else if("text/plain".equalsIgnoreCase(source.mime))indexPlainText(pending,stop);
             else if("application/pdf".equalsIgnoreCase(source.mime))indexPdf(pending,stop);
+            else if(NexusRarBook.supported(source.mime))indexRar(pending,stop);
             else if(comic(source.mime))indexComic(pending,stop);
             else indexDocx(pending,stop);
         }catch(Exception error){
@@ -265,6 +266,24 @@ public final class NexusBookIndex {
                 android.webkit.WebResourceResponse response=archive.response(path);
                 if(response==null||response.getData()==null)throw new IOException("Comic page unavailable");
                 try(InputStream page=response.getData()){
+                    recordOcr(p.sha,i,"Page "+(i+1),count,NexusBookOcr.recognize(app,page));
+                }
+                if(++processed>=2&&i+1<count){mark(p.sha,"queued","",i+1,count);return;}
+            }
+            finishCoverage(p.sha,count);
+        }
+    }
+    private void indexRar(Pending p,AtomicBoolean stop)throws Exception{
+        NexusRegistry registry=new NexusRegistry(app);
+        NexusRegistry.Item source=registry.find(p.sha);
+        if(source==null)throw new IOException("CBR original unavailable");
+        try(NexusRarBook book=new NexusRarBook(registry.original(source))){
+            int count=book.count();
+            if(count<=0||count>MAX_CHAPTERS)throw new IOException("Comic page count unsupported");
+            int processed=0;
+            for(int i=p.next;i<count;i++){
+                if(interrupted(stop)){mark(p.sha,"queued","",i,count);return;}
+                try(InputStream page=new ByteArrayInputStream(book.page(i))){
                     recordOcr(p.sha,i,"Page "+(i+1),count,NexusBookOcr.recognize(app,page));
                 }
                 if(++processed>=2&&i+1<count){mark(p.sha,"queued","",i+1,count);return;}
