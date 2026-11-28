@@ -8,9 +8,10 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 import com.ailm.android.runtime.ai.LocalAiSchema
 
-class LocalDatabase(
+class LocalDatabase @JvmOverloads constructor(
     context: Context,
-) : SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+    databaseName: String = DB_NAME,
+) : SQLiteOpenHelper(context, databaseName, null, DB_VERSION) {
 
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
@@ -137,6 +138,10 @@ class LocalDatabase(
 
     override fun onOpen(db: SQLiteDatabase) {
         super.onOpen(db)
+        // Recover the base Fusion schema, revision row and triggers before any
+        // dependent maintenance or reads. Same-version legacy databases can
+        // have missing artifacts despite a current SQLite user_version.
+        db.transaction { FusionDatabaseSchema.ensureArtifacts(this) }
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_review_pending_page ON review_items(status,last_updated_ms DESC,review_id DESC)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_review_image_type ON review_items(image_id,review_type)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_images_active_import_order ON images(active, imported_order)")
@@ -147,7 +152,6 @@ class LocalDatabase(
         db.execSQL("UPDATE scan_runs SET status='interrupted', error_message='Process terminated before scan completion' WHERE status='running'")
         db.execSQL("UPDATE library_folders SET last_scan_status='interrupted' WHERE last_scan_status='running'")
         ensureVisualReferenceIndex(db)
-        FusionDatabaseSchema.ensureArtifacts(db)
         LocalAiSchema.ensureArtifacts(db)
         runCatching { FusionDatabaseSchema.recordIntegritySnapshot(db) }
             .onFailure { error -> Log.w(DB_TAG, "Fusion integrity snapshot failed", error) }
