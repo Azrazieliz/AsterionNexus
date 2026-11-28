@@ -154,6 +154,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
     override fun onResume(){
         super.onResume()
         previewEnabled=true
+        com.azrael.pixivdumpsync.AuthenticatedItemDownloader.resumeIfConnected(this)
         if(records.isNotEmpty())loadPage(reset=true)
     }
 

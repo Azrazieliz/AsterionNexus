@@ -48,6 +48,11 @@ import com.ailm.android.runtime.FusionDatabaseRepository
 import com.azrael.pixivdumpsync.AsterionSearchHub
 import com.azrael.pixivdumpsync.UnifiedDownloadsUi
 import com.azrael.pixivdumpsync.SourceIndex
+import com.azrael.pixivdumpsync.ApprovedCosplayActions
+import com.azrael.pixivdumpsync.AuthenticatedItemDownloader
+import com.azrael.pixivdumpsync.ResourceDownloads
+import com.azrael.pixivdumpsync.SelectedVideoRouter
+import com.azrael.pixivdumpsync.SourceIndexParser
 import com.azrael.pixivdumpsync.IndexedItem
 import com.azrael.pixivdumpsync.IndexedSource
 import com.azrael.pixivdumpsync.SiteControls
@@ -97,7 +102,8 @@ data class NexusUnifiedEntry(
     val kind:String="",
     val origin:String="",
     val filename:String?=null,
-    val account:String=""
+    val account:String="",
+    val queued:Boolean=false
 )
 @Composable private fun UnifiedHeading(title:String,subtitle:String){
     Text(title,color=C_TEXT,fontSize=23.sp,fontWeight=FontWeight.SemiBold)
@@ -183,6 +189,8 @@ private fun NexusUnifiedSearch(
     var status by remember{mutableStateOf("No query has been sent online.")}
     var loading by remember{mutableStateOf(false)}
     var hits by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
+    var providerErrors by remember{mutableStateOf<List<String>>(emptyList())}
+    var providerCount by remember{mutableIntStateOf(0)}
     var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
     val generation=remember{AtomicInteger()}
     val cloudAccounts=remember(ctx){FgTeraboxClient.accounts(ctx)}
@@ -242,7 +250,7 @@ private fun NexusUnifiedSearch(
         val query=term.trim()
         if(query.length !in 2..180){status="Enter 2–180 characters";return}
         val token=generation.incrementAndGet()
-        loading=true;hits=emptyList();status="Searching Nexus sources"
+        loading=true;hits=emptyList();providerErrors=emptyList();providerCount=0;status="Searching Nexus sources"
         scope.launch{
             try{
                 val originals=withContext(Dispatchers.IO){
@@ -288,6 +296,9 @@ private fun NexusUnifiedSearch(
                     }
                     if(token==generation.get()){
                         val incoming=mutableListOf<NexusUnifiedEntry>()
+                        providerCount=response.optInt("searched")
+                        val errors=response.optJSONArray("errors")?:JSONArray()
+                        providerErrors=(0 until errors.length()).map{errors.optString(it)}.filter{it.isNotBlank()}
                         val a=response.optJSONArray("items")?:JSONArray()
                         for(i in 0 until a.length()){
                             val j=a.optJSONObject(i)?:continue
@@ -299,7 +310,7 @@ private fun NexusUnifiedSearch(
                                     j.optString("source","Web"),web=url,
                                     preview=j.optString("thumbnail").takeIf{it.isNotBlank()},
                                     area=when(onlineMode){3->"GAMES";4->"BOOKS";else->"VIDEOS"},
-                                    kind=if(onlineMode==0)"video" else "",
+                                    kind=j.optString("kind").ifBlank{if(onlineMode==0)"video" else ""},
                                     filename=j.optString("filename").takeIf{it.isNotBlank()}))
                         }
                         hits=hits+incoming
@@ -329,6 +340,14 @@ private fun NexusUnifiedSearch(
             }
         }
         Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.padding(vertical=11.dp))
+        if(online&&(providerCount>0||providerErrors.isNotEmpty())){
+            Text("$providerCount provider indexes responded · ${providerErrors.size} failures",color=C_MUTED,fontSize=12.sp)
+            if(providerErrors.isNotEmpty()){
+                var expanded by remember{mutableStateOf(false)}
+                TextButton(onClick={expanded=!expanded}){Text(if(expanded)"Hide source failures" else "Show source failures")}
+                if(expanded)Text(providerErrors.joinToString("\n"),color=C_MUTED,fontSize=11.sp,maxLines=15)
+            }
+        }
         LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
             items(hits){item->UnifiedEntryCard(item){
                 if(item.web!=null){selected=item}
@@ -367,34 +386,58 @@ private fun NexusUnifiedSearch(
 
 private fun IndexedItem.nexusEntry()=NexusUnifiedEntry(title,
     if(queued)"Already submitted to native engine" else kind,source,web=url,
-    preview=preview,area=area,kind=kind,origin=source)
+    preview=preview,area=area,kind=kind,origin=source,queued=queued)
 
 /** Every candidate either reaches an existing original resolver/queue or reports
  * why it cannot be submitted. No browser launch is used as a download result. */
-private fun acquireNexusEntry(activity:Activity,item:NexusUnifiedEntry):String{
+private suspend fun acquireNexusEntry(activity:Activity,item:NexusUnifiedEntry):String{
     val url=requireNotNull(item.web){"No original source selected"}
-    require(url.startsWith("https://")||url.startsWith("magnet:?")){"Only HTTPS or supported torrent originals"}
+    require(url.startsWith("https://")||url.startsWith("magnet:?",true)){"Only HTTPS or supported torrent originals"}
     check(NexusCloudPublication.canPublish(activity)){"Connect the same TeraBox browsing and upload account first"}
-    if(url.startsWith("magnet:"))throw IllegalStateException("Select torrent files in the native torrent engine first")
-    if(item.area=="BOOKS"&&NovelEpubParser.supportedSeries(url)){
-        NovelEpubService.enqueue(activity,url,item.title)
-        return "Book archive requested; verification pending"
+    val area=item.area.uppercase(java.util.Locale.ROOT)
+    val source=item.origin.takeIf{SourceIndexParser.safe(it)}?:url
+    val plan=NexusProviderDispatch.route(url,area,item.kind,item.filename,item.queued)
+    when(plan){
+        NexusProviderDispatch.Route.ALREADY_TRACKED->return "Already submitted · see Transfers for verified status"
+        NexusProviderDispatch.Route.TORRENT->{
+            val folder=if(area=="VIDEOS")"Videos" else "Games"
+            withContext(Dispatchers.Main){ResourceDownloads.route(activity,url,folder)}
+            return "Torrent file selection requested; transfer and security verification pending"
+        }
+        NexusProviderDispatch.Route.GALLERY->{
+            val owner=source.takeIf{ApprovedCosplayActions.isGalleryPage(url)}
+                ?:error("Choose the exact publisher gallery, not a preview")
+            check(ApprovedCosplayActions.enqueueExactOriginal(activity,owner,url,item.title)){"Gallery original request not accepted"}
+            return "Selected gallery queued · original count and verification pending"
+        }
+        NexusProviderDispatch.Route.BOOK_SERIES->{
+            val created=NovelEpubService.enqueue(activity,url,item.title)
+            return if(created)"Book archive requested; verification pending" else "Book already tracked"
+        }
+        NexusProviderDispatch.Route.COMIC_SERIES->{
+            require(!ChapterScraper.isSingleChapter(url)){"Select the complete comic series, not one chapter"}
+            ChapterQueue(activity).use{it.enqueue(url,item.title)}
+            ChapterArchives.start(activity)
+            return "Complete comic requested; verification pending"
+        }
+        NexusProviderDispatch.Route.NATIVE_VIDEO->{
+            check(withContext(Dispatchers.Main){SelectedVideoRouter.request(activity,url,item.title,area)}){"Selected video route unavailable"}
+            return "Native video selection requested; check Transfers for verified outcome"
+        }
+        NexusProviderDispatch.Route.WEB_VIDEO->{
+            val result=NexusWebAcquisition.acquireSelected(activity,url)
+            return NexusCloudPublication.status(activity,result)
+        }
+        NexusProviderDispatch.Route.PUBLIC_FILE->{
+            check(CloudOriginalRouting.enqueue(activity,url,area,item.filename)){"Cloud request not accepted"}
+            return "Remote original requested; verification pending"
+        }
+        NexusProviderDispatch.Route.AUTHORIZED_ITEM->{
+            val indexed=IndexedItem(url,item.title,item.preview,source,area,item.kind,System.currentTimeMillis(),false)
+            withContext(Dispatchers.Main){AuthenticatedItemDownloader.download(activity,indexed)}
+            return "Native original resolution requested; access and verification pending"
+        }
     }
-    if(item.area=="COMICS"&&!TeraBoxRemoteOriginals.verifiedPublicFileLink(url)){
-        require(!ChapterScraper.isSingleChapter(url)){"Select the complete comic series, not one chapter"}
-        ChapterQueue(activity).use{it.enqueue(url,item.title)}
-        ChapterArchives.start(activity)
-        return "Complete comic requested; verification pending"
-    }
-    if(item.kind=="video"||item.area=="VIDEOS"){
-        val result=NexusWebAcquisition.acquireSelected(activity,url)
-        return NexusCloudPublication.status(activity,result)
-    }
-    if(TeraBoxRemoteOriginals.verifiedPublicFileLink(url)){
-        CloudOriginalRouting.enqueue(activity,url,item.area,item.filename)
-        return "Remote original requested; verification pending"
-    }
-    throw IllegalStateException("This selected page has no supported verified-original route")
 }
 
 @Composable
@@ -462,8 +505,9 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
                             UnifiedButton("Backfill"){
                                 scope.launch{
                                     runCatching{withContext(Dispatchers.IO){
-                                        SourceIndex.scanSourceNow(ctx,provider.url,true)
-                                    }}.onSuccess{message="Backfill requested; refresh for actual status"}
+                                        if(area=="COSPLAY")ApprovedCosplayActions.backfill(ctx,provider.url)
+                                        else{SourceIndex.scanSourceNow(ctx,provider.url,true);"Backfill requested; refresh for actual status"}
+                                    }}.onSuccess{message=it}
                                         .onFailure{message="Backfill request failed"}
                                 }
                             }
