@@ -103,7 +103,7 @@ internal class NexusMarianEngine private constructor(
     companion object{
         private val files=listOf("encoder.onnx","decoder.onnx","source.spm","target.spm","vocab.json","config.json")
         private val revisions=mapOf("ja" to "1a906cfaaf7c8f4193f67f5885c082aa6dbd9d16",
-            "ko" to "d9fa1ac6008242100fecb4fff9b0a5917a1be81f","zh" to "6540b5e5f5d78a277bc7de2b566362a61b772103")
+            "ko" to "d9fa1ac6008242100fecb4fff9b0a5917a1be81f")
         private fun digest(file:File):String{
             val md=MessageDigest.getInstance("SHA-256")
             file.inputStream().use{stream->val b=ByteArray(131072);while(true){val n=stream.read(b);if(n<0)break;md.update(b,0,n)}}
