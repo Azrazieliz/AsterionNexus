@@ -124,6 +124,8 @@ object NexusCloudPublication {
         val sha=uri.lastPathSegment?:throw IllegalArgumentException("Original identity missing")
         val item=NexusRegistry(context).find(sha)?:throw IllegalArgumentException("Original unavailable")
         check(NexusRegistry(context).verifyOriginal(item)){"Original bytes no longer match their verified identity"}
+        val cloud=FgTeraboxClient.forScope(context,account.browserScope)
+        cloud.requireScope(account.browserScope)
         val safeName=NduTeraboxClient.safeFileName(name)
         // On retry, credit a pre-existing final path only if its actual
         // remote whole-file hash matches the original.
@@ -132,7 +134,6 @@ object NexusCloudPublication {
         check(!stop()){"Publication cancelled"}
         val browserScope=account.browserScope
         check(!stop()){"Cloud account authorization changed"}
-        val cloud=FgTeraboxClient.forScope(context,browserScope)
         val stageFolder=NduSettings.validateDirectory(folder+"/Nexus publishing")
         val stageName=sha+"-"+safeName.takeLast(120)
         val staged=runCatching{client.verifyExisting(context,uri,stageName,stageFolder,::stop)}
