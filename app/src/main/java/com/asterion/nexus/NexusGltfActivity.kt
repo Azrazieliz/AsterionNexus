@@ -4,7 +4,8 @@ import android.app.Activity
 import android.net.Uri
 import android.os.Bundle
 import android.view.Choreographer
-import android.view.SurfaceView
+import android.view.TextureView
+import android.view.View
 import android.widget.*
 import com.google.android.filament.IndirectLight
 import com.google.android.filament.Skybox
@@ -25,7 +26,7 @@ class NexusGltfActivity : Activity() {
     private lateinit var root:LinearLayout
     private lateinit var status:TextView
     private var viewer:ModelViewer?=null
-    private var renderSurface:SurfaceView?=null
+    private var renderSurface:TextureView?=null
     private var sky:Skybox?=null
     private var ambient:IndirectLight?=null
     private var active=false
@@ -40,7 +41,7 @@ class NexusGltfActivity : Activity() {
             if(!active)return
             val v=viewer?:return
             val surface=renderSurface
-            if(surface==null||!surface.holder.surface.isValid||surface.width<=0||surface.height<=0){
+            if(surface==null||!surface.isAvailable||surface.width<=0||surface.height<=0){
                 Choreographer.getInstance().postFrameCallback(this);return
             }
             try {
@@ -105,11 +106,33 @@ class NexusGltfActivity : Activity() {
     }
     private fun showModel(buffer:ByteBuffer) {
         Utils.init()
-        val surface=SurfaceView(this)
+        val surface=TextureView(this)
         renderSurface=surface
+        // ModelViewer constructs its orbit controller from the initial viewport.
+        // Wait for measured, nonzero dimensions and use the composited texture
+        // rather than a separate SurfaceView layer whose readback can be stale.
+        val listener=object:View.OnLayoutChangeListener{
+            override fun onLayoutChange(view:View,left:Int,top:Int,right:Int,bottom:Int,
+                                        oldLeft:Int,oldTop:Int,oldRight:Int,oldBottom:Int){
+                if(right<=left||bottom<=top)return
+                surface.removeOnLayoutChangeListener(this)
+                if(isDestroyed||isFinishing)return
+                runCatching{initializeModel(surface,buffer)}.onFailure{
+                    status.text="Model unavailable: "+(it.message?:it.javaClass.simpleName)
+                }
+            }
+        }
+        surface.addOnLayoutChangeListener(listener)
+        root.addView(surface,LinearLayout.LayoutParams(-1,0,1f))
+    }
+    private fun initializeModel(surface:TextureView,buffer:ByteBuffer){
+        check(surface.width>0&&surface.height>0){"Invalid render viewport"}
         val v=ModelViewer(surface)
         viewer=v
-        root.addView(surface,LinearLayout.LayoutParams(-1,0,1f))
+        // A frontal key light makes front-facing textured geometry visible;
+        // the default vertical light is tangent to planar models.
+        val lightManager=v.engine.lightManager
+        lightManager.setDirection(lightManager.getInstance(v.light),-.35f,-.5f,-.79f)
         surface.setOnTouchListener(v)
         surface.contentDescription="Interactive model. Drag to orbit and pinch to zoom."
         sky=Skybox.Builder().color(0.055f,0.065f,0.085f,1f).build(v.engine)
@@ -159,7 +182,7 @@ class NexusGltfActivity : Activity() {
             v.scene.skybox=null;sky?.let{v.engine.destroySkybox(it)}
             v.scene.indirectLight=null;ambient?.let{v.engine.destroyIndirectLight(it)}
         }}
-        // ModelViewer owns the engine and destroys it on SurfaceView detach.
+        // ModelViewer owns the engine and destroys it on TextureView detach.
         viewer=null;renderSurface=null;super.onDestroy()
     }
 }
