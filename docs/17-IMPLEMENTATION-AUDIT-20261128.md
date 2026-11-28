@@ -52,3 +52,11 @@ Authority: docs/00–16, especially owner-confirmed docs/16, and spec/acceptance
 - Selected AAC extraction: one explicit audio track, lossless M4A remux, complete packet and relative timestamp hash comparison, codec configuration and registry readback verification. Unsupported codecs, encrypted or nonmonotonic samples fail closed. No general transcoding or codec conversion claim.
 - Shared opened-file details expose these actions without adding navigation destinations. Output remains local and verified; no automatic cloud publication or source deletion by these operations. Six geometry/identity regression fixtures added. Android execution and full-format tests outstanding.
 - Development batch staged separately to avoid cancelling the existing compile repeatedly, then promoted by fast-forward only. No user device operations or signed deployment.
+
+
+## CBR reader continuation
+
+- Verified local CBR/RAR4 now uses the retained Junrar 8.1.1 dependency through a single bounded page adapter, physical header preflight, dictionary/entry/page limits, natural ordering, independent CRC and length checks and no filesystem extraction paths.
+- The existing reader routes CBR through Pages, Vertical and Horizontal modes; single comic pages use viewport-fit geometry. The same page adapter supplies private resumable OCR indexing. Legacy CBR names are recognized via canonical MIME normalization and a new historical-index seed cursor.
+- Six new regression fixtures cover real stored archive-member reads, natural ordering, wrong CRC, traversal, solid and truncated archive rejection, and MIME normalization.
+- RAR5, solid/multipart/encrypted archives, extension headers and remote-only CBR streaming are not admitted by this bounded adapter. Remote CBR must first be saved as a verified offline copy; actual device and native regression acceptance remains outstanding.
