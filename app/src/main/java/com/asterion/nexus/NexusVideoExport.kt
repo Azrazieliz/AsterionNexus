@@ -24,6 +24,7 @@ import kotlin.math.abs
 /** Explicit non-destructive EDL, MediaCodec/Media3 export and independently probed output. */
 @androidx.annotation.OptIn(UnstableApi::class)
 object NexusVideoExport {
+    private val draining=mutableSetOf<String>()
     data class Clip(val sha:String,val startMs:Long,val endMs:Long,val audioTrack:Int=-2)
     data class Profile(val width:Int,val height:Int,val bitrate:Int,val hevc:Boolean,val mute:Boolean,val omitOtherTracks:Boolean=false)
     data class AudioTrack(val index:Int,val language:String,val mime:String)
@@ -84,6 +85,7 @@ object NexusVideoExport {
         val review=JSONArray(reviewEvidence)
         if(review.length()>0)spec.put("review_evidence",review)
         val identity="video-edl-v2:"+NexusOriginalStore.sourceKey(spec.toString())
+        check(identity !in draining){"Previous codec cancellation is still finishing; retry shortly"}
         val dir=File(context.filesDir,"nexus-video-projects")
         check(dir.isDirectory||dir.mkdirs())
         val receipt=File(dir,identity.substringAfter(':')+".json")
@@ -193,7 +195,7 @@ object NexusVideoExport {
             handler.post{runCatching{transformer.get()?.cancel()};worker.quitSafely()}
             // Never remove a file while codec cancellation may still write to it.
             worker.join(10000)
-            if(!worker.isAlive){output.delete();stageDir.deleteRecursively()}else{Thread{worker.join();output.delete();stageDir.deleteRecursively()}.start()}
+            if(!worker.isAlive){output.delete();stageDir.deleteRecursively()}else{draining.add(identity);Thread{worker.join();synchronized(this@NexusVideoExport){output.delete();stageDir.deleteRecursively();draining.remove(identity)}}.start()}
         }
     }
     private fun validate(file:File,duration:Long,profile:Profile,mime:String,audio:Boolean){

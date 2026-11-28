@@ -71,7 +71,7 @@ object NexusCloudPublication {
                 val page=registry.acquiredPage(offset,200)
                 for(item in page){
                     val uri=NexusLibraryProvider.uriFor(context,item.sha256)
-                    if(!queue.hasAnyPublication(uri.toString()))queue.enqueueScoped(category(item),item.displayName,uri,uploadScope)
+                    if(registry.localPresent(item)&&!queue.hasAnyPublication(uri.toString()))queue.enqueueScoped(category(item),item.displayName,uri,uploadScope)
                 }
                 if(page.size<200)break
                 offset+=page.size

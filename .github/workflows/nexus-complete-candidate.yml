@@ -1,0 +1,89 @@
+name: Nexus complete model-inclusive release candidate
+on:
+  push:
+    branches: [work/nexus-completion-20261128b]
+    paths:
+      - '.github/workflows/nexus-complete-candidate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nexus-complete-candidate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Validate full Core model
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+        run: |
+          python -m venv "$RUNNER_TEMP/core-env"
+          source "$RUNNER_TEMP/core-env/bin/activate"
+          pip install -r scripts/requirements-core-model.txt
+          python scripts/prepare_bundled_wd_vit_v3.py
+          python scripts/test_bundled_wd_vit_v3.py
+          python scripts/test_fusion_wd_training.py
+          python scripts/test_fusion_wd_graph.py
+      - name: Validate OCR and accepted Japanese/Korean translation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+          python -m venv "$RUNNER_TEMP/reading-env"
+          source "$RUNNER_TEMP/reading-env/bin/activate"
+          pip install 'huggingface_hub==0.30.2' 'numpy==1.26.4' 'onnxruntime==1.22.1' 'onnx==1.18.0' 'Pillow==11.2.1' 'sentencepiece==0.2.0' 'jsonschema==4.23.0'
+          python scripts/prepare_nexus_ocr.py
+          python scripts/prepare_nexus_translation.py --languages ja ko
+          python scripts/verify_spec.py
+          python scripts/test_unified_nexus_contract.py
+      - name: Install Android SDK and pinned native toolchain
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "ndk;26.3.11579264" "cmake;3.22.1"
+          bash scripts/restore_downloader_wheel.sh
+      - name: Build full release payload for private owner signing
+        run: gradle --no-daemon --max-workers=2 :app:verifyFrozenVideoProviders :fusion:testDebugUnitTest :app:testDebugUnitTest :app:assembleRelease --stacktrace
+      - name: Verify actual model and native components in release payload
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, zipfile
+          path=pathlib.Path("app/build/outputs/apk/release/app-release-unsigned.apk")
+          assert path.is_file()
+          with zipfile.ZipFile(path) as apk:
+              names=set(apk.namelist())
+              required={"assets/bundled_wd_vit_v3.zip","assets/bundled_ppocrv5_cjk.zip","lib/arm64-v8a/libnexus_sentencepiece.so","lib/arm64-v8a/libfilament-jni.so","assets/yt_dlp-2026.10.26-py3-none-any.whl"}
+              for lang in ("ja","ko"):
+                  required.update(f"assets/translation-models/{lang}/{n}" for n in ("manifest.json","encoder.onnx","decoder.onnx","source.spm","target.spm","vocab.json","config.json"))
+              assert required <= names, sorted(required-names)
+              assert not any(n.startswith("assets/translation-models/zh/") for n in names)
+              for n in required:
+                  assert apk.getinfo(n).file_size>0, n
+          with path.open("rb") as f:
+              digest=hashlib.file_digest(f,"sha256").hexdigest()
+          pathlib.Path("nexus-release-receipt.json").write_text(json.dumps({"commit":"${{ github.sha }}","sha256":digest,"bytes":path.stat().st_size,"signing":"unsigned_private_owner_signing_required","model_components":sorted(required)},indent=2))
+          PY
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/release/app-release-unsigned.apk | grep -F "package: name='com.asterion.nexus'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nexus-complete-unsigned-owner-signing-candidate
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            app/build/outputs/apk/release/app-release-unsigned.apk
+            nexus-release-receipt.json
+            model_inference_smoke.json
+            nexus_ocr_smoke.json
+            nexus_translation_smoke.json

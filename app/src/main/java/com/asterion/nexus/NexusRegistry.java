@@ -109,6 +109,7 @@ public final class NexusRegistry {
             else if(filename.endsWith(".obj"))type="model/obj";
             else if(filename.endsWith(".stl"))type="model/stl";
             else if(filename.endsWith(".glb"))type="model/gltf-binary";
+            else if(filename.endsWith(".gltf"))type="model/gltf+json";
             else if(filename.endsWith(".cbr"))type="application/vnd.comicbook-rar";
         }
         type=canonicalComicMime(displayName,type);
@@ -195,7 +196,7 @@ public final class NexusRegistry {
         if(offset<0||limit<1||limit>200)throw new IllegalArgumentException("Invalid staged page");
         ArrayList<Item> rows=new ArrayList<>();Database helper=new Database(app);
         try(Cursor c=helper.getReadableDatabase().rawQuery(
-            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.source_kind IN ('downloader-direct','nexus-comic','nexus-novel','nexus-assembly') ORDER BY l.id LIMIT ? OFFSET ?",
+            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.source_kind IN ('downloader-direct','nexus-comic','nexus-novel','nexus-assembly','nexus-video-edit','nexus-derivative','nexus-translation') ORDER BY l.id LIMIT ? OFFSET ?",
             new String[]{Integer.toString(limit),Integer.toString(offset)})){
             while(c.moveToNext())rows.add(item(c));
         }finally{helper.close();}
@@ -354,7 +355,7 @@ public final class NexusRegistry {
         return java.nio.file.Files.exists(new File(new File(privateRoot,"originals"),item.sha256).toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS);
     }
     private boolean eligibleForEviction(SQLiteDatabase db,String sha){
-        try(Cursor c=db.rawQuery("SELECT 1 FROM locations WHERE sha256=? AND source_kind NOT IN ('downloader-direct','nexus-comic','nexus-novel','nexus-assembly') LIMIT 1",new String[]{sha})){
+        try(Cursor c=db.rawQuery("SELECT 1 FROM locations WHERE sha256=? AND source_kind NOT IN ('downloader-direct','nexus-comic','nexus-novel','nexus-assembly','nexus-video-edit','nexus-derivative','nexus-translation') LIMIT 1",new String[]{sha})){
             if(c.moveToFirst())return false;
         }
         try(Cursor c=db.rawQuery("SELECT 1 FROM remote_locations WHERE sha256=? AND pinned=1 LIMIT 1",new String[]{sha})){

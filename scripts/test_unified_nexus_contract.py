@@ -96,7 +96,7 @@ def check():
     assert "NexusCloudContentTile(" in workspace and "cloud.openThumbnail(entry.path,folder,page)" in workspace
     assert "accountScope==cloud.metadataScope()" in workspace
     assert "NexusFileDetails.show(" in viewer and "file_ratings" in registry
-    assert "if(old==1&&current==2)" in registry
+    registry_migration_regression(registry)
     assert "score BETWEEN 0 AND 100" in registry and "if(score==-1)" in registry
     taxonomy_revision_regression()
     cloud_account_regression()
@@ -105,6 +105,38 @@ def check():
     assert 'MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4' in assembly and 'evidence.verify(actual)' in assembly
     assert 'NexusOriginalStore.matches(original,item.length,item.sha256)' in assembly
     print("PASS: one Nexus launcher; approved navigation; native transfer routes; real cover flow; taxonomy revision SQL fixture")
+
+def registry_migration_regression(registry):
+    # Execute production registry DDL, including direct upgrade from v1.
+    def ddl(method):
+        start = registry.index(method)
+        end = registry.index("\n        }", start)
+        return re.findall(r'db\.execSQL\("([^"\n]+)"\)', registry[start:end])
+    assert 'if(old==1)createFileRatings(db)' in registry
+    assert 'if(old<3)createRemoteLocations(db)' in registry
+    assert 'if(old<4)createCollections(db)' in registry
+    assert 'createEvictions(db);createPlayback(db);createBookmarks(db);createCloudProofs(db);' in registry
+    sha = "a" * 64
+    with sqlite3.connect(":memory:") as db:
+        db.execute("PRAGMA foreign_keys=ON")
+        for sql in ddl("void onCreate("):
+            db.execute(sql)
+        db.execute("INSERT INTO originals VALUES(?,?,?,?)", (sha, 12, "video/mp4", 1))
+        db.execute("INSERT INTO locations(sha256,source_kind,account_key,origin_key,display_name,created_at) VALUES(?,?,?,?,?,?)", (sha,"local","device","origin","Original",1))
+        methods = ["createFileRatings","createRemoteLocations","createCollections","createEvictions","createPlayback","createBookmarks","createCloudProofs"]
+        for method in methods:
+            for sql in ddl("void "+method+"("):
+                db.execute(sql)
+        db.execute("INSERT INTO file_ratings VALUES(?,?,?)",(sha,87,1))
+        for method in methods:
+            for sql in ddl("void "+method+"("):
+                db.execute(sql)
+        assert db.execute("SELECT score FROM file_ratings WHERE sha256=?",(sha,)).fetchone()==(87,)
+        assert db.execute("SELECT display_name FROM locations").fetchall()==[("Original",)]
+        assert db.execute("PRAGMA foreign_key_check").fetchall()==[]
+        actual={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        assert {"file_ratings","remote_locations","collection_members","local_evictions","playback_progress","reader_bookmarks","remote_content_proofs"} <= actual
+    print("PASS: additive registry v1-to-v8 schema, preserved original and rating")
 
 def taxonomy_revision_regression():
     # Execute exact SQL from the Kotlin schema using SQLite. This is a

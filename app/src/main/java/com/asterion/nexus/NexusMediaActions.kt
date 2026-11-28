@@ -77,6 +77,7 @@ object NexusMediaActions {
                                     if(active(activity)){
                                         processing.dismiss()
                                         result.onSuccess{output->
+                                            worker.execute{NexusCloudPublication.enqueueIfConnected(activity.applicationContext,output)}
                                             AlertDialog.Builder(activity).setTitle("Verified audio output")
                                                 .setMessage(output.displayName+"\nOriginal retained.")
                                                 .setPositiveButton("Open"){_,_->NexusFileOpen.open(activity,NexusLibraryProvider.uriFor(activity,output.sha256),output.mime,output.displayName)}

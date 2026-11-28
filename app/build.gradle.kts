@@ -370,3 +370,38 @@ val requireBookOcrReleaseModel = tasks.register("requireBookOcrReleaseModel") {
     }
 }
 tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(requireBookOcrReleaseModel) }
+
+
+// Required owner-facing release model assets: both accepted source languages.
+// Debug source-only CI remains independent of downloading large weights.
+val requireTranslationReleaseModels = tasks.register("requireTranslationReleaseModels") {
+    doLast {
+        val root = file("src/main/assets/translation-models")
+        val revisions = mapOf(
+            "ja" to "1a906cfaaf7c8f4193f67f5885c082aa6dbd9d16",
+            "ko" to "d9fa1ac6008242100fecb4fff9b0a5917a1be81f"
+        )
+        for ((language, revision) in revisions) {
+            val model = root.resolve(language)
+            val manifest = model.resolve("manifest.json")
+            require(manifest.isFile && manifest.length() in 1..100_000) { "Missing validated translation model: $language" }
+            val descriptor = manifest.readText()
+            require(descriptor.contains(revision) && descriptor.contains("\"reference_smoke_passed\": true")) {
+                "Translation model validation missing: $language"
+            }
+            for (name in listOf("encoder.onnx","decoder.onnx","source.spm","target.spm","vocab.json","config.json")) {
+                val asset = model.resolve(name)
+                require(asset.isFile && asset.length() > 0) { "Missing translation artifact: $language/$name" }
+                val md = MessageDigest.getInstance("SHA-256")
+                asset.inputStream().buffered().use { input ->
+                    val bytes = ByteArray(131072)
+                    while (true) { val n = input.read(bytes); if (n < 0) break; if(n>0)md.update(bytes,0,n) }
+                }
+                val hash = md.digest().joinToString("") { "%02x".format(it) }
+                require(descriptor.contains("\"$name\": \"$hash\"")) { "Translation artifact hash mismatch: $language/$name" }
+            }
+        }
+        require(file("src/main/cpp/third_party/sentencepiece/CMakeLists.txt").isFile) { "Native translation tokenizer missing" }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(requireTranslationReleaseModels) }
