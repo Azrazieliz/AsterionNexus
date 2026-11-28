@@ -1,9 +1,5 @@
 name: Nexus alternative Chinese translation candidate
 on:
-  pull_request:
-    paths:
-      - 'scripts/prepare_nexus_zh_alternative.py'
-      - '.github/workflows/nexus-zh-alternative.yml'
   workflow_dispatch:
 permissions:
   contents: read
