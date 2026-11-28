@@ -3,16 +3,11 @@ package com.azrael.pixivdumpsync
 import android.app.Instrumentation
 import android.content.Intent
 import android.graphics.Bitmap
-import android.os.Handler
-import android.os.Looper
-import android.view.PixelCopy
-import android.view.SurfaceView
+import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import com.asterion.nexus.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Exercises the actual platform codec and Filament renderer using original synthetic fixtures. */
@@ -48,42 +43,55 @@ internal object NexusMediaSimulation{
                 yield(v)
                 if(v is ViewGroup)for(i in 0 until v.childCount)yieldAll(descendants(v.getChildAt(i)))
             }
-            var surface:SurfaceView?=null
+            var surface:TextureView?=null
             var animated=false
             val deadline=android.os.SystemClock.elapsedRealtime()+45000
             while(android.os.SystemClock.elapsedRealtime()<deadline&&!animated){
                 instrumentation.runOnMainSync{
                     val views=descendants(activity.window.decorView).toList()
-                    surface=views.filterIsInstance<SurfaceView>().firstOrNull()
+                    surface=views.filterIsInstance<TextureView>().firstOrNull()
                     animated=views.filterIsInstance<TextView>().any{it.text.toString().contains("1 animation clips")}
                 }
                 if(!animated)Thread.sleep(250)
             }
             check(animated&&surface!=null){"Animated model did not reach rendered status"}
+            // The composited texture is the actual user-visible rendering, not
+            // the enclosing activity background or the model metadata.
             var verified=false
-            var lastCopy=-1
             var lastBins=0
-            repeat(12){
-                if(!verified){
-                    Thread.sleep(1000)
-                    val bitmap=Bitmap.createBitmap(128,128,Bitmap.Config.ARGB_8888)
-                    val latch=CountDownLatch(1)
-                    instrumentation.runOnMainSync{
-                        if(surface!!.holder.surface.isValid&&surface!!.width>0&&surface!!.height>0){
-                            PixelCopy.request(surface!!,bitmap,{result->lastCopy=result;latch.countDown()},Handler(Looper.getMainLooper()))
-                        }else latch.countDown()
-                    }
+            var lastChannels=listOf(0,0,0)
+            val renderDeadline=android.os.SystemClock.elapsedRealtime()+90000
+            while(!verified&&android.os.SystemClock.elapsedRealtime()<renderDeadline){
+                Thread.sleep(1000)
+                var bitmap:Bitmap?=null
+                instrumentation.runOnMainSync{
+                    val view=surface!!
+                    if(view.isAvailable&&view.width>0&&view.height>0)
+                        bitmap=view.getBitmap(128,128)
+                }
+                bitmap?.let{frame->
                     try{
-                        if(latch.await(5,TimeUnit.SECONDS)&&lastCopy==PixelCopy.SUCCESS){
-                            val pixels=IntArray(128*128);bitmap.getPixels(pixels,0,128,0,0,128,128)
-                            lastBins=pixels.map{it and 0x00f0f0f0}.distinct().size
-                            verified=lastBins>=3
+                        val pixels=IntArray(128*128);frame.getPixels(pixels,0,128,0,0,128,128)
+                        lastBins=pixels.map{it and 0x00f0f0f0}.distinct().size
+                        // The original fixture deliberately contains red, green,
+                        // blue and yellow texels. Require all three primary color
+                        // families so a uniform sky or loading layer cannot pass.
+                        val counts=IntArray(3)
+                        for(pixel in pixels){
+                            val r=pixel ushr 16 and 255
+                            val g=pixel ushr 8 and 255
+                            val b=pixel and 255
+                            if(r>g+18&&r>b+18)counts[0]++
+                            if(g>r+18&&g>b+18)counts[1]++
+                            if(b>r+18&&b>g+18)counts[2]++
                         }
-                    }finally{if(latch.count==0L)bitmap.recycle()}
+                        lastChannels=counts.toList()
+                        verified=lastBins>=3&&counts.all{it>=12}
+                    }finally{frame.recycle()}
                 }
             }
-            check(verified){"Rendered model pixels unavailable or uniform: PixelCopy="+lastCopy+" bins="+lastBins}
-            status("GLTF_RENDER_OK textured model, animation clip and rendered surface pixels")
+            check(verified){"Rendered texture missing: bins="+lastBins+" primary pixels="+lastChannels}
+            status("GLTF_RENDER_OK textured model, animation clip and verified rendered primary-color texture pixels")
         }finally{instrumentation.runOnMainSync{activity.finish()}}
     }
 }
