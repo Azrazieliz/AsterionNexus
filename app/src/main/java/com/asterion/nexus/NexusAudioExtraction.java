@@ -149,6 +149,7 @@ public final class NexusAudioExtraction {
                     "audio/mp4","nexus-derivative","device",identity,output.length(),null);
             }
             require(registry.verifyOriginal(result),"Registered output failed readback");
+            registry.linkDerivative(result.sha256,item.sha256,"derived_from",identity);
             journal.put("state","INDEXED").put("output_sha256",result.sha256).put("output_bytes",result.length)
                 .put("packets",expected.count).put("verification","all AAC packet bytes and relative timestamps");
             write(receipt,journal);registry.job(identity,"INDEXED",result.length,null);
