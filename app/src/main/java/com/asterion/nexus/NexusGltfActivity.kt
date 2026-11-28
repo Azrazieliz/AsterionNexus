@@ -42,13 +42,14 @@ class NexusGltfActivity : Activity() {
             val v=viewer?:return
             val surface=renderSurface
             if(surface==null||!surface.isAvailable||surface.width<=0||surface.height<=0){
+                previous=0L
                 Choreographer.getInstance().postFrameCallback(this);return
             }
             try {
                 val animator=v.animator
                 if(animator!=null && animator.animationCount>animation) {
                     val duration=animator.getAnimationDuration(animation)
-                    if(playing && previous>0 && duration>0) elapsed=(elapsed+((now-previous)/1e9).toFloat().coerceIn(0f,.1f))%duration
+                    if(playing && previous>0 && duration>0) elapsed=(elapsed+((now-previous).coerceAtLeast(0L)/1e9).toFloat())%duration
                     animator.applyAnimation(animation,elapsed)
                     animator.updateBoneMatrices()
                     if(duration>0) {
@@ -116,9 +117,14 @@ class NexusGltfActivity : Activity() {
                                         oldLeft:Int,oldTop:Int,oldRight:Int,oldBottom:Int){
                 if(right<=left||bottom<=top)return
                 surface.removeOnLayoutChangeListener(this)
-                if(isDestroyed||isFinishing)return
-                runCatching{initializeModel(surface,buffer)}.onFailure{
-                    status.text="Model unavailable: "+(it.message?:it.javaClass.simpleName)
+                // Run after layout traversal so attaching Filament's texture
+                // callbacks and adding playback controls cannot invalidate
+                // the in-progress layout or start with an empty viewport.
+                surface.post {
+                    if(isDestroyed||isFinishing||!surface.isAttachedToWindow)return@post
+                    runCatching{initializeModel(surface,buffer)}.onFailure{
+                        status.text="Model unavailable: "+(it.message?:it.javaClass.simpleName)
+                    }
                 }
             }
         }
