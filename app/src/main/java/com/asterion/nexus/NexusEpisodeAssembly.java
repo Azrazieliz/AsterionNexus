@@ -229,6 +229,46 @@ public final class NexusEpisodeAssembly {
         }
         return new NexusRepeatedEdges.Episode(duration,spans);
     }
+    /** Conservative repeated-edge suggestions for the transcoding editor.
+     * Unsupported tracks, uncertain fingerprints and questionable cuts retain the complete episode.
+     */
+    public static List<long[]> transcodePlan(Context context,List<String> ids,List<Long> durations)throws Exception{
+        require(ids.size()==durations.size()&&ids.size()>=2&&ids.size()<=100,"Invalid episode selection");
+        NexusRegistry registry=new NexusRegistry(context);
+        ArrayList<NexusRepeatedEdges.Episode> edges=new ArrayList<>();
+        ArrayList<File> files=new ArrayList<>();
+        for(int i=0;i<ids.size();i++){
+            NexusRegistry.Item item=registry.find(ids.get(i));
+            require(item!=null&&registry.verifyOriginal(item),"Episode integrity check failed");
+            File file=registry.original(item);files.add(file);
+            NexusRepeatedEdges.Episode ep=new NexusRepeatedEdges.Episode(durations.get(i)*1000,Collections.emptyList());
+            try{
+                MediaExtractor ex=open(file);Layout l;
+                try{l=layout(ex);}finally{ex.release();}
+                ep=scanEdges(file,l);
+            }catch(Exception uncertain){/* preserve complete footage */}
+            edges.add(ep);
+        }
+        List<NexusRepeatedEdges.Cut> cuts=NexusRepeatedEdges.plan(edges);
+        ArrayList<long[]> result=new ArrayList<>();
+        for(int i=0;i<ids.size();i++){
+            long duration=durations.get(i),start=0,end=duration;
+            NexusRepeatedEdges.Cut cut=cuts.get(i);
+            long until=cut.end==edges.get(i).duration?Long.MAX_VALUE:cut.end;
+            if(cut.start!=0||until!=Long.MAX_VALUE){
+                try{
+                    MediaExtractor check=open(files.get(i));
+                    try{transfer(check,layout(check),null,null,0,new Evidence(),cut.start,until);}
+                    finally{check.release();}
+                    long proposedStart=cut.start/1000;
+                    long proposedEnd=until==Long.MAX_VALUE?duration:Math.min(duration,(until+999)/1000);
+                    if(proposedStart>=0&&proposedStart<proposedEnd){start=proposedStart;end=proposedEnd;}
+                }catch(Exception uncertain){/* preserve complete footage */}
+            }
+            result.add(new long[]{start,end});
+        }
+        return result;
+    }
     private static void journal(File file,JSONObject project)throws Exception{
         AtomicFile atomic=new AtomicFile(file);FileOutputStream stream=atomic.startWrite();
         try{stream.write(project.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));atomic.finishWrite(stream);}

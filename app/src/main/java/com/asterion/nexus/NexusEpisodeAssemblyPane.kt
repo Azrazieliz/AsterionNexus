@@ -57,6 +57,9 @@ fun NexusEpisodeAssemblyPane(onRefresh:()->Unit){
         TextButton(enabled=!busy&&chosen.isNotEmpty(),onClick={
             NexusVideoEditActivity.open(context,chosen.map{it.sha256},title)
         },modifier=Modifier.fillMaxWidth()){Text("Edit timeline / transcode")}
+        TextButton(enabled=!busy&&chosen.size>=2,onClick={
+            NexusVideoEditActivity.open(context,chosen.map{it.sha256},title,true)
+        },modifier=Modifier.fillMaxWidth()){Text("Prepare automatic assembly / transcode")}
         if(status.isNotBlank())Text(status)
         if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
         Button(enabled=!busy&&title.isNotBlank()&&chosen.size>=2,onClick={

@@ -12,9 +12,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Native timeline editor. Millisecond boundaries, reordered clips, export profile and cancellation. */
 class NexusVideoEditActivity:Activity(){
     companion object{
-        fun open(context:Context,ids:List<String>,title:String){
+        fun open(context:Context,ids:List<String>,title:String,automatic:Boolean=false){
             context.startActivity(Intent(context,NexusVideoEditActivity::class.java)
-                .putStringArrayListExtra("sources",ArrayList(ids)).putExtra("title",title))
+                .putStringArrayListExtra("sources",ArrayList(ids)).putExtra("title",title).putExtra("automatic",automatic))
         }
     }
     private val worker=Executors.newSingleThreadExecutor()
@@ -56,10 +56,16 @@ class NexusVideoEditActivity:Activity(){
         layout.addView(cancelButton)
         setContentView(layout)
         worker.execute{
-            val result=runCatching{ids.map{NexusVideoExport.source(applicationContext,it)}}
+            val result=runCatching{
+                val sources=ids.map{NexusVideoExport.source(applicationContext,it)}
+                if(intent.getBooleanExtra("automatic",false)){
+                    val plan=NexusEpisodeAssembly.transcodePlan(applicationContext,ids,sources.map{it.duration})
+                    sources.zip(plan).map{(source,range)->Row(source,range[0].toString(),range[1].toString())}
+                }else sources.map{Row(it)}
+            }
             runOnUiThread{
                 if(isDestroyed||isFinishing)return@runOnUiThread
-                result.onSuccess{items->rows.addAll(items.map{Row(it)});renderRows();status.text="Trim and reorder clips";exportButton.isEnabled=true}
+                result.onSuccess{items->rows.addAll(items);renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true}
                     .onFailure{status.text="Cannot edit: "+it.message}
             }
         }
