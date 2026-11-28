@@ -15,7 +15,7 @@ public final class NexusRegistry {
     private static final String DB_NAME="nexus_registry_v1.sqlite";
 
     private static final class Database extends SQLiteOpenHelper {
-        Database(Context app){super(app,DB_NAME,null,5);setWriteAheadLoggingEnabled(true);}
+        Database(Context app){super(app,DB_NAME,null,6);setWriteAheadLoggingEnabled(true);}
         @Override public void onConfigure(SQLiteDatabase db){
             super.onConfigure(db);db.setForeignKeyConstraintsEnabled(true);
         }
@@ -25,7 +25,7 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX idx_nexus_library_names ON locations(display_name COLLATE NOCASE)");
             db.execSQL("CREATE INDEX idx_nexus_library_sources ON locations(source_kind,account_key)");
             db.execSQL("CREATE TABLE jobs(job_key TEXT PRIMARY KEY,stage TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,error_code TEXT)");
-            createFileRatings(db);createRemoteLocations(db);createCollections(db);createEvictions(db);
+            createFileRatings(db);createRemoteLocations(db);createCollections(db);createEvictions(db);createPlayback(db);
         }
         private void createFileRatings(SQLiteDatabase db){
             db.execSQL("CREATE TABLE IF NOT EXISTS file_ratings(sha256 TEXT PRIMARY KEY CHECK(length(sha256)=64),score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),updated_at INTEGER NOT NULL)");
@@ -50,11 +50,14 @@ public final class NexusRegistry {
             db.execSQL("CREATE TABLE IF NOT EXISTS local_evictions(sha256 TEXT PRIMARY KEY REFERENCES originals(sha256),account TEXT NOT NULL,fs_id INTEGER NOT NULL,remote_md5 TEXT NOT NULL,bytes INTEGER NOT NULL,verified_at INTEGER NOT NULL,state TEXT NOT NULL CHECK(state IN ('PREPARED','EVICTED')))");
         }
         @Override public void onUpgrade(SQLiteDatabase db,int old,int current){
-            if(old<1||current!=5||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
+            if(old<1||current!=6||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
             if(old==1)createFileRatings(db);
             if(old<3)createRemoteLocations(db);
             if(old<4)createCollections(db);
-            createEvictions(db);
+            createEvictions(db);createPlayback(db);
+        }
+        private void createPlayback(SQLiteDatabase db){
+            db.execSQL("CREATE TABLE IF NOT EXISTS playback_progress(sha256 TEXT PRIMARY KEY REFERENCES originals(sha256),position_ms INTEGER NOT NULL,duration_ms INTEGER NOT NULL,updated_at INTEGER NOT NULL,CHECK(position_ms>=0 AND duration_ms>0 AND position_ms<duration_ms))");
         }
     }
     public static final class Item {
@@ -368,6 +371,22 @@ public final class NexusRegistry {
         try{helper.getWritableDatabase().delete("collection_members","collection_id=? AND sha256=?",new String[]{collection,sha});}
         finally{helper.close();}
     }
+    public void notePlaybackProgress(String sha,long position,long duration){
+        requireRatingIdentity(sha);
+        if(duration<=0||position<0||position>=duration)throw new IllegalArgumentException("Invalid playback progress");
+        Database helper=new Database(app);
+        try{
+            ContentValues row=new ContentValues();row.put("sha256",sha);row.put("position_ms",position);row.put("duration_ms",duration);row.put("updated_at",System.currentTimeMillis());
+            helper.getWritableDatabase().insertWithOnConflict("playback_progress",null,row,SQLiteDatabase.CONFLICT_REPLACE);
+        }finally{helper.close();}
+    }
+    public long playbackPosition(String sha){
+        requireRatingIdentity(sha);
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT position_ms FROM playback_progress WHERE sha256=?",new String[]{sha})){
+            return c.moveToFirst()?c.getLong(0):-1L;
+        }finally{helper.close();}
+    }
     public void noteReadingProgress(String sha,int position,int total){
         requireRatingIdentity(sha);
         if(position<0||total<1||position>=total)throw new IllegalArgumentException("Invalid reading progress");
@@ -401,6 +420,8 @@ public final class NexusRegistry {
                 filter="EXISTS(SELECT 1 FROM file_ratings r WHERE r.sha256=o.sha256 AND r.score>=?)";args.add(value);break;
             case "offline_pin":
                 filter="EXISTS(SELECT 1 FROM remote_locations r WHERE r.sha256=o.sha256 AND r.pinned=1)";break;
+            case "continue_watching":
+                filter="o.mime LIKE 'video/%' AND EXISTS(SELECT 1 FROM playback_progress p WHERE p.sha256=o.sha256 AND p.position_ms>0)";break;
             case "continue_reading":
                 filter="EXISTS(SELECT 1 FROM reading_progress r WHERE r.sha256=o.sha256 AND r.position<r.total-1)";break;
             case "related_output":
