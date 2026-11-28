@@ -1,0 +1,87 @@
+{
+  "schema": "asterion.nexus.rounder-extension.v1",
+  "donor": {
+    "repository": "Azrazieliz/AsterionRounder",
+    "branch": "feat/control-recursive-inventory-20261122",
+    "commit": "d6c9a1725a3fdc91d8e325625c25395b5e3962c4"
+  },
+  "assembly": "entire ordered upstream build workflow through source-export gate",
+  "collision_resolution": {
+    "documents_provider": "com.asterion.nexus.terabox.documents"
+  },
+  "files": [
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgTeraboxDocumentsProvider.java",
+      "sha256": "51fabc7a69776a1e447f869591c4537e745101354d0723343fb3922fb5fcae0c"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgTeraboxMediaDataSource.java",
+      "sha256": "a11940b42e7483929334346c12caf1f95a3524891c83a25d9ea1fb8223a03a72"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgGrowingMediaDataSource.java",
+      "sha256": "a32667f545ade6066339d29fe28faab5e54f2c1248ecbe02b45053e55e783a88"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgMediaPlayer.java",
+      "sha256": "55a2340525379016c14c5f1223393372b78530ba65fad74a4d7b964558cdde81"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/ReaderCovers.java",
+      "sha256": "51ed39fa3dd4099159f2c1e6e9e0611db7dc76143db2def0d2fba16bfa285e48"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/UniversalReader.java",
+      "sha256": "d07ec331a3500cf581ee9df2d34b9bb4aa039f1f857c7aea49863ed30691019e"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/LegacyOfficeReader.java",
+      "sha256": "eb6e94aa0c0afa82bb1ec52afb0989dc953df73475ff95e882e67c3ab9d9068f"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/RichDocxPreview.java",
+      "sha256": "79d54abf1279ee8937ddb1afad910747edeed166f9a3b3ccc078294e282bf68a"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgRounderVideoPreviews.java",
+      "sha256": "bc7f4b6ce2578d6d40b16a2856791f369948080053caca0af030cc8fe29b4d37"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/FgRounderOriginalPreviews.java",
+      "sha256": "f42e0b4610b0aadce9be1dd31550d506a7d35f35a1e305c48a2f3ab6a6c538e9"
+    },
+    {
+      "path": "rounder/src/main/java/com/openlocal/office/core/KoikatsuCards.java",
+      "sha256": "576e5f4e68f8a5d2152805909b3db50bec6e8aa82b5ae1456d7eb1d57bf98c5e"
+    },
+    {
+      "path": "rounder/src/main/assets/universal-reader.js",
+      "sha256": "b0df55d05063ac278c91f259754b98217dcedb904d7d466aadf3613c1f06eba9"
+    },
+    {
+      "path": "rounder/src/main/assets/epub-reader.js",
+      "sha256": "9452440df9dba89e12dcf1dbe2b27a8720ec121cee416abf310d30b62091e55e"
+    },
+    {
+      "path": "rounder/src/main/assets/unified-viewer-controls.js",
+      "sha256": "83dcc258d85af5ba139ba7f2af46c478b1c171288baf0f3611f0bb17db05e76b"
+    },
+    {
+      "path": "rounder/src/main/assets/reader-controls.js",
+      "sha256": "4dd688ba85fbafb84325e62db0f23d782c8b423bb99177a8a887ce2168d3ea00"
+    },
+    {
+      "path": "rounder/src/main/assets/premium-library.css",
+      "sha256": "7021a41b682a19c60ae42050fbb43c80c956d440eeef46f4af8bf2baa919a716"
+    },
+    {
+      "path": "rounder/src/main/assets/premium-library.js",
+      "sha256": "6eb1b2653a742e47e8114e388063d8911adc02c38178bc30e2f12b1a023beaf1"
+    },
+    {
+      "path": "rounder/src/main/assets/rounder-premium-theme.css",
+      "sha256": "c19c47f52152195afdc354dee88b271fa5b0f6ca031e31422b64cef6fbf4820e"
+    }
+  ],
+  "device_verified": false
+}

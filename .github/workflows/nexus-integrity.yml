@@ -1,0 +1,27 @@
+name: Nexus original-integrity source acceptance
+on:
+  push:
+    branches: [work/merge-core-downloader-rounder]
+    paths:
+      - 'app/src/main/java/com/asterion/nexus/NexusOriginalStore.java'
+      - 'scripts/NexusOriginalStoreSmoke.java'
+      - '.github/workflows/nexus-integrity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Compile production original-store code without mocks
+        run: |
+          mkdir -p /tmp/nexus-integrity/classes
+          javac -Xlint:all -d /tmp/nexus-integrity/classes app/src/main/java/com/asterion/nexus/NexusOriginalStore.java scripts/NexusOriginalStoreSmoke.java
+      - name: Verify complete original, deduplication and interruption guards
+        run: java -cp /tmp/nexus-integrity/classes com.asterion.nexus.NexusOriginalStoreSmoke

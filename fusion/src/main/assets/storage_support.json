@@ -1,0 +1,21 @@
+{
+  "android_storage": [
+    "SAF",
+    "MediaStore",
+    "Tree URI",
+    "DocumentProvider",
+    "Internal storage",
+    "SD card",
+    "NAS",
+    "SMB",
+    "FTP",
+    "SFTP",
+    "WebDAV"
+  ],
+  "implemented_storage": [
+    "SAF",
+    "Tree URI",
+    "DocumentProvider"
+  ],
+  "integration": "backend_adapters_only"
+}

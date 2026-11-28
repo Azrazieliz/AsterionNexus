@@ -1,0 +1,55 @@
+name: Nexus accepted Rounder readers and streaming import
+on:
+  push:
+    branches: [work/merge-core-downloader-rounder]
+    paths:
+      - scripts/expand_rounder_engines.py
+      - .github/workflows/nexus-rounder-expand.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: nexus-rounder-expand
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --disable-pip-version-check 'PyYAML==6.0.2'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reassemble pinned Rounder then materialize remaining engines
+        run: python scripts/expand_rounder_engines.py
+      - name: Check real source and reader assets
+        run: |
+          set -euo pipefail
+          test -s rounder/src/main/java/com/openlocal/office/core/FgMediaPlayer.java
+          test -s rounder/src/main/java/com/openlocal/office/core/FgTeraboxDocumentsProvider.java
+          test -s rounder/src/main/java/com/openlocal/office/core/FgTeraboxMediaDataSource.java
+          test -s rounder/src/main/java/com/openlocal/office/core/UniversalReader.java
+          test -s rounder/src/main/assets/premium-library.js
+          grep -Fq 'com.asterion.nexus.terabox.documents' rounder/src/main/java/com/openlocal/office/core/FgTeraboxDocumentsProvider.java
+          python -m json.tool spec/rounder-engine-extension.v1.json >/dev/null
+          for p in rounder/src/main/assets/*.js; do node --check "$p"; done
+      - name: Commit imported source only to Nexus work branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add rounder/src/main/java/com/openlocal/office/core rounder/src/main/assets spec/rounder-engine-extension.v1.json
+          git diff --cached --quiet && { echo "No new source"; exit 0; }
+          git commit -m 'feat(nexus): import assembled Rounder reader, seekable player and cloud SAF provider'
+          git fetch origin "$GITHUB_REF_NAME"
+          git rebase "origin/$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"

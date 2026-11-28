@@ -1,0 +1,1129 @@
+package com.ailm.android.runtime
+
+import android.content.ContentValues
+import androidx.core.database.sqlite.transaction
+import android.database.sqlite.SQLiteDatabase
+import org.json.JSONArray
+import org.json.JSONObject
+import kotlin.math.sqrt
+
+internal data class CanonicalTagObservation(
+    val tagId: String,
+    val tagName: String,
+    val scope: String,
+    val confidence: Double,
+    val source: String,
+)
+
+internal data class SubjectResolutionRecord(
+    val subjectIndex: Int,
+    val prominence: Double,
+    val observations: Map<String, Double>,
+    val candidates: List<Map<String, Any>>,
+    val characterId: String?,
+    val confidence: Double,
+    val status: String,
+)
+
+internal data class ImageFingerprintMatch(
+    val imageId: Int,
+    val uri: String,
+    val filename: String,
+    val perceptualHash: String,
+    val width: Int,
+    val height: Int,
+    val sizeBytes: Long,
+)
+
+/** One cursor entry; never retain an entire 300K+ library in RAM. */
+data class AutomationImageCandidate(
+    val imageId: Int,
+    val importedOrder: Long,
+    val uri: String = "",
+)
+
+internal class FusionResolutionStore(
+    private val database: LocalDatabase,
+) {
+    fun listAutomationImageIds(forceAll: Boolean = false): List<Int> {
+        val predicate = if (forceAll) {
+            "i.active = 1"
+        } else {
+            """
+            i.active = 1 AND (
+                fp.image_id IS NULL OR
+                s.image_id IS NULL OR
+                s.state IN ('pending', 'retry_required', 'failed') OR
+                (
+                    s.state IN ('complete', 'review_pending', 'waiting_for_knowledge') AND
+                    COALESCE(i.modified_at_ms, i.last_modified_ms, 0) > COALESCE(s.source_modified_at_ms, 0)
+                )
+            )
+            """.trimIndent()
+        }
+        val sql = """
+            SELECT i.image_id
+            FROM images i
+            LEFT JOIN fusion_automation_state s ON s.image_id = i.image_id
+            LEFT JOIN ${FusionDatabaseSchema.TABLE_IMAGE_FINGERPRINTS} fp ON fp.image_id = i.image_id
+            WHERE $predicate
+            ORDER BY i.imported_order ASC, i.image_id ASC
+        """.trimIndent()
+        return buildList {
+            database.readableDatabase.rawQuery(sql, emptyArray()).use { cursor ->
+                while (cursor.moveToNext()) add(cursor.getInt(0))
+            }
+        }
+    }
+
+
+    /**
+     * Exact pending count via SQLite, not an allocated Int array.
+     * The working set for automation remains bounded regardless of catalog size.
+     */
+    private fun eligibleAutomationRows(forceAll: Boolean, failedOnly: Boolean): String = when {
+        failedOnly -> "i.active = 1 AND s.state IN ('failed','retry_required')"
+        forceAll -> "i.active = 1"
+        else -> """
+            i.active = 1 AND (
+                fp.image_id IS NULL OR s.image_id IS NULL OR
+                s.state IN ('pending', 'retry_required', 'failed') OR
+                (s.state IN ('complete', 'review_pending', 'waiting_for_knowledge') AND
+                 COALESCE(i.modified_at_ms, i.last_modified_ms, 0) > COALESCE(s.source_modified_at_ms, 0))
+            )
+        """.trimIndent()
+    }
+
+    fun countAutomationImages(forceAll: Boolean = false, failedOnly: Boolean = false): Int {
+        val predicate = eligibleAutomationRows(forceAll, failedOnly)
+        val joins = if (forceAll && !failedOnly) "" else """
+            LEFT JOIN fusion_automation_state s ON s.image_id = i.image_id
+            LEFT JOIN ${FusionDatabaseSchema.TABLE_IMAGE_FINGERPRINTS} fp ON fp.image_id = i.image_id
+        """.trimIndent()
+        return database.readableDatabase.rawQuery(
+            "SELECT COUNT(*) FROM images i $joins WHERE $predicate",
+            emptyArray(),
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+    }
+
+    /**
+     * Index-backed keyset pagination. Never use OFFSET at 300K scale.
+     * Includes failed records only once within a run; a new run can retry.
+     */
+    fun automationImageBatch(
+        forceAll: Boolean,
+        afterImportedOrder: Long,
+        afterImageId: Int,
+        limit: Int,
+        failedOnly: Boolean = false,
+    ): List<AutomationImageCandidate> {
+        val predicate = eligibleAutomationRows(forceAll, failedOnly)
+        val joins = if (forceAll && !failedOnly) "" else """
+            LEFT JOIN fusion_automation_state s ON s.image_id = i.image_id
+            LEFT JOIN ${FusionDatabaseSchema.TABLE_IMAGE_FINGERPRINTS} fp ON fp.image_id = i.image_id
+        """.trimIndent()
+        val bounded = limit.coerceIn(1, 64)
+        val sql = """
+            SELECT i.image_id, i.imported_order, i.uri
+            FROM images i
+            $joins
+            WHERE ($predicate)
+                AND i.imported_order >= ?
+                AND (
+                    i.imported_order > ? OR
+                    (i.imported_order = ? AND i.image_id > ?)
+                )
+            ORDER BY i.imported_order ASC, i.image_id ASC
+            LIMIT ?
+        """.trimIndent()
+        return buildList {
+            database.readableDatabase.rawQuery(
+                sql,
+                arrayOf(afterImportedOrder.toString(), afterImportedOrder.toString(), afterImportedOrder.toString(), afterImageId.toString(), bounded.toString()),
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    add(AutomationImageCandidate(
+                        imageId = cursor.getInt(0),
+                        importedOrder = cursor.getLong(1),
+                        uri = cursor.getString(2).orEmpty(),
+                    ))
+                }
+            }
+        }
+    }
+
+    fun requeueLegacyReviewPendingWithoutSubjects(): Int {
+        return database.writableDatabase.update(
+            "fusion_automation_state",
+            ContentValues().apply {
+                put("state", "pending")
+                put("pipeline_complete", 0)
+                put("organization_complete", 0)
+                put("needs_review", 0)
+                put("last_error", "Legacy incomplete automation result queued for a semantic retry.")
+                put("updated_at_ms", System.currentTimeMillis())
+            },
+            """
+            state = 'review_pending'
+            AND NOT EXISTS (
+                SELECT 1
+                FROM fusion_image_subjects subjects
+                WHERE subjects.image_id = fusion_automation_state.image_id
+            )
+            """.trimIndent(),
+            emptyArray(),
+        )
+    }
+
+    fun resetWaitingForKnowledge() {
+        database.writableDatabase.execSQL(
+            """
+            UPDATE fusion_automation_state
+            SET state = 'pending',
+                pipeline_complete = 0,
+                organization_complete = 0,
+                needs_review = 0,
+                last_error = '',
+                updated_at_ms = ?
+            WHERE state = 'waiting_for_knowledge'
+            """.trimIndent(),
+            arrayOf(System.currentTimeMillis()),
+        )
+    }
+
+    fun upsertImageFingerprint(
+        imageId: Int,
+        sha256: String,
+        perceptualHash: String,
+        width: Int,
+        height: Int,
+        sizeBytes: Long,
+    ) {
+        database.writableDatabase.insertWithOnConflict(
+            FusionDatabaseSchema.TABLE_IMAGE_FINGERPRINTS,
+            null,
+            ContentValues().apply {
+                put("image_id", imageId)
+                put("sha256", sha256.trim().lowercase())
+                put("perceptual_hash", perceptualHash.trim().lowercase())
+                put("pixel_width", width.coerceAtLeast(0))
+                put("pixel_height", height.coerceAtLeast(0))
+                put("source_size_bytes", sizeBytes.coerceAtLeast(0L))
+                put("updated_at_ms", System.currentTimeMillis())
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+    }
+
+    fun findExactDuplicate(imageId: Int, sha256: String): ImageFingerprintMatch? {
+        val clean = sha256.trim().lowercase()
+        if (clean.isBlank()) return null
+        return database.readableDatabase.rawQuery(
+            """
+            SELECT f.image_id, i.uri, i.filename, f.perceptual_hash,
+                   f.pixel_width, f.pixel_height, f.source_size_bytes
+            FROM ${FusionDatabaseSchema.TABLE_IMAGE_FINGERPRINTS} f
+            JOIN images i ON i.image_id = f.image_id
+            WHERE f.sha256 = ? AND f.image_id < ? AND i.active = 1
+            ORDER BY f.image_id ASC
+            LIMIT 1
+            """.trimIndent(),
+            arrayOf(clean, imageId.toString()),
+        ).use { cursor ->
+            if (!cursor.moveToFirst()) null else ImageFingerprintMatch(
+                imageId = cursor.getInt(0),
+                uri = cursor.getString(1),
+                filename = cursor.getString(2),
+                perceptualHash = cursor.getString(3).orEmpty(),
+                width = cursor.getInt(4),
+                height = cursor.getInt(5),
+                sizeBytes = cursor.getLong(6),
+            )
+        }
+    }
+
+    fun perceptualDuplicateCandidates(
+        imageId: Int,
+        width: Int,
+        height: Int,
+        limit: Int = 500,
+    ): List<ImageFingerprintMatch> {
+        if (width <= 0 || height <= 0) return emptyList()
+        val bounded = limit.coerceIn(1, 5000)
+        return buildList {
+            database.readableDatabase.rawQuery(
+                """
+                SELECT f.image_id, i.uri, i.filename, f.perceptual_hash,
+                       f.pixel_width, f.pixel_height, f.source_size_bytes
+                FROM ${FusionDatabaseSchema.TABLE_IMAGE_FINGERPRINTS} f
+                JOIN images i ON i.image_id = f.image_id
+                WHERE f.image_id < ? AND i.active = 1
+                  AND f.pixel_width = ? AND f.pixel_height = ?
+                  AND f.perceptual_hash != ''
+                ORDER BY f.image_id ASC
+                LIMIT ?
+                """.trimIndent(),
+                arrayOf(imageId.toString(), width.toString(), height.toString(), bounded.toString()),
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    add(
+                        ImageFingerprintMatch(
+                            imageId = cursor.getInt(0),
+                            uri = cursor.getString(1),
+                            filename = cursor.getString(2),
+                            perceptualHash = cursor.getString(3).orEmpty(),
+                            width = cursor.getInt(4),
+                            height = cursor.getInt(5),
+                            sizeBytes = cursor.getLong(6),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun markAutomationState(
+        imageId: Int,
+        state: String,
+        pipelineComplete: Boolean,
+        organizationComplete: Boolean,
+        needsReview: Boolean,
+        lastError: String = "",
+    ) {
+        val modifiedAt = database.readableDatabase.rawQuery(
+            "SELECT COALESCE(modified_at_ms, last_modified_ms, 0) FROM images WHERE image_id = ? LIMIT 1",
+            arrayOf(imageId.toString()),
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getLong(0) else 0L }
+        database.writableDatabase.insertWithOnConflict(
+            "fusion_automation_state",
+            null,
+            ContentValues().apply {
+                put("image_id", imageId)
+                put("state", state)
+                put("source_modified_at_ms", modifiedAt)
+                put("pipeline_complete", if (pipelineComplete) 1 else 0)
+                put("organization_complete", if (organizationComplete) 1 else 0)
+                put("needs_review", if (needsReview) 1 else 0)
+                put("last_error", lastError)
+                put("updated_at_ms", System.currentTimeMillis())
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+    }
+
+    fun correctedSubjectIdentities(imageId: Int): Map<Int, String> =
+        database.readableDatabase.rawQuery(
+            "SELECT subject_index, resolved_character_id FROM fusion_image_subjects " +
+                "WHERE image_id=? AND status='corrected' AND resolved_character_id IS NOT NULL",
+            arrayOf(imageId.toString()),
+        ).use { rows -> buildMap {
+            while (rows.moveToNext()) put(rows.getInt(0), rows.getString(1))
+        } }
+
+    fun allSubjectIdentitiesResolved(imageId: Int): Boolean =
+        database.readableDatabase.rawQuery(
+            """SELECT COUNT(*), COUNT(CASE WHEN status IN ('corrected','resolved')
+                AND COALESCE(resolved_character_id,'') <> '' THEN 1 END)
+                FROM fusion_image_subjects WHERE image_id=?""",
+            arrayOf(imageId.toString()),
+        ).use { rows -> rows.moveToFirst() && rows.getInt(0) > 0 && rows.getInt(0) == rows.getInt(1) }
+
+    fun replaceSubjects(imageId: Int, subjects: List<SubjectResolutionRecord>, preserveOtherSubjects: Boolean = false) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            if (!preserveOtherSubjects) db.delete("fusion_image_subjects", "image_id = ?", arrayOf(imageId.toString()))
+            subjects.forEach { subject ->
+                if (preserveOtherSubjects) db.delete("fusion_image_subjects", "image_id=? AND subject_index=?",
+                    arrayOf(imageId.toString(), subject.subjectIndex.toString()))
+                db.insertOrThrow(
+                    "fusion_image_subjects",
+                    null,
+                    ContentValues().apply {
+                        put("image_id", imageId)
+                        put("subject_index", subject.subjectIndex)
+                        put("prominence", subject.prominence)
+                        put("observations_json", JSONObject(subject.observations).toString())
+                        put("candidates_json", JSONArray(subject.candidates).toString())
+                        put("resolved_character_id", subject.characterId)
+                        put("resolution_confidence", subject.confidence)
+                        put("status", subject.status)
+                        put("updated_at_ms", System.currentTimeMillis())
+                    },
+                )
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Apply identity corrections only to the selected subject indices.
+     * Never delete other subjects' visual tag spaces or their user corrections.
+     * All selected subjects must exist; an empty legacy record may initialize
+     * a single explicitly corrected subject for backwards compatibility.
+     */
+    fun correctSubjectIdentities(
+        imageId: Int,
+        corrections: List<SubjectResolutionRecord>,
+    ): Boolean {
+        if (corrections.isEmpty() ||
+            corrections.map { it.subjectIndex }.distinct().size != corrections.size) return false
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            val existing = mutableSetOf<Int>()
+            db.rawQuery(
+                "SELECT subject_index FROM fusion_image_subjects WHERE image_id = ?",
+                arrayOf(imageId.toString()),
+            ).use { rows ->
+                while (rows.moveToNext()) existing += rows.getInt(0)
+            }
+            if (existing.isNotEmpty() &&
+                corrections.any { it.subjectIndex !in existing }) return false
+            if (existing.isEmpty() && (corrections.size != 1 ||
+                    corrections.first().subjectIndex != 0)) return false
+
+            for (subject in corrections) {
+                val values = ContentValues().apply {
+                    put("resolved_character_id", subject.characterId)
+                    put("resolution_confidence", subject.confidence)
+                    put("status", "corrected")
+                    put("candidates_json", JSONArray(subject.candidates).toString())
+                    put("updated_at_ms", System.currentTimeMillis())
+                }
+                if (existing.isNotEmpty()) {
+                    val changed = db.update(
+                        "fusion_image_subjects", values,
+                        "image_id = ? AND subject_index = ?",
+                        arrayOf(imageId.toString(), subject.subjectIndex.toString()),
+                    )
+                    if (changed != 1) return false
+                } else {
+                    values.put("image_id", imageId)
+                    values.put("subject_index", subject.subjectIndex)
+                    values.put("prominence", subject.prominence)
+                    values.put("observations_json", JSONObject(subject.observations).toString())
+                    if (db.insertOrThrow("fusion_image_subjects", null, values) == -1L) return false
+                }
+            }
+            db.setTransactionSuccessful()
+            return true
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Edit a single subject's tag space, retaining every other character.
+     * Returns IDs removed from that subject, or null for an invalid index.
+     * Parent/sibling characters are never touched.
+     */
+    fun editSubjectTag(
+        imageId: Int,
+        subjectIndex: Int,
+        tagId: String,
+        include: Boolean,
+        exclusiveFamily: Boolean,
+    ): Set<String>? {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            var current: JSONObject? = null
+            db.rawQuery(
+                "SELECT observations_json FROM fusion_image_subjects " +
+                    "WHERE image_id = ? AND subject_index = ? LIMIT 1",
+                arrayOf(imageId.toString(), subjectIndex.toString()),
+            ).use { rows ->
+                if (rows.moveToFirst()) current =
+                    runCatching { JSONObject(rows.getString(0).orEmpty()) }.getOrNull()
+            }
+            val json = current ?: return null
+            val removed = mutableSetOf<String>()
+            if (include && exclusiveFamily) {
+                val keys = json.keys().asSequence().toList()
+                keys.filter { it != tagId && it.take(2) == tagId.take(2) }.forEach {
+                    json.remove(it)
+                    removed += it
+                }
+            }
+            if (include) json.put(tagId, 1.0)
+            else if (json.has(tagId)) {
+                json.remove(tagId)
+                removed += tagId
+            }
+            val changed = db.update(
+                "fusion_image_subjects",
+                ContentValues().apply {
+                    put("observations_json", json.toString())
+                    put("updated_at_ms", System.currentTimeMillis())
+                },
+                "image_id = ? AND subject_index = ?",
+                arrayOf(imageId.toString(), subjectIndex.toString()),
+            )
+            if (changed != 1) return null
+            db.setTransactionSuccessful()
+            return removed
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /** Explicit per-image review rejection; never changes Knowledge or originals. */
+    fun removeScopedCanonicalTag(imageId: Int, tagId: String, scope: String) {
+        database.writableDatabase.delete("fusion_image_canonical_tags",
+            "image_id=? AND tag_id=? AND tag_scope=?", arrayOf(imageId.toString(), tagId, scope))
+    }
+
+    fun removeImageCanonicalTag(imageId: Int, tagId: String) {
+        database.writableDatabase.delete(
+            "fusion_image_canonical_tags",
+            "image_id = ? AND tag_id = ?",
+            arrayOf(imageId.toString(), tagId),
+        )
+    }
+
+    fun currentImageCanonicalTags(imageId: Int): List<CanonicalTagObservation> {
+        return buildList {
+            database.readableDatabase.rawQuery(
+                "SELECT tag_id, tag_name, tag_scope, confidence, source " +
+                    "FROM fusion_image_canonical_tags WHERE image_id = ? ORDER BY tag_id",
+                arrayOf(imageId.toString()),
+            ).use { cursor ->
+                while (cursor.moveToNext()) add(CanonicalTagObservation(
+                    tagId = cursor.getString(0),
+                    tagName = cursor.getString(1),
+                    scope = cursor.getString(2),
+                    confidence = cursor.getDouble(3),
+                    source = cursor.getString(4),
+                ))
+            }
+        }
+    }
+
+    /** Merge verified recovery tags without deleting manual or earlier observations. */
+    fun mergeCanonicalTags(imageId: Int, tags: List<CanonicalTagObservation>) {
+        if (tags.isEmpty()) return
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            writeCanonicalObservations(db, imageId, tags)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun replaceCanonicalTags(
+        imageId: Int,
+        tags: List<CanonicalTagObservation>,
+        replaceFamilies: Set<String>? = null,
+    ) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            // None of these operations may remove manual/imported records.
+            // A specialist classifier is not a full-taxonomy negative oracle:
+            // restrict replacement to accepted or explicitly deferred families,
+            // retaining other families from previous trusted visual stages.
+            val machineOnly =
+                "source IN ('vision', 'vision_classifier', 'vision_sa_species_inference', 'nsfw_classifier', 'wd_rating_classifier', 'character_knowledge')"
+            if (replaceFamilies == null) {
+                db.delete(
+                    "fusion_image_canonical_tags",
+                    "image_id = ? AND " + machineOnly,
+                    arrayOf(imageId.toString()),
+                )
+            } else {
+                val safe = replaceFamilies.filter {
+                    Regex("^[A-Z]{2}$").matches(it)
+                }.distinct()
+                if (safe.isNotEmpty()) {
+                    db.delete(
+                        "fusion_image_canonical_tags",
+                        "image_id = ? AND " + machineOnly +
+                            " AND substr(tag_id,1,2) IN (" +
+                            safe.joinToString(",") { "?" } + ")",
+                        (listOf(imageId.toString()) + safe).toTypedArray(),
+                    )
+                }
+            }
+            writeCanonicalObservations(db, imageId, tags)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    private fun writeCanonicalObservations(db: SQLiteDatabase, imageId: Int, tags: List<CanonicalTagObservation>) {
+        val sql = """
+            INSERT OR REPLACE INTO fusion_image_canonical_tags
+                (image_id,tag_id,tag_name,tag_scope,confidence,source,added_at_ms)
+            SELECT ?,?,?,?,?,?,?
+            WHERE ? = 'manual' OR NOT EXISTS (
+                SELECT 1 FROM fusion_image_canonical_tags prior
+                WHERE prior.image_id=? AND (
+                    (prior.tag_id=? AND prior.tag_scope=? AND prior.source NOT IN
+                        ('vision','vision_classifier','vision_sa_species_inference','nsfw_classifier','wd_rating_classifier','character_knowledge'))
+                    OR (?='content_rating' AND substr(prior.tag_id,1,2)='RT'
+                        AND prior.source='manual' AND prior.tag_scope IN ('illustration','content_rating'))
+                )
+            )
+        """.trimIndent()
+        val now = System.currentTimeMillis()
+        for (tag in tags.distinctBy { Triple(it.tagId, it.scope, it.source) }) {
+            db.execSQL(sql, arrayOf(imageId, tag.tagId, tag.tagName, tag.scope,
+                tag.confidence.coerceIn(0.0, 1.0), tag.source, now, tag.source,
+                imageId, tag.tagId, tag.scope, tag.scope))
+        }
+    }
+
+    fun markCharacterSheetPending(characterId: String, sourceUri: String) {
+        database.writableDatabase.insertWithOnConflict(
+            "fusion_character_sheet_index_state",
+            null,
+            ContentValues().apply {
+                put("character_id", characterId)
+                put("source_uri", sourceUri)
+                put("status", "pending")
+                put("attempts", 0)
+                put("last_error", "")
+                put("updated_at_ms", System.currentTimeMillis())
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+    }
+
+    fun pendingCharacterSheets(limit: Int = 50): List<Map<String, String>> {
+        val bounded = limit.coerceIn(1, 250)
+        return buildList {
+            database.readableDatabase.rawQuery(
+                """
+                SELECT character_id, source_uri
+                FROM fusion_character_sheet_index_state
+                WHERE status IN ('pending', 'retry')
+                ORDER BY updated_at_ms ASC, character_id ASC
+                LIMIT ?
+                """.trimIndent(),
+                arrayOf(bounded.toString()),
+            ).use { cursor ->
+                while (cursor.moveToNext()) {
+                    add(
+                        mapOf(
+                            "character_id" to cursor.getString(0),
+                            "source_uri" to cursor.getString(1),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun characterSheetIndexRemaining(): Int = database.readableDatabase.rawQuery(
+        "SELECT COUNT(*) FROM fusion_character_sheet_index_state WHERE status IN ('pending', 'retry')",
+        emptyArray(),
+    ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+
+    fun completeCharacterSheetIndex(characterId: String, sourceUri: String) {
+        database.writableDatabase.update(
+            "fusion_character_sheet_index_state",
+            ContentValues().apply {
+                put("status", "indexed")
+                put("source_uri", sourceUri)
+                put("last_error", "")
+                put("updated_at_ms", System.currentTimeMillis())
+            },
+            "character_id = ?",
+            arrayOf(characterId),
+        )
+    }
+
+    fun failCharacterSheetIndex(characterId: String, error: String, retryable: Boolean = true) {
+        val attempts = database.readableDatabase.rawQuery(
+            "SELECT attempts FROM fusion_character_sheet_index_state WHERE character_id = ? LIMIT 1",
+            arrayOf(characterId),
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else 0 }
+        database.writableDatabase.update(
+            "fusion_character_sheet_index_state",
+            ContentValues().apply {
+                put("status", if (retryable && attempts < 3) "retry" else "failed")
+                put("attempts", attempts + 1)
+                put("last_error", error.take(500))
+                put("updated_at_ms", System.currentTimeMillis())
+            },
+            "character_id = ?",
+            arrayOf(characterId),
+        )
+    }
+
+    fun markOriginalSubject(imageId: Int, subjectIndex: Int) {
+        database.writableDatabase.execSQL(
+            "UPDATE fusion_image_subjects SET resolved_character_id=NULL, candidates_json='[]', status='original_character', resolution_confidence=1.0, updated_at_ms=? WHERE image_id=? AND subject_index=?",
+            arrayOf(System.currentTimeMillis(), imageId, subjectIndex),
+        )
+    }
+
+    fun retractReviewedIdentityEvidence(imageId: Int) {
+        database.writableDatabase.execSQL(
+            "DELETE FROM fusion_character_visual_evidence WHERE image_id=? AND evidence_kind='review_correction'",
+            arrayOf(imageId),
+        )
+    }
+
+    fun hasCharacterEvidence(
+        characterId: String,
+        evidenceKind: String,
+        sourceUri: String,
+    ): Boolean = database.readableDatabase.rawQuery(
+        """
+        SELECT EXISTS(
+            SELECT 1
+            FROM fusion_character_visual_evidence
+            WHERE character_id = ? AND evidence_kind = ? AND source_uri = ?
+            LIMIT 1
+        )
+        """.trimIndent(),
+        arrayOf(characterId, evidenceKind, sourceUri),
+    ).use { cursor -> cursor.moveToFirst() && cursor.getInt(0) == 1 }
+
+    fun addCharacterEvidence(
+        characterId: String,
+        imageId: Int?,
+        evidenceKind: String,
+        sourceUri: String,
+        embedding: List<Double>,
+        attributes: Map<String, Double>,
+        validated: Boolean,
+        weight: Double,
+    ) {
+        val db = database.writableDatabase
+        if (imageId == null) {
+            // SQLite UNIQUE permits multiple NULL image_ids. Canonical sheet
+            // evidence is instead idempotent by character + kind + source path.
+            db.delete(
+                "fusion_character_visual_evidence",
+                "character_id = ? AND evidence_kind = ? AND source_uri = ?",
+                arrayOf(characterId, evidenceKind, sourceUri),
+            )
+        }
+        db.insertWithOnConflict(
+            "fusion_character_visual_evidence",
+            null,
+            ContentValues().apply {
+                put("character_id", characterId)
+                if (imageId == null) putNull("image_id") else put("image_id", imageId)
+                put("evidence_kind", evidenceKind)
+                put("source_uri", sourceUri)
+                put("embedding_json", JSONArray(embedding).toString())
+                put("attributes_json", JSONObject(attributes).toString())
+                put("validated", if (validated) 1 else 0)
+                put("weight", weight)
+                put("added_at_ms", System.currentTimeMillis())
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+    }
+
+    fun replaceCanonicalSheetEvidence(
+        characterId: String,
+        sourceUri: String,
+        embedding: List<Double>,
+    ) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete(
+                "fusion_character_visual_evidence",
+                "character_id = ? AND evidence_kind = 'canonical_sheet'",
+                arrayOf(characterId),
+            )
+            addCharacterEvidence(
+                characterId = characterId,
+                imageId = null,
+                evidenceKind = "canonical_sheet",
+                sourceUri = sourceUri,
+                embedding = embedding,
+                attributes = emptyMap(),
+                validated = true,
+                weight = 1.35,
+            )
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Only human-validated visual evidence can authorize unattended identity
+     * assignment. Unverified self-generated image embeddings may help rank
+     * candidates in Review, but cannot bootstrap a false character identity.
+     */
+    /** Fast gate: skip extra crop embeddings until real indexed sheets exist. */
+    fun hasAnyValidatedCharacterEvidence(): Boolean =
+        database.readableDatabase.rawQuery(
+            "SELECT EXISTS(SELECT 1 FROM fusion_character_visual_evidence " +
+                "WHERE validated=1 AND embedding_json!='[]' LIMIT 1)",
+            emptyArray(),
+        ).use { it.moveToFirst() && it.getInt(0) == 1 }
+
+    fun hasValidatedCharacterEvidence(characterId: String): Boolean =
+        database.readableDatabase.rawQuery(
+            "SELECT EXISTS(SELECT 1 FROM fusion_character_visual_evidence " +
+                "WHERE character_id=? AND validated=1 AND embedding_json!='[]' LIMIT 1)",
+            arrayOf(characterId),
+        ).use { it.moveToFirst() && it.getInt(0) == 1 }
+
+    data class VisualRecall(val ids: Set<String>, val incomplete: Boolean)
+
+    fun recallByReference(vector: List<Double>): VisualRecall {
+        val keys = VisualReferenceBuckets.keys(vector)
+        if (keys.isEmpty()) return VisualRecall(emptySet(), false)
+        val db = database.writableDatabase
+        val hasPending = { db.rawQuery("SELECT 1 FROM fusion_visual_ref_pending LIMIT 1", null).use { it.moveToFirst() } }
+        if (hasPending()) db.transaction {
+            val pending = ArrayList<Pair<Long, IntArray>>()
+            rawQuery("""SELECT p.evidence_id,e.embedding_json FROM fusion_visual_ref_pending p
+                JOIN fusion_character_visual_evidence e USING(evidence_id)
+                ORDER BY p.evidence_id LIMIT 32""", null).use { rows ->
+                while (rows.moveToNext()) pending += rows.getLong(0) to
+                    VisualReferenceBuckets.keys(parseDoubleList(rows.getString(1)))
+            }
+            for ((id, bands) in pending) {
+                for (bucket in bands) execSQL("INSERT OR IGNORE INTO fusion_visual_ref_bands VALUES(?,?)", arrayOf(bucket,id))
+                execSQL("DELETE FROM fusion_visual_ref_pending WHERE evidence_id=?", arrayOf(id))
+            }
+        }
+        var incomplete = hasPending()
+        val ids = linkedSetOf<String>()
+        for (bucket in keys) {
+            db.rawQuery("""SELECT e.character_id FROM fusion_visual_ref_bands b
+                JOIN fusion_character_visual_evidence e ON e.evidence_id=b.evidence_id
+                WHERE b.bucket=? AND e.validated=1 ORDER BY b.evidence_id LIMIT 65""",
+                arrayOf(bucket.toString())).use { rows ->
+                var count = 0
+                while (rows.moveToNext()) {
+                    if (++count > 64) { incomplete = true; break }
+                    ids += rows.getString(0)
+                }
+            }
+        }
+        return VisualRecall(ids, incomplete)
+    }
+
+    fun visualSimilarity(characterId: String, queryEmbedding: List<Double>): Double? {
+        if (queryEmbedding.isEmpty()) return null
+        val best = mutableListOf<Pair<Double, Double>>()
+        database.readableDatabase.rawQuery(
+            """
+            SELECT embedding_json, weight FROM fusion_character_visual_evidence
+            WHERE character_id = ? AND validated = 1 AND embedding_json != '[]'
+            """.trimIndent(),
+            arrayOf(characterId),
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val embedding = parseDoubleList(cursor.getString(0))
+                if (embedding.size != queryEmbedding.size || embedding.isEmpty()) continue
+                val similarity = cosine(queryEmbedding, embedding)
+                val weight = cursor.getDouble(1)
+                if (!similarity.isFinite() || !weight.isFinite() || weight <= 0.0) continue
+                best += similarity to weight
+                best.sortByDescending { it.first * it.second }
+                if (best.size > 4) best.removeAt(4)
+            }
+        }
+        if (best.isEmpty()) return null
+        val denominator = best.sumOf { it.second }.coerceAtLeast(0.0001)
+        return (best.sumOf { it.first.coerceIn(-1.0, 1.0) * it.second } / denominator)
+            .coerceIn(0.0, 1.0)
+    }
+
+    fun queueReview(
+        imageId: Int,
+        reviewType: String,
+        reason: String,
+        payload: Map<String, Any>,
+    ) {
+        val db = database.writableDatabase
+        db.transaction {
+            val uri = db.rawQuery("SELECT uri FROM images WHERE image_id=?", arrayOf(imageId.toString()))
+                .use { if (it.moveToFirst()) it.getString(0) else null } ?: return@transaction
+            val args = arrayOf(imageId.toString(), reviewType)
+            val values = ContentValues().apply {
+                put("image_id", imageId)
+                put("review_type", reviewType)
+                put("reason", reason)
+                put("status", "pending")
+                put("payload_json", JSONObject(payload).toString())
+                put("last_updated_ms", System.currentTimeMillis())
+            }
+            // A move can change the URI. Prefer the stable image identity and
+            // adopt a legacy URI-only notice without allocating a second ID.
+            db.rawQuery(
+                """SELECT review_id,status,reason,correction_json FROM review_items
+                    WHERE review_type=? AND (image_id=? OR image_uri=?)
+                    ORDER BY CASE WHEN image_id=? THEN 0 ELSE 1 END, review_id DESC LIMIT 1""",
+                arrayOf(reviewType, args[0], uri, args[0]),
+            ).use { row ->
+                if (!row.moveToFirst()) {
+                    values.put("image_uri", uri)
+                    db.insertOrThrow("review_items", null, values)
+                } else {
+                    val id = row.getLong(0)
+                    val status = row.getString(1)
+                    val previousReason = row.getString(2).orEmpty()
+                    val previousKey = ReviewEventPolicy.cause(previousReason)
+                    val incomingKey = ReviewEventPolicy.cause(reason)
+                    if (ReviewEventPolicy.acknowledged(status, previousKey, incomingKey)) return@transaction
+                    if (status != "pending" && status != "auto_resolved") {
+                        db.execSQL(
+                            """INSERT OR REPLACE INTO fusion_review_decisions
+                                (image_id,review_type,cause,status,correction_json) VALUES(?,?,?,?,?)""",
+                            arrayOf(imageId, reviewType, previousKey, status, row.getString(3).orEmpty()),
+                        )
+                    }
+                    val acknowledged = db.rawQuery(
+                        "SELECT 1 FROM fusion_review_decisions WHERE image_id=? AND review_type=? AND cause=?",
+                        arrayOf(args[0], reviewType, incomingKey),
+                    ).use { it.moveToFirst() }
+                    if (!acknowledged) {
+                        if (status == "pending" && previousKey == incomingKey) values.remove("last_updated_ms")
+                        if (previousKey != incomingKey) values.put("correction_json", "{}")
+                        db.update("review_items", values, "review_id=?", arrayOf(id.toString()))
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * A later classifier run may recover verified crop tags while the
+     * character name remains unknown. Retire only obsolete machine-generated
+     * inference/identity reviews; never clear relocation failures, manual
+     * corrections, promotions, or content-safety Review items.
+     */
+    fun resolveRecoveredVisualReviews(imageId: Int) {
+        database.writableDatabase.update(
+            "review_items",
+            ContentValues().apply {
+                put("status", "auto_resolved")
+                put("correction_json", JSONObject(mapOf(
+                    "automatic_resolution" to true,
+                    "reason" to "Verified native visual tags recovered; identity reference still pending.",
+                )).toString())
+                put("last_updated_ms", System.currentTimeMillis())
+            },
+            "image_id = ? AND status = 'pending' AND review_type IN ('runtime_failure', 'character_resolution')",
+            arrayOf(imageId.toString()),
+        )
+    }
+
+    fun resolveVisualAbstention(imageId: Int) {
+        database.writableDatabase.execSQL(
+            "UPDATE review_items SET status='auto_resolved', last_updated_ms=? " +
+                "WHERE image_id=? AND review_type='visual_abstention' AND status='pending'",
+            arrayOf(System.currentTimeMillis(), imageId),
+        )
+    }
+
+    fun resolveAutomationReviews(imageId: Int) {
+        database.writableDatabase.update(
+            "review_items",
+            ContentValues().apply {
+                put("status", "auto_resolved")
+                put(
+                    "correction_json",
+                    JSONObject(
+                        mapOf(
+                            "automatic_resolution" to true,
+                            "reason" to "A later complete automation run resolved this item.",
+                        ),
+                    ).toString(),
+                )
+                put("last_updated_ms", System.currentTimeMillis())
+            },
+            "image_id = ? AND status = 'pending' AND review_type IN ('runtime_failure', 'character_resolution', 'organization_failure')",
+            arrayOf(imageId.toString()),
+        )
+    }
+
+    fun getReviewItem(reviewId: Long): Map<String, Any>? = database.readableDatabase.rawQuery(
+        """
+        SELECT review_id, image_uri, COALESCE(image_id, 0), status, review_type,
+               COALESCE(reason, ''), payload_json, correction_json, last_updated_ms
+        FROM review_items
+        WHERE review_id = ?
+        LIMIT 1
+        """.trimIndent(),
+        arrayOf(reviewId.toString()),
+    ).use { cursor ->
+        if (!cursor.moveToFirst()) return@use null
+        mapOf(
+            "id" to cursor.getLong(0).toString(),
+            "path" to cursor.getString(1),
+            "image_id" to cursor.getInt(2),
+            "status" to cursor.getString(3),
+            "review_type" to cursor.getString(4),
+            "reason" to cursor.getString(5),
+            "payload" to parseObject(cursor.getString(6)),
+            "correction" to parseObject(cursor.getString(7)),
+            "updated_at_ms" to cursor.getLong(8),
+        )
+    }
+
+    fun completeReview(reviewId: Long, status: String, correction: Map<String, Any>) {
+        database.writableDatabase.update(
+            "review_items",
+            ContentValues().apply {
+                put("status", status)
+                put("correction_json", JSONObject(correction).toString())
+                put("last_updated_ms", System.currentTimeMillis())
+            },
+            "review_id = ?",
+            arrayOf(reviewId.toString()),
+        )
+    }
+
+    fun createOrAssignOriginalCharacterCluster(
+        imageId: Int,
+        subjectIndex: Int,
+        attributes: Map<String, Double>,
+        embedding: List<Double>,
+    ): String = database.writableDatabase.transaction {
+        val db = this
+        db.rawQuery(
+            "SELECT cluster_id FROM fusion_image_oc_clusters WHERE image_id=? AND subject_index=?",
+            arrayOf(imageId.toString(), subjectIndex.toString()),
+        ).use { rows -> if (rows.moveToFirst()) return@transaction rows.getString(0) }
+        val existing = bestOriginalCharacterCluster(attributes, embedding)
+        val clusterId = existing?.first?.takeIf { existing.second >= OC_CLUSTER_THRESHOLD }
+            ?: nextOriginalCharacterClusterId()
+
+        val previous = readOriginalCluster(clusterId)
+        val count = (previous?.get("image_count") as? Number)?.toInt() ?: 0
+        val prototype = (previous?.get("embedding") as? List<*>)
+            ?.mapNotNull { (it as? Number)?.toDouble() }
+            .orEmpty()
+        val updatedPrototype = averageEmbedding(prototype, count, embedding)
+
+        db.insertWithOnConflict(
+            "fusion_original_character_clusters",
+            null,
+            ContentValues().apply {
+                put("cluster_id", clusterId)
+                put("label", "Original Character " + clusterId.removePrefix("OC"))
+                put("attributes_json", JSONObject(attributes).toString())
+                put("prototype_embedding_json", JSONArray(updatedPrototype).toString())
+                put("image_count", count + 1)
+                put("updated_at_ms", System.currentTimeMillis())
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+        db.insertWithOnConflict(
+            "fusion_image_oc_clusters",
+            null,
+            ContentValues().apply {
+                put("image_id", imageId)
+                put("subject_index", subjectIndex)
+                put("cluster_id", clusterId)
+                put("confidence", existing?.second ?: 1.0)
+                put("added_at_ms", System.currentTimeMillis())
+            },
+            SQLiteDatabase.CONFLICT_REPLACE,
+        )
+        clusterId
+    }
+
+    private fun bestOriginalCharacterCluster(
+        attributes: Map<String, Double>,
+        embedding: List<Double>,
+    ): Pair<String, Double>? {
+        var best: Pair<String, Double>? = null
+        database.readableDatabase.rawQuery(
+            "SELECT cluster_id, attributes_json, prototype_embedding_json FROM fusion_original_character_clusters",
+            emptyArray(),
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val candidateAttributes = parseObject(cursor.getString(1))
+                    .mapNotNull { (key, value) -> (value as? Number)?.toDouble()?.let { key to it } }
+                    .toMap()
+                val attrScore = attributeJaccard(attributes, candidateAttributes)
+                val candidateEmbedding = parseDoubleList(cursor.getString(2))
+                val visual = if (embedding.isNotEmpty() && embedding.size == candidateEmbedding.size) {
+                    cosine(embedding, candidateEmbedding).coerceIn(0.0, 1.0)
+                } else 0.0
+                val score = if (visual > 0.0) 0.55 * attrScore + 0.45 * visual else attrScore
+                if (best == null || score > best!!.second) best = cursor.getString(0) to score
+            }
+        }
+        return best
+    }
+
+    private fun nextOriginalCharacterClusterId(): String {
+        val max = database.readableDatabase.rawQuery(
+            "SELECT cluster_id FROM fusion_original_character_clusters",
+            emptyArray(),
+        ).use { cursor ->
+            var value = 0
+            while (cursor.moveToNext()) {
+                value = maxOf(value, cursor.getString(0).removePrefix("OC").toIntOrNull() ?: 0)
+            }
+            value
+        }
+        return "OC" + (max + 1).toString().padStart(6, '0')
+    }
+
+    private fun readOriginalCluster(clusterId: String): Map<String, Any>? = database.readableDatabase.rawQuery(
+        "SELECT image_count, prototype_embedding_json FROM fusion_original_character_clusters WHERE cluster_id = ? LIMIT 1",
+        arrayOf(clusterId),
+    ).use { cursor ->
+        if (!cursor.moveToFirst()) null else mapOf(
+            "image_count" to cursor.getInt(0),
+            "embedding" to parseDoubleList(cursor.getString(1)),
+        )
+    }
+
+    private fun parseDoubleList(raw: String): List<Double> =
+        CharacterSubjectEvidencePolicy.readStoredEmbedding(raw)
+
+    private fun parseObject(raw: String): Map<String, Any> = runCatching {
+        val obj = JSONObject(raw)
+        buildMap {
+            obj.keys().forEach { key -> obj.opt(key)?.let { put(key, it) } }
+        }
+    }.getOrDefault(emptyMap())
+
+    private fun cosine(a: List<Double>, b: List<Double>): Double {
+        if (a.size != b.size || a.isEmpty()) return 0.0
+        var dot = 0.0
+        var normA = 0.0
+        var normB = 0.0
+        for (index in a.indices) {
+            dot += a[index] * b[index]
+            normA += a[index] * a[index]
+            normB += b[index] * b[index]
+        }
+        val denominator = sqrt(normA) * sqrt(normB)
+        return if (denominator <= 1e-12) 0.0 else dot / denominator
+    }
+
+    private fun attributeJaccard(a: Map<String, Double>, b: Map<String, Double>): Double {
+        if (a.isEmpty() || b.isEmpty()) return 0.0
+        val union = a.keys + b.keys
+        val intersection = a.keys.intersect(b.keys)
+        return intersection.sumOf { minOf(a[it] ?: 0.0, b[it] ?: 0.0) } /
+            union.sumOf { maxOf(a[it] ?: 0.0, b[it] ?: 0.0) }.coerceAtLeast(0.0001)
+    }
+
+    private fun averageEmbedding(existing: List<Double>, count: Int, incoming: List<Double>): List<Double> {
+        if (incoming.isEmpty()) return existing
+        if (existing.size != incoming.size || count <= 0) return incoming
+        return incoming.indices.map { index ->
+            (existing[index] * count.toDouble() + incoming[index]) / (count + 1).toDouble()
+        }
+    }
+
+    companion object {
+        private const val OC_CLUSTER_THRESHOLD = 0.78
+    }
+}

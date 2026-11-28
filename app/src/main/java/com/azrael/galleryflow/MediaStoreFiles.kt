@@ -1,0 +1,608 @@
+package com.azrael.galleryflow
+
+import android.content.ContentValues
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
+import com.github.junrar.Archive
+import net.lingala.zip4j.ZipFile
+import java.io.File
+import java.net.URI
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import kotlin.math.max
+
+/** Preserve the original publisher reference except when 4KHD's selected
+ * first-party bridge deliberately transitions to its official TeraBox share.
+ * The previous 4KHD archive transfer sent the 4khd.com article Referer to
+ * the TeraBox file endpoint, while the same engine correctly used TeraBox's
+ * own Referer for media marked as provider=TeraBox. This is scoped only to
+ * 4KHD archive bridges; unrelated publishers, photos and direct 4KHD CDN
+ * files retain their existing request policy and account cookies.
+ */
+internal object GalleryArchiveRefererPolicy {
+    fun preferred(media:MediaRef):String? {
+        val name=media.provider?.lowercase(java.util.Locale.ROOT)
+        if(name=="4khd" && media.kind==MediaKind.ARCHIVE) {
+            val bridge=runCatching{URI(media.url)}.getOrNull()
+            if(bridge?.scheme=="https" &&
+                bridge.host.orEmpty().lowercase(java.util.Locale.ROOT)=="m.4khd.com" &&
+                bridge.userInfo==null && bridge.port==-1)
+                return "https://www.terabox.com/"
+        }
+        return when(name){
+            "terabox"->"https://www.terabox.com/"
+            "mediafire","sorafolder","gofile"->media.url
+            else->media.referer
+        }
+    }
+}
+
+class MediaStoreFiles(private val context: Context, private val http: HttpClient) {
+    fun exists(contentUri: String?): Boolean {
+        if (contentUri.isNullOrBlank()) return false
+        return runCatching {
+            context.contentResolver.openFileDescriptor(Uri.parse(contentUri), "r")?.use { fd ->
+                when {
+                    fd.statSize > 0L -> true
+                    fd.statSize == 0L -> false
+                    else -> java.io.FileInputStream(fd.fileDescriptor).use {
+                        it.read() != -1
+                    }
+                }
+            } ?: false
+        }.getOrDefault(false)
+    }
+
+    fun download(entity: EntityRecord, gallery: GalleryMeta, media: MediaRef): DownloadOutcome {
+        if (!SyncControl.checkpoint()) throw SyncCancelledException()
+        if(media.kind==MediaKind.ARCHIVE)
+            SyncControl.updateMessage("Resolving selected archive · "+gallery.title.take(90))
+        val resolved = if (media.provider.equals("SoraFolder", ignoreCase = true)) {
+            SoraFolderWebResolver(context).resolve(media.url)
+        } else {
+            http.resolveDownloadUrl(media.url, media.referer, media.provider)
+        }
+        val resolvedReferer = GalleryArchiveRefererPolicy.preferred(media)
+        if(media.kind==MediaKind.ARCHIVE)
+            SyncControl.updateMessage("Opening selected archive · "+gallery.title.take(90))
+        openWithFallback(media, resolved, resolvedReferer).use { response ->
+            val responseMime = response.contentType?.lowercase()
+            if (media.kind == MediaKind.ARCHIVE && responseMime?.startsWith("text/html") == true) {
+                throw InteractiveProviderRequiredException(media.provider ?: "Archive provider", response.finalUrl)
+            }
+            if (media.kind == MediaKind.IMAGE && responseMime?.startsWith("text/") == true) {
+                throw AdapterException("Image URL returned HTML/text instead of an image.")
+            }
+            if (media.kind == MediaKind.VIDEO && responseMime?.startsWith("text/") == true) {
+                throw AdapterException("Video URL returned HTML/text instead of a video.")
+            }
+
+            val dispositionName = filenameFromDisposition(response.contentDisposition)
+            val mime = chooseMime(media, response.contentType, dispositionName, response.finalUrl)
+            val ext = extensionFor(mime, dispositionName ?: response.finalUrl, media.kind)
+            val filename = FlatStoragePolicy.filename(media, ext)
+
+            val uri = createRow(filename, mime, relativePath(entity, gallery))
+            val digest = MessageDigest.getInstance("SHA-256")
+            var bytes = 0L
+            val signature=ByteArray(40)
+            var signatureSize=0
+            var lastProgress=0L
+            var extracted:List<ExtractedDownload> = emptyList()
+            try {
+                context.contentResolver.openOutputStream(uri, "w")!!.use { out ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE * 4)
+                    while (true) {
+                        if (!SyncControl.checkpoint()) throw SyncCancelledException()
+                        val read = response.input.read(buffer)
+                        if (read < 0) break
+                        out.write(buffer, 0, read)
+                        if(signatureSize<signature.size){
+                            val amount=minOf(read,signature.size-signatureSize)
+                            buffer.copyInto(signature,signatureSize,0,amount)
+                            signatureSize+=amount
+                        }
+                        digest.update(buffer, 0, read)
+                        bytes += read
+                        if(media.kind==MediaKind.ARCHIVE){
+                            val now=android.os.SystemClock.elapsedRealtime()
+                            if(now-lastProgress>=2000L){
+                                lastProgress=now
+                                val total=if(response.contentLength>0)
+                                    " / "+(response.contentLength/1048576L)+" MiB" else ""
+                                SyncControl.updateMessage("Archive transfer · "+
+                                    (bytes/1048576L)+" MiB"+total+" · "+gallery.title.take(60))
+                            }
+                        }
+                    }
+                }
+                if (bytes <= 0L || (response.contentLength > 0L && bytes != response.contentLength))
+                    throw java.io.IOException("Incomplete download: " + bytes + " of " + response.contentLength)
+                OriginalPayloadVerifier.verify(media.kind,bytes,signature,signatureSize)
+                val primary = DownloadResult(
+                    contentUri = uri.toString(),
+                    filename = filename,
+                    mimeType = mime,
+                    bytes = bytes,
+                    sha256 = digest.digest().joinToString("") { byte -> "%02x".format(byte) },
+                    aHash64 = if (mime.startsWith("image/")) averageHash64(uri) else null
+                )
+                if(media.kind==MediaKind.ARCHIVE)
+                    SyncControl.updateMessage("Verifying and extracting selected archive · "+gallery.title.take(90))
+                extracted = when {
+                    media.kind != MediaKind.ARCHIVE -> emptyList()
+                    isZip(filename, mime) -> extractZip(entity, gallery, media, uri)
+                    isRar(filename, mime) -> extractRar(entity, gallery, media, uri)
+                    media.archiveVideosOnly || media.expectedArchivePhotos!=null ->
+                        throw AdapterException("Archive format is not supported: $filename")
+                    else -> emptyList()
+                }
+                // All members have been checked before exposing any new
+                // original. Roll back only rows belonging to this attempt.
+                extracted.forEach { finishRow(Uri.parse(it.result.contentUri)) }
+                finishRow(uri)
+                return DownloadOutcome(primary, extracted)
+            } catch (t: Throwable) {
+                extracted.forEach { delete(it.result.contentUri) }
+                runCatching { context.contentResolver.delete(uri, null, null) }
+                throw t
+            }
+        }
+    }
+
+    private fun openWithFallback(
+        media: MediaRef,
+        resolved: String,
+        preferredReferer: String?
+    ): HttpClient.OpenResponse {
+        val referers = linkedSetOf<String?>()
+        referers += preferredReferer
+
+        val root = runCatching {
+            val uri = URI(resolved)
+            uri.scheme + "://" + uri.host + "/"
+        }.getOrNull()
+        referers += root
+        referers += null
+
+        var last: Throwable? = null
+        for (referer in referers) {
+            try {
+                val response = http.open(resolved, referer)
+                val type = response.contentType?.lowercase().orEmpty()
+                val htmlInsteadOfPayload =
+                    type.startsWith("text/html") || type.startsWith("text/plain")
+                if (htmlInsteadOfPayload &&
+                    (media.kind == MediaKind.IMAGE ||
+                     media.kind == MediaKind.VIDEO ||
+                     media.kind == MediaKind.ARCHIVE)
+                ) {
+                    response.close()
+                    last = AdapterException(
+                        "Media endpoint returned " + (type.ifBlank { "text" }) +
+                            " with referer " + (referer ?: "<none>")
+                    )
+                    continue
+                }
+                return response
+            } catch (e: HttpStatusException) {
+                last = e
+                if (e.code !in listOf(401, 403)) throw e
+            } catch (t: Exception) {
+                if(t is SyncCancelledException || t is InterruptedException ||
+                    Thread.currentThread().isInterrupted)throw t
+                last = t
+                // Connection/TLS failures can also be referer/path dependent on CDNs.
+                // Try the remaining safe variants before giving up.
+                continue
+            }
+        }
+        throw last ?: AdapterException("Could not open media URL.")
+    }
+
+    fun delete(contentUri: String?) {
+        if (!contentUri.isNullOrBlank()) runCatching {
+            context.contentResolver.delete(Uri.parse(contentUri), null, null)
+        }
+    }
+
+    /** Re-open only an existing exact archive receipt; verify its recorded
+     * SHA-256 while copying into private temporary storage. Publication and
+     * rollback concern only newly recovered members. */
+    internal fun recoverArchiveMembers(entity:EntityRecord,gallery:GalleryMeta,
+                                       archive:MediaRef,record:MediaRecord):List<ExtractedDownload>{
+        require(record.source==archive.source && record.mediaId==archive.stableId &&
+            record.galleryId==archive.galleryStableId &&
+            record.state==TransferState.COMPLETE){"No matching saved archive"}
+        val hash=record.sha256?.takeIf{it.matches(Regex("[a-fA-F0-9]{64}"))}
+            ?:throw AdapterException("Saved archive has no verified SHA-256 receipt")
+        val uri=Uri.parse(requireNotNull(record.contentUri))
+        require(uri.scheme=="content"){"Invalid saved archive URI"}
+        val name=record.filename.orEmpty()
+        val mime=context.contentResolver.getType(uri).orEmpty()
+        val members=when{
+            isZip(name,mime)->extractZip(entity,gallery,archive,uri,hash)
+            isRar(name,mime)->extractRar(entity,gallery,archive,uri,hash)
+            else->throw AdapterException("Saved archive format is unsupported")
+        }
+        try{
+            members.forEach{finishRow(Uri.parse(it.result.contentUri))}
+            return members
+        }catch(t:Throwable){
+            members.forEach{delete(it.result.contentUri)}
+            throw t
+        }
+    }
+
+    private fun copyArchiveToTemp(uri:Uri,temp:File,expectedHash:String?){
+        val digest=MessageDigest.getInstance("SHA-256")
+        context.contentResolver.openInputStream(uri)!!.use{source->
+            temp.outputStream().buffered().use{output->
+                val buffer=ByteArray(128*1024)
+                while(true){
+                    if(!SyncControl.checkpoint())throw SyncCancelledException()
+                    val read=source.read(buffer)
+                    if(read<0)break
+                    if(read==0)continue
+                    output.write(buffer,0,read)
+                    if(expectedHash!=null)digest.update(buffer,0,read)
+                }
+            }
+        }
+        if(expectedHash!=null){
+            val actual=digest.digest().joinToString(""){"%02x".format(it)}
+            if(!actual.equals(expectedHash,true))
+                throw AdapterException("Saved archive SHA-256 no longer matches its receipt")
+        }
+    }
+
+    private fun extractZip(
+        entity: EntityRecord,
+        gallery: GalleryMeta,
+        archive: MediaRef,
+        archiveUri: Uri,
+        expectedHash:String?=null
+    ): List<ExtractedDownload> {
+        val temp = File.createTempFile("galleryflow_", ".zip", context.cacheDir)
+        val createdUris = mutableListOf<Uri>()
+        try {
+            copyArchiveToTemp(archiveUri,temp,expectedHash)
+            val zip = ZipFile(temp)
+            if (zip.isEncrypted) {
+                val password = archive.archivePassword?.takeIf { it.isNotBlank() }
+                    ?: throw AdapterException("Encrypted ZIP requires an extraction password.")
+                zip.setPassword(password.toCharArray())
+            }
+
+            val out = mutableListOf<ExtractedDownload>()
+            var extractedIndex = 0
+            for (header in zip.fileHeaders) {
+                if (!SyncControl.checkpoint()) throw SyncCancelledException()
+                if (header.isDirectory) continue
+                val entryName = header.fileName.replace('\\', '/')
+                val ext = entryName.substringAfterLast('.', "").lowercase()
+                val mime = mimeForExtension(ext) ?: continue
+                if(!mime.startsWith("image/") && !mime.startsWith("video/"))continue
+                val kind = if (mime.startsWith("video/")) MediaKind.VIDEO else MediaKind.IMAGE
+                if (archive.archiveVideosOnly && kind != MediaKind.VIDEO) continue
+                val base = safeFileName(entryName.substringAfterLast('/').ifBlank { "file.$ext" })
+                val filename = archive.source.wireName + "_" + archive.galleryStableId + "_" + archive.stableId + "_" + (extractedIndex + 1) + "_" + base
+                val uri = createRow(filename, mime, relativePath(entity, gallery))
+                createdUris += uri
+                val digest = MessageDigest.getInstance("SHA-256")
+                val bytes = zip.getInputStream(header).use { input ->
+                    writeVerifiedMember(input,uri,kind,header.uncompressedSize,digest)
+                }
+                val syntheticUrl = "archive:" + archive.normalizedUrl + "#" + entryName
+                val media = MediaRef(
+                    source = archive.source,
+                    stableId = sha256Text(archive.stableId + ":" + entryName).take(24),
+                    galleryStableId = archive.galleryStableId,
+                    index = 100000 + archive.index * 10000 + extractedIndex,
+                    url = syntheticUrl,
+                    normalizedUrl = syntheticUrl,
+                    referer = archive.url,
+                    mimeHint = mime,
+                    kind = kind,
+                    provider = archive.provider
+                )
+                val result = DownloadResult(
+                    contentUri = uri.toString(),
+                    filename = filename,
+                    mimeType = mime,
+                    bytes = bytes,
+                    sha256 = digest.digest().joinToString("") { byte -> "%02x".format(byte) },
+                    aHash64 = if (mime.startsWith("image/")) averageHash64(uri) else null
+                )
+                out += ExtractedDownload(media, result)
+                extractedIndex++
+            }
+            verifyArchivePhotos(archive, out)
+            if (out.isEmpty()) {
+                val expected = if (archive.archiveVideosOnly) "video files" else "supported image/video files"
+                throw AdapterException("ZIP contained no $expected.")
+            }
+            return out
+        } catch (t: Throwable) {
+            createdUris.forEach { runCatching { context.contentResolver.delete(it, null, null) } }
+            throw t
+        } finally {
+            runCatching { temp.delete() }
+        }
+    }
+
+    private fun extractRar(
+        entity: EntityRecord,
+        gallery: GalleryMeta,
+        archive: MediaRef,
+        archiveUri: Uri,
+        expectedHash:String?=null
+    ): List<ExtractedDownload> {
+        val temp = File.createTempFile("galleryflow_", ".rar", context.cacheDir)
+        val createdUris = mutableListOf<Uri>()
+        try {
+            copyArchiveToTemp(archiveUri,temp,expectedHash)
+
+            val password = archive.archivePassword?.takeIf { it.isNotBlank() }
+            val rar = if (password == null) Archive(temp) else Archive(temp, password)
+            rar.use { opened ->
+                val out = mutableListOf<ExtractedDownload>()
+                var extractedIndex = 0
+
+                while (true) {
+                    if (!SyncControl.checkpoint()) throw SyncCancelledException()
+                    val header = opened.nextFileHeader() ?: break
+                    if (header.isDirectory) continue
+
+                    val entryName = header.fileName.replace('\\', '/')
+                    val ext = entryName.substringAfterLast('.', "").lowercase()
+                    val mime = mimeForExtension(ext) ?: continue
+                    if(!mime.startsWith("image/") && !mime.startsWith("video/"))continue
+                    val kind = if (mime.startsWith("video/")) MediaKind.VIDEO else MediaKind.IMAGE
+                    if (archive.archiveVideosOnly && kind != MediaKind.VIDEO) continue
+
+                    val base = safeFileName(entryName.substringAfterLast('/').ifBlank { "file.$ext" })
+                    val filename = archive.source.wireName + "_" + archive.galleryStableId + "_" + archive.stableId + "_" + (extractedIndex + 1) + "_" + base
+                    val uri = createRow(filename, mime, relativePath(entity, gallery))
+                    createdUris += uri
+
+                    val digest = MessageDigest.getInstance("SHA-256")
+                    val bytes = opened.getInputStream(header).use { input ->
+                        writeVerifiedMember(input,uri,kind,header.fullUnpackSize,digest)
+                    }
+
+                    val syntheticUrl = "archive:" + archive.normalizedUrl + "#" + entryName
+                    val media = MediaRef(
+                        source = archive.source,
+                        stableId = sha256Text(archive.stableId + ":" + entryName).take(24),
+                        galleryStableId = archive.galleryStableId,
+                        index = 100000 + archive.index * 10000 + extractedIndex,
+                        url = syntheticUrl,
+                        normalizedUrl = syntheticUrl,
+                        referer = archive.url,
+                        mimeHint = mime,
+                        kind = kind,
+                        provider = archive.provider
+                    )
+                    val result = DownloadResult(
+                        contentUri = uri.toString(),
+                        filename = filename,
+                        mimeType = mime,
+                        bytes = bytes,
+                        sha256 = digest.digest().joinToString("") { byte -> "%02x".format(byte) },
+                        aHash64 = if (mime.startsWith("image/")) averageHash64(uri) else null
+                    )
+                    out += ExtractedDownload(media, result)
+                    extractedIndex++
+                }
+
+                verifyArchivePhotos(archive, out)
+                if (out.isEmpty()) {
+                    val expected = if (archive.archiveVideosOnly) "video files" else "supported image/video files"
+                    throw AdapterException("RAR contained no $expected.")
+                }
+                return out
+            }
+        } catch (t: Throwable) {
+            createdUris.forEach { runCatching { context.contentResolver.delete(it, null, null) } }
+            throw t
+        } finally {
+            runCatching { temp.delete() }
+        }
+    }
+
+    private fun writeVerifiedMember(input:java.io.InputStream,uri:Uri,
+                                    kind:MediaKind,declared:Long,digest:MessageDigest):Long {
+        val signature=ByteArray(40)
+        var signatureSize=0
+        var bytes=0L
+        context.contentResolver.openOutputStream(uri,"w")!!.use{output->
+            val buffer=ByteArray(DEFAULT_BUFFER_SIZE*4)
+            while(true){
+                if(!SyncControl.checkpoint())throw SyncCancelledException()
+                val read=input.read(buffer)
+                if(read<0)break
+                if(read==0)continue
+                bytes+=read
+                if(declared>=0L && bytes>declared)
+                    throw AdapterException("Archive member exceeds declared size")
+                if(signatureSize<signature.size){
+                    val amount=minOf(read,signature.size-signatureSize)
+                    buffer.copyInto(signature,signatureSize,0,amount)
+                    signatureSize+=amount
+                }
+                output.write(buffer,0,read)
+                digest.update(buffer,0,read)
+            }
+        }
+        OriginalPayloadVerifier.verifyArchiveMember(kind,bytes,declared,signature,signatureSize)
+        return bytes
+    }
+
+    private fun createRow(filename: String, mime: String, relativePath: String): Uri {
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, filename)
+            put(MediaStore.Downloads.MIME_TYPE, mime)
+            put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        return context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: error("Could not create MediaStore row")
+    }
+
+    private fun finishRow(uri: Uri) {
+        check(context.contentResolver.update(
+            uri,
+            ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) },
+            null,
+            null
+        )==1){"Unable to publish verified original"}
+    }
+
+    // Every media entry, including extracted archive entries, lives in one flat folder.
+    private fun relativePath(entity: EntityRecord, gallery: GalleryMeta): String =
+        CosplayStoragePolicy.relativePath(
+            context.getString(com.azrael.pixivdumpsync.R.string.gallery_download_folder))
+
+    private fun safe(value: String): String = value
+        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+        .take(120)
+        .ifBlank { "unknown" }
+
+    private fun safeFileName(value: String): String = value
+        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        .trim()
+        .take(160)
+        .ifBlank { "file.bin" }
+
+    private fun chooseMime(media: MediaRef, responseMime: String?, filename: String?, url: String): String {
+        val clean = responseMime?.substringBefore(';')?.trim()?.lowercase()
+        if (!clean.isNullOrBlank() &&
+            clean != "application/octet-stream" &&
+            clean != "binary/octet-stream"
+        ) return clean
+
+        val source = filename ?: url
+        val ext = source.substringBefore('?').substringAfterLast('.', "").lowercase()
+        mimeForExtension(ext)?.let { return it }
+        media.mimeHint?.takeIf { it.isNotBlank() && it != "application/octet-stream" }?.let { return it }
+
+        return if (media.kind == MediaKind.ARCHIVE) "application/octet-stream" else "application/octet-stream"
+    }
+
+    private fun extensionFor(mime: String, source: String, kind: MediaKind): String = when (mime.lowercase()) {
+        "image/jpeg" -> "jpg"
+        "image/png" -> "png"
+        "image/webp" -> "webp"
+        "image/gif" -> "gif"
+        "image/avif" -> "avif"
+        "video/mp4" -> "mp4"
+        "video/webm" -> "webm"
+        "video/quicktime" -> "mov"
+        "application/zip", "application/x-zip-compressed" -> "zip"
+        "application/vnd.rar", "application/x-rar-compressed", "application/x-rar" -> "rar"
+        else -> {
+            val ext = source.substringBefore('?').substringAfterLast('.', "").lowercase().take(8)
+            if (ext.isNotBlank()) ext else if (kind == MediaKind.ARCHIVE) "zip" else "bin"
+        }
+    }
+
+    private fun filenameFromDisposition(value: String?): String? {
+        if (value.isNullOrBlank()) return null
+        Regex("filename\\*=UTF-8''([^;]+)", RegexOption.IGNORE_CASE).find(value)?.groupValues?.get(1)?.let {
+            return runCatching { URLDecoder.decode(it.trim(), StandardCharsets.UTF_8.name()) }.getOrDefault(it.trim())
+        }
+        return Regex("filename=\"?([^\";]+)\"?", RegexOption.IGNORE_CASE)
+            .find(value)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun verifyArchivePhotos(archive: MediaRef, files: List<ExtractedDownload>) {
+        val expected=archive.expectedArchivePhotos
+        // Original 4KHD archives still need per-image signature/size
+        // verification when the publisher does not disclose a photo count.
+        // Other providers keep their existing verifier behavior untouched.
+        if(expected==null && archive.provider!="4KHD")return
+        val images=files.filter { it.media.kind==MediaKind.IMAGE }
+        if(archive.provider=="4KHD" && images.isEmpty())
+            throw AdapterException("4KHD official archive contained no original photos")
+        SelectedAlbumScope.verifyAdvertisedCount(expected, images.size)
+        for(image in images){
+            val first=context.contentResolver.openInputStream(Uri.parse(image.result.contentUri))
+                ?.buffered()?.use { input ->
+                    ByteArray(minOf(image.result.bytes,40L).toInt()).also {
+                        java.io.DataInputStream(input).readFully(it)
+                    }
+                } ?: byteArrayOf()
+            OriginalPayloadVerifier.verify(MediaKind.IMAGE,image.result.bytes,first,first.size)
+        }
+    }
+
+    private fun isZip(filename: String, mime: String): Boolean =
+        filename.endsWith(".zip", true) || mime.equals("application/zip",true) ||
+            mime.equals("application/x-zip-compressed",true)
+
+    private fun isRar(filename: String, mime: String): Boolean =
+        filename.endsWith(".rar", true) || mime.contains("rar", true)
+
+    private fun mimeForExtension(ext: String): String? = when (ext.lowercase()) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "webp" -> "image/webp"
+        "gif" -> "image/gif"
+        "avif" -> "image/avif"
+        "mp4", "m4v" -> "video/mp4"
+        "webm" -> "video/webm"
+        "mov" -> "video/quicktime"
+        "zip" -> "application/zip"
+        "rar" -> "application/vnd.rar"
+        "7z" -> "application/x-7z-compressed"
+        else -> null
+    }
+
+    private fun averageHash64(uri: Uri): String? = runCatching {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+        val sample = max(1, max(bounds.outWidth / 256, bounds.outHeight / 256))
+        val bitmap = context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+        } ?: return@runCatching null
+        bitmap.useBitmap { source ->
+            val tiny = Bitmap.createScaledBitmap(source, 8, 8, true)
+            tiny.useBitmap { b ->
+                val luminance = IntArray(64)
+                var total = 0L
+                var i = 0
+                for (y in 0 until 8) for (x in 0 until 8) {
+                    val color = b.getPixel(x, y)
+                    val lum = (android.graphics.Color.red(color) * 299 +
+                        android.graphics.Color.green(color) * 587 +
+                        android.graphics.Color.blue(color) * 114) / 1000
+                    luminance[i++] = lum
+                    total += lum
+                }
+                val average = total / 64
+                var bits = 0L
+                luminance.forEachIndexed { index, lum ->
+                    if (lum >= average) bits = bits or (1L shl index)
+                }
+                java.lang.Long.toUnsignedString(bits, 16).padStart(16, '0')
+            }
+        }
+    }.getOrNull()
+
+    private fun sha256Text(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8))
+        .joinToString("") { byte -> "%02x".format(byte) }
+
+    private inline fun <T> Bitmap.useBitmap(block: (Bitmap) -> T): T {
+        try { return block(this) } finally { if (!isRecycled) recycle() }
+    }
+}

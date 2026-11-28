@@ -1,0 +1,243 @@
+package com.azrael.galleryflow
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Intent
+import android.os.IBinder
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+
+/** Completion must be judged by the OWNED original-file transaction.
+ * Targeted requests never become automatic site-wide subscriptions.
+ * Replaying an already completed selected album stalls all other providers.
+ */
+internal object GalleryCompletionPolicy {
+    fun completed(job:GalleryRequestLedger.Request,
+                  result:SyncEngine.Stats,stopping:Boolean):Boolean {
+        if(stopping || result.errors>0 || result.incompleteGalleries>0)
+            return false
+        if(job.albumUrl!=null)
+            return result.galleriesCompleted>0
+        if(result.entities<=0)return false
+        return if(job.mode==SyncMode.BACKFILL)
+            result.galleriesSeen>0 else true
+    }
+}
+
+class SyncForegroundService : Service() {
+    companion object {
+        const val ACTION_START = "com.azrael.galleryflow.START"
+        const val ACTION_PAUSE = "com.azrael.galleryflow.PAUSE"
+        const val ACTION_RESUME = "com.azrael.galleryflow.RESUME"
+        const val ACTION_STOP = "com.azrael.galleryflow.STOP"
+        const val ACTION_RECOVER = "com.azrael.galleryflow.RECOVER_SELECTED"
+        const val EXTRA_MODE = "sync_mode"
+        const val EXTRA_SITE_ID = "target_site_id"
+        const val EXTRA_SITE_HOST = "target_site_host"
+        const val EXTRA_SITE_SOURCE = "target_site_source"
+        const val EXTRA_ALBUM_URL = "target_album_url"
+        const val EXTRA_ALBUM_TITLE = "target_album_title"
+        private const val CHANNEL_ID = "galleryflow_sync"
+        private const val NOTIFICATION_ID = 91
+    }
+
+    private val executor = Executors.newSingleThreadExecutor()
+    @Volatile private var currentRun: Future<*>? = null
+    @Volatile private var activeRequest:GalleryRequestLedger.Request?=null
+    private val pending=ArrayDeque<GalleryRequestLedger.Request>()
+
+    override fun onCreate() {
+        super.onCreate()
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(CHANNEL_ID, "GalleryFlow sync", NotificationManager.IMPORTANCE_LOW)
+        )
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // A scheduled background restart can be denied foreground-service
+        // promotion by Android. Preserve the durable queue and return safely:
+        // an uncaught exception here used to kill the whole app in background.
+        try {
+            startForeground(NOTIFICATION_ID, notification())
+        }catch(t:RuntimeException){
+            android.util.Log.e("AsterionGallerySync",
+                "Foreground promotion denied; saved gallery jobs retained",t)
+            stopSelfResult(startId)
+            return START_NOT_STICKY
+        }
+        when(intent?.action){
+            ACTION_PAUSE->{SyncControl.pause();notifyNow();return START_NOT_STICKY}
+            ACTION_RESUME->{SyncControl.resume();notifyNow();return START_NOT_STICKY}
+            ACTION_STOP->{
+                synchronized(pending){pending.clear()}
+                GalleryRequestLedger.clear(this)
+                SyncControl.stop()
+                currentRun?.cancel(true)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelfResult(startId)
+                return START_NOT_STICKY
+            }
+        }
+        if(!com.azrael.pixivdumpsync.AppPower.enabled(this)){
+            synchronized(pending){pending.clear()}
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelfResult(startId)
+            return START_NOT_STICKY
+        }
+
+        val mode=runCatching{
+            SyncMode.valueOf(intent?.getStringExtra(EXTRA_MODE)?:SyncMode.LIVE.name)
+        }.getOrDefault(SyncMode.LIVE)
+        val requested=if(intent?.action==ACTION_RECOVER)null
+            else GalleryRequestLedger.Request(
+                mode,intent?.getStringExtra(EXTRA_SITE_ID),
+                intent?.getStringExtra(EXTRA_SITE_HOST),
+                intent?.getStringExtra(EXTRA_ALBUM_URL),
+                intent?.getStringExtra(EXTRA_ALBUM_TITLE),
+                intent?.getStringExtra(EXTRA_SITE_SOURCE))
+        if(requested?.targeted==true)GalleryRequestLedger.remember(this,requested)
+        // Recover unfinished album taps first. An untargeted automatic Live
+        // run is not persisted and cannot turn an opted-out Sync back on.
+        // A user-tapped gallery takes priority over old failed site-wide
+        // backfills. Do not discard those durable jobs; process them AFTER
+        // the current explicit selection instead of appearing hung on source.
+        val jobs=(listOfNotNull(requested)+GalleryRequestLedger.pending(this))
+            .filterNot{it.retired}
+            .distinctBy{it.signature()}
+        synchronized(pending){
+            if(currentRun?.isDone==false){
+                for(job in jobs){
+                    if(job==activeRequest)continue
+                    if(requested!=null && job.signature()==requested.signature() &&
+                        job.albumUrl!=null){
+                        pending.remove(job)
+                        pending.addFirst(job)
+                    }else if(job !in pending)pending.addLast(job)
+                }
+                notifyNow()
+                return START_NOT_STICKY
+            }
+            if(jobs.isEmpty()){
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelfResult(startId)
+                return START_NOT_STICKY
+            }
+            pending.clear()
+            pending.addAll(jobs.drop(1))
+            activeRequest=jobs.first()
+            currentRun=executor.submit{
+                try{
+                    var next:GalleryRequestLedger.Request?=jobs.first()
+                    while(next!=null &&
+                        com.azrael.pixivdumpsync.AppPower.enabled(applicationContext)){
+                        val job=next
+                        if(job!=null){
+                            val result=SyncEngine(applicationContext).run(job.mode,
+                                targetEntityId=job.entityId,
+                                targetSiteHost=job.siteHost,
+                                targetSiteSource=job.siteSource,
+                                targetGalleryUrl=job.albumUrl,
+                                targetGalleryTitle=job.albumTitle){notifyNow()}
+                            // A selected album is not a completed download
+                            // merely because the worker returned. Retain its
+                            // exact original request through network errors,
+                            // mismatched counts and partial files. The retry
+                            // ledger preserves individual failed originals.
+                            // A previously queued SITE-WIDE check used
+                            // to be marked complete unconditionally, even
+                            // when the native engine never acquired its lock,
+                            // resolved no album, or every transfer failed.
+                            // Retain failed requests and expose an error,
+                            // not a false "scheduled successfully" receipt.
+                            val verified=GalleryCompletionPolicy.completed(
+                                job,result,SyncControl.isStopping())
+                            if(verified){
+                                GalleryRequestLedger.completed(applicationContext,job)
+                            }else{
+                                android.util.Log.w("AsterionGallerySync",
+                                    "Kyora request retained: "+
+                                    job.siteHost.orEmpty()+" "+
+                                    "entities="+result.entities+
+                                    " galleries="+result.galleriesSeen+
+                                    " completed="+result.galleriesCompleted+
+                                    " errors="+result.errors+
+                                    " incomplete="+result.incompleteGalleries)
+                            }
+                        }
+                        next=synchronized(pending){
+                            val following=if(pending.isEmpty())null
+                                else pending.removeFirst()
+                            activeRequest=following
+                            following
+                        }
+                    }
+                }finally{
+                    synchronized(pending){
+                        pending.clear()
+                        activeRequest=null
+                        currentRun=null
+                    }
+                    runCatching{notifyNow()}
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    getSystemService(NotificationManager::class.java)
+                        .cancel(NOTIFICATION_ID)
+                    stopSelf()
+                }
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    /** Android 15+ will crash dataSync services that exceed the foreground
+     * quota unless they terminate promptly. Preserve already downloaded
+     * originals and database retry rows; interrupt the current request.
+     */
+    override fun onTimeout(startId:Int,fgsType:Int){
+        SyncControl.stop()
+        currentRun?.cancel(true)
+        synchronized(pending){pending.clear()}
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    override fun onDestroy(){
+        synchronized(pending){pending.clear()}
+        currentRun?.cancel(true)
+        executor.shutdownNow()
+        super.onDestroy()
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun notifyNow() {
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification())
+    }
+
+    private fun notification(): Notification {
+        val s = SyncControl.snapshot()
+        val open = PendingIntent.getActivity(
+            this, 0, Intent(this,
+                com.azrael.pixivdumpsync.AsterionHomeActivity::class.java)
+                .putExtra("asterion_page","Site"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val toggleAction = if (s.paused) ACTION_RESUME else ACTION_PAUSE
+        val toggleLabel = if (s.paused) "Resume" else "Pause"
+        val toggle = PendingIntent.getService(
+            this, 1, Intent(this, SyncForegroundService::class.java).setAction(toggleAction), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val stop = com.azrael.pixivdumpsync.EmergencyBackfillStopReceiver.action(this)
+        return Notification.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("Asterion · Kyora")
+            .setContentText(s.message.take(180))
+            .setContentIntent(open)
+            .setOngoing(s.running)
+            .addAction(Notification.Action.Builder(null, toggleLabel, toggle).build())
+            .addAction(Notification.Action.Builder(null, "Stop", stop).build())
+            .build()
+    }
+}

@@ -1,0 +1,96 @@
+package com.asterion.videoflow
+
+import java.net.URI
+
+/** Only an explicitly selected HTTPS manifest is routed to typed HLS first.
+ * Browser pages, arbitrary JS strings, thumbnails and media-lookalike hosts
+ * are never promoted to downloaded originals by this dispatch check.
+ */
+internal object VideoHlsDispatch {
+    /** Resolve short-lived selected signed HLS links only AFTER the Python
+     * runtime is ready. Starting Chaquopy and validating yt-dlp after
+     * receiving a signed manifest can expire that very media URL on Android.
+     */
+    fun needsRuntimeBeforeSource(url:String):Boolean {
+        val uri=runCatching{URI(url)}.getOrNull()?:return false
+        if(uri.scheme!="https" || uri.userInfo!=null || uri.port!=-1 ||
+            uri.fragment!=null)return false
+        val host=uri.host.orEmpty().lowercase().removePrefix("www.")
+        if(host in setOf("pornhub.com","m.pornhub.com",
+                "fr.pornhub.com","en.pornhub.com")){
+            if(uri.path!="/view_video.php")return false
+            val keys=uri.rawQuery.orEmpty().split('&').filter{
+                it.startsWith("viewkey=")
+            }
+            return keys.size==1 && keys.single().removePrefix("viewkey=")
+                .matches(Regex("[A-Za-z0-9_-]{5,50}"))
+        }
+        // Restore the original non-JK JAV Guru LU/SB path. Its selected
+        // LuluStream/JAVClan manifest is short-lived, so initialize the
+        // existing Python HLS engine BEFORE resolving the publisher relay.
+        // JK-native optimization had removed this warmup for ALL JAV Guru
+        // articles, leaving non-JK transfers to expire during Python startup.
+        if(JavGuruNonJkRouting.selectedArticle(url))return true
+        // The selected HentaiHaven episode also resolves its publisher
+        // HLS only after the page is read. Avoid expiring that manifest
+        // while starting the embedded Python runtime on Android.
+        // JAV Guru has a proven selected JK -> Maxstream native AES-HLS
+        // transfer lane. Priming Chaquopy before the selected STREAM JK
+        // shortcode is resolved starts a heavy interpreter even though the
+        // native worker needs none, delays first bytes and competes for RAM.
+        // For an actually selected non-JK HLS, the existing typed() call
+        // still initializes its extractor; other publishers are unchanged.
+        // xChina's selected /video/<hex> article publishes a first-party
+        // short-lived HLS URL in #video-player[data-src]. Unlike JAV Guru JK,
+        // it has no dedicated native HLS lane; prepare the embedded runtime
+        // BEFORE obtaining its selected signed manifest.
+        return (host=="xchina.co" && VideoSiteProfiles.isVideoPage(url)) ||
+            (host=="en.xchina.co" && VideoSiteProfiles.isVideoPage(url)) ||
+            (host=="hentaihaven.xxx" &&
+                HentaiHavenEpisodeSource.isEpisode(url)) ||
+            // TaiAV's exact selected movie publishes a short-lived
+            // first-party /api/getmovie HLS. Prepare Python BEFORE asking
+            // the publisher to sign that stream, not after it has started
+            // expiring. Do not prewarm on its listings or previewvideo.
+            (host=="taiav.com" && VideoSiteProfiles.isVideoPage(url)) ||
+            // The owner-selected PornBuz primary player issues a signed
+            // JWPlayer HLS. Warm Python before resolving its signature.
+            (host=="pornbuz.com" && VideoSiteProfiles.isVideoPage(url)) ||
+            // DSYSAV's first-party signed DASH chunks are short-lived;
+            // initialize the retained Python transfer runtime BEFORE the
+            // exact watch ID's API response signs original segments.
+            (host=="dsysav.com" && VideoSiteProfiles.isVideoPage(url))
+    }
+
+    /** Exact xChina article => same-ID first-party HLS only.
+     * HLS concurrency can be reduced for this verified publisher stream
+     * without changing auth, signed URLs, accounts or external routes.
+     */
+    internal fun isSelectedXChinaHls(
+        selected:String?,playlist:String
+    ):Boolean {
+        val article=runCatching{URI(selected ?: return false)}
+            .getOrNull()?:return false
+        val manifest=runCatching{URI(playlist)}.getOrNull()?:return false
+        val hosts=setOf("xchina.co","en.xchina.co","www.xchina.co")
+        if(article.scheme!="https" || manifest.scheme!="https" ||
+            article.host.orEmpty().lowercase() !in hosts ||
+            manifest.host.orEmpty().lowercase() !in hosts ||
+            article.port!=-1 || manifest.port!=-1 ||
+            article.userInfo!=null || manifest.userInfo!=null ||
+            article.rawFragment!=null || manifest.rawFragment!=null ||
+            manifest.rawQuery.orEmpty().length>2048)return false
+        val id=Regex("""(?i)^/video/(?:id-)?([a-f0-9]{10,32})(?:\.html)?/?$""")
+            .matchEntire(article.path.orEmpty())?.groupValues?.get(1)
+                ?:return false
+        return Regex("""(?i)^/hls/"""+Regex.escape(id)+"""/master\.m3u8$""")
+            .matches(manifest.path.orEmpty())
+    }
+
+    fun isSelectedManifest(url:String):Boolean {
+        val uri=runCatching{URI(url)}.getOrNull() ?: return false
+        return uri.scheme=="https" && !uri.host.isNullOrBlank() &&
+            uri.userInfo==null && uri.fragment==null && uri.port==-1 &&
+            uri.path.orEmpty().matches(Regex("""(?i)^/[^?#]{5,2000}\.(?:m3u8|mpd)$"""))
+    }
+}
