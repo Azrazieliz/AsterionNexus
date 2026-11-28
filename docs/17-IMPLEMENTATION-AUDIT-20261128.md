@@ -31,3 +31,15 @@ Authority: docs/00–16, especially owner-confirmed docs/16, and spec/acceptance
 | DATA-001, REL-001 | Additive schema changes and original-preserving registry | Actual transactional three-app migration/backup receipts and signed physical-device release with donor apps preserved |
 
 **Release gate:** do not label Nexus complete, production-ready, fully premium, or issue-free on compilation/source tests alone. All acceptance cases remain owner-unaccepted until their required real evidence exists. No PC or phone operation was performed in this audit.
+
+
+## Continuation: archive recovery, native OCR indexing and visual retrieval
+
+- 49890517c63d233a797aec54c2dad3b42fc6fbfa: prior native regression/compile and specification runs 46093972168 and 46093972165 passed.
+- REP-001: ZIP/CBZ central-directory preflight, bounded staging, CRC/size/SHA verification and contextual extraction into verified originals with a durable provenance receipt. No arbitrary extraction paths, recursive archive expansion, or source destruction. The current bounded extractor intentionally refuses ZIP64, encryption, empty entries, special entries and unsupported archive methods. General archive-format parity is outstanding.
+- REP-001: exact recovery against an existing verified SHA/length identity, with explicit confirmation, damaged bytes retained, cross-process publication lock, atomic replacement and readback receipt. This is exact-copy restoration, not arbitrary repair of irrecoverable damaged media.
+- READ-001 / IDX-001: native existing-model OCR for scanned PDF and CBZ pages; private per-page evidence, coverage and model receipts; non-destructive index migration, historical book seeding, resumable bounded work, Unicode CJK substring indexing with exact verification. Model absence is reported as blocked, not successful OCR. General comic/archive formats and validated multilingual model release remain outstanding; translation is not implemented by indexing.
+- SEM-001: persistent fingerprint-bound quantized whole-image WD encoder descriptors, same-encoder streamed cosine ranking, recovery of compatible cached vectors and a contextual similar-artwork action. No reclassification of subject crops as whole images. Semantic ranking no longer returns unscored fallback rows. Full-library reanalysis/backfill, approximate-nearest-neighbour performance at owner scale, text-to-image retrieval, smart collections and device evidence are outstanding.
+- 21 additional JUnit test methods cover archive safety, recovery, CJK index terms and visual similarity math. These fixtures are committed, not certified executed.
+- Specification runs 46133608268 and 46133945687 passed on intermediate heads. Native runs 46133608311 and 46133945681 were cancelled/superseded by subsequent commits. Final implementation head before this audit update: 151d20416f7c623291a36c454de63baf42b5fb60. Final-head native regression is not yet verified.
+- No PC/phone work, physical acceptance, signed release, provider/account verification, or claims of complete implementation were made. PR #2 stays draft and unmerged.
