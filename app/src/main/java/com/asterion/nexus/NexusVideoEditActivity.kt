@@ -28,9 +28,8 @@ class NexusVideoEditActivity:Activity(){
     private lateinit var bitrate:Spinner
     private lateinit var codec:Spinner
     private lateinit var mute:CheckBox
-    private lateinit var omitOtherTracks:CheckBox
     private val rows=mutableListOf<Row>()
-    private data class Row(val source:NexusVideoExport.Source,var start:String="0",var end:String=source.duration.toString(),var audioTrack:Int=source.audioTracks.singleOrNull()?.index?:if(source.audioTracks.isEmpty())-1 else -2)
+    private data class Row(val source:NexusVideoExport.Source,var start:String="0",var end:String=source.duration.toString(),var audioTrack:Int=source.audioTracks.firstOrNull()?.index?:-1)
     private var lease=false
     private var running=false
     private var ready=false
@@ -45,7 +44,7 @@ class NexusVideoEditActivity:Activity(){
         rows.forEach{clips.put(org.json.JSONObject().put("sha",it.source.item.sha256).put("start",it.start).put("end",it.end).put("audio_track",it.audioTrack))}
         val draft=org.json.JSONObject().put("clips",clips).put("title",titleField.text.toString())
             .put("resolution",resolution.selectedItemPosition).put("bitrate",bitrate.selectedItemPosition)
-            .put("codec",codec.selectedItemPosition).put("mute",mute.isChecked).put("repeat_review",reviewLog).put("omit_other_tracks",omitOtherTracks.isChecked)
+            .put("codec",codec.selectedItemPosition).put("mute",mute.isChecked).put("repeat_review",reviewLog)
         getSharedPreferences("nexus-video-drafts",MODE_PRIVATE).edit().putString(draftKey,draft.toString()).apply()
     }
     private fun restoreDraft(items:List<Row>):List<Row>{
@@ -58,14 +57,13 @@ class NexusVideoEditActivity:Activity(){
             val restored=(0 until a.length()).map{i->
                 val j=a.getJSONObject(i)
                 val src=sources.getValue(j.getString("sha")).source
-                Row(src,j.getString("start"),j.getString("end"),j.optInt("audio_track",src.audioTracks.singleOrNull()?.index?:if(src.audioTracks.isEmpty())-1 else -2))
+                Row(src,j.getString("start"),j.getString("end"),src.audioTracks.firstOrNull()?.index?:-1)
             }
             titleField.setText(d.optString("title",titleField.text.toString()))
             resolution.setSelection(d.optInt("resolution").coerceIn(0,4))
             bitrate.setSelection(d.optInt("bitrate").coerceIn(0,3))
             codec.setSelection(d.optInt("codec").coerceIn(0,1))
             mute.isChecked=d.optBoolean("mute")
-            omitOtherTracks.isChecked=d.optBoolean("omit_other_tracks")
             reviewLog=d.optJSONArray("repeat_review")?:org.json.JSONArray()
             restored
         }.getOrElse{items}
@@ -92,7 +90,7 @@ class NexusVideoEditActivity:Activity(){
         bitrate=choices(listOf("4 Mbps","8 Mbps","16 Mbps","30 Mbps"));layout.addView(bitrate)
         codec=choices(listOf("H.264 / AAC MP4","HEVC / AAC MP4"));layout.addView(codec)
         mute=CheckBox(this).apply{text="Remove audio";setTextColor(-1)};layout.addView(mute)
-        omitOtherTracks=CheckBox(this).apply{text="Keep subtitles / other tracks in originals only";setTextColor(-1);visibility=android.view.View.GONE};layout.addView(omitOtherTracks)
+        layout.addView(heading("MP4 uses the main audio track. Original files stay unchanged."))
         status=heading("Verifying sources…");layout.addView(status)
         exportButton=Button(this).apply{text="Export independent MP4";isEnabled=false;setOnClickListener{startExport()}}
         layout.addView(exportButton)
@@ -106,14 +104,14 @@ class NexusVideoEditActivity:Activity(){
         worker.execute{
             val result=runCatching{
                 val sources=ids.map{NexusVideoExport.source(applicationContext,it)}
-                if(intent.getBooleanExtra("automatic",false)){
+                if(intent.getBooleanExtra("automatic",false)&&sources.size>=2){
                     val plan=NexusEpisodeAssembly.transcodePlan(applicationContext,ids,sources.map{it.duration})
                     sources.zip(plan).map{(source,range)->Row(source,range[0].toString(),range[1].toString())}
                 }else sources.map{Row(it)}
             }
             runOnUiThread{
                 if(isDestroyed||isFinishing)return@runOnUiThread
-                result.onSuccess{items->initialRows=items.map{it.copy()};omitOtherTracks.visibility=if(items.any{it.source.otherTracks>0})android.view.View.VISIBLE else android.view.View.GONE;rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=true;repeatsButton.isEnabled=items.size in 3..20}
+                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=true;repeatsButton.isEnabled=items.size in 3..20}
                     .onFailure{status.text="Cannot edit: "+it.message}
             }
         }
@@ -136,18 +134,6 @@ class NexusVideoEditActivity:Activity(){
             action("Duplicate",rows.size<100){rows.add(i+1,row.copy())}
             action("Remove",rows.size>1){rows.removeAt(i)}
             entry.addView(controls)
-            if(row.source.audioTracks.isNotEmpty()){
-                val options=listOf(-2,-1)+row.source.audioTracks.map{it.index}
-                val labels=listOf("Choose audio track","Silent clip")+row.source.audioTracks.map{"Track "+it.index+" · "+it.language+" · "+it.mime}
-                val selector=Spinner(this).apply{
-                    adapter=ArrayAdapter(this@NexusVideoEditActivity,android.R.layout.simple_spinner_dropdown_item,labels)
-                    setSelection(options.indexOf(row.audioTrack).coerceAtLeast(0));isEnabled=!running
-                    onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener{
-                        override fun onNothingSelected(parent:android.widget.AdapterView<*>?){}
-                        override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long){row.audioTrack=options[position]}
-                    }
-                };entry.addView(selector)
-            }
             entry.addView(Button(this).apply{text="Preview / mark clip";isEnabled=!running;setOnClickListener{sync();preview(row)}})
             timeline.addView(entry)
         }
@@ -302,10 +288,8 @@ class NexusVideoEditActivity:Activity(){
         sync()
         val clips=runCatching{rows.map{NexusVideoExport.Clip(it.source.item.sha256,it.start.toLong(),it.end.toLong(),it.audioTrack)}}.getOrElse{status.text="Enter valid millisecond boundaries";return}
         val dims=listOf(1280 to 720,1920 to 1080,1080 to 1920,3840 to 2160,854 to 480)[resolution.selectedItemPosition]
-        val profile=NexusVideoExport.Profile(dims.first,dims.second,listOf(4000000,8000000,16000000,30000000)[bitrate.selectedItemPosition],codec.selectedItemPosition==1,mute.isChecked,omitOtherTracks.isChecked)
+        val profile=NexusVideoExport.Profile(dims.first,dims.second,listOf(4000000,8000000,16000000,30000000)[bitrate.selectedItemPosition],codec.selectedItemPosition==1,mute.isChecked,true)
         val name=titleField.text.toString()
-        if(!mute.isChecked&&rows.any{it.source.audioTracks.size>1&&it.audioTrack==-2}){status.text="Select an audio track for each multi-audio clip";return}
-        if(!omitOtherTracks.isChecked&&rows.any{it.source.otherTracks>0}){status.text="Choose the explicit other-track policy before export";return}
         saveDraft()
         running=true;cancel.set(false);renderRows();exportButton.isEnabled=false;highlightButton.isEnabled=false;cancelButton.isEnabled=true
         status.text="Preparing export…"
@@ -327,5 +311,5 @@ class NexusVideoEditActivity:Activity(){
             }
         }
     }
-    override fun onDestroy(){cancel.set(true);worker.shutdownNow();if(lease){val app=applicationContext;Thread{try{worker.awaitTermination(Long.MAX_VALUE,java.util.concurrent.TimeUnit.MILLISECONDS)}finally{NexusVideoInputs.end(app)}}.start()};super.onDestroy()}
+    override fun onDestroy(){cancel.set(true);worker.shutdown();if(lease){val app=applicationContext;Thread{try{worker.awaitTermination(Long.MAX_VALUE,java.util.concurrent.TimeUnit.MILLISECONDS)}finally{NexusVideoInputs.end(app)}}.start()};super.onDestroy()}
 }

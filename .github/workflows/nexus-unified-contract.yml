@@ -1,7 +1,7 @@
 name: Nexus one-app UI contract
 on:
   push:
-    branches: [work/nexus-harmonization-20261126]
+    branches: [work/nexus-harmonization-20261126, work/nexus-completion-20261128b]
     paths:
       - 'scripts/test_unified_nexus_contract.py'
       - '.github/workflows/nexus-unified-contract.yml'

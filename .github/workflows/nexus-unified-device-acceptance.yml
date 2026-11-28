@@ -2,7 +2,7 @@ name: Nexus unified Android real acquisition acceptance
 
 on:
   push:
-    branches: [work/nexus-harmonization-20261126]
+    branches: [work/nexus-harmonization-20261126, work/nexus-completion-20261128b]
     paths:
       - app/src/androidTest/java/com/azrael/pixivdumpsync/DeviceTransferSimulation.kt
       - .github/workflows/nexus-unified-device-acceptance.yml

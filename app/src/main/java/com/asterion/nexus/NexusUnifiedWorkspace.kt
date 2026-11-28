@@ -196,7 +196,7 @@ private fun NexusUnifiedSearch(
     var completedMode by remember{mutableIntStateOf(-1)}
     var providerFilter by remember{mutableStateOf("")}
     var moreOnline by remember{mutableStateOf(false)}
-    var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
+    var acquiring by remember{mutableStateOf(false)}
     val generation=remember{AtomicInteger()}
     val cloudAccounts=remember(ctx){FgTeraboxClient.accounts(ctx)}
     val cloudIndexes=remember(ctx){cloudAccounts.mapNotNull{account->
@@ -370,7 +370,16 @@ private fun NexusUnifiedSearch(
         }
         LazyColumn(verticalArrangement=Arrangement.spacedBy(9.dp)){
             items(hits.filter{providerFilter.isBlank()||it.source==providerFilter}){item->UnifiedEntryCard(item){
-                if(item.web!=null){selected=item}
+                if(item.web!=null){
+                    if(!acquiring){
+                        acquiring=true;status="Resolving chosen original"
+                        scope.launch{
+                            try{status=withContext(Dispatchers.IO){acquireNexusEntry(ctx as Activity,item)};onLibraryRefresh()}
+                            catch(e:Exception){status="Original unavailable: "+e.message.orEmpty().take(150)}
+                            finally{acquiring=false}
+                        }
+                    }
+                }
                 else if(item.path!=null){
                     if(!item.folder&&item.account.isNotBlank()&&item.size>=0)
                         onOpen(FgTeraboxDocumentsProvider.uriForAccount(item.account,item.path,item.size),
@@ -383,26 +392,6 @@ private fun NexusUnifiedSearch(
                 UnifiedButton(if(loading)"Loading…" else "Load next provider page",!loading){nextPage()}
             }
         }
-    }
-    selected?.let{chosen->
-        AlertDialog(onDismissRequest={selected=null},
-            title={Text(chosen.title)},
-            text={Text("Source page is not a verified original. Download only after actual original resolution.")},
-            confirmButton={
-                TextButton(onClick={
-                    selected=null
-                    scope.launch{
-                        loading=true;status="Resolving chosen original"
-                        runCatching{withContext(Dispatchers.IO){
-                            acquireNexusEntry(ctx as Activity,chosen)
-                        }}.onSuccess{status=it;onLibraryRefresh()}
-                            .onFailure{status="Original unavailable: "+it.message.orEmpty().take(120)}
-                        loading=false
-                    }
-                }){Text("Acquire original")}
-            },
-            dismissButton={TextButton(onClick={selected=null}){Text("Cancel")}}
-        )
     }
 }
 
@@ -476,7 +465,7 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
     var providers by remember{mutableStateOf<List<IndexedSource>>(emptyList())}
     var message by remember{mutableStateOf("Loading native index")}
     var busy by remember{mutableStateOf(false)}
-    var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
+    var acquiring by remember{mutableStateOf(false)}
     var refresh by remember{mutableIntStateOf(0)}
     var catalogQuery by remember{mutableStateOf("")}
     var catalogPage by remember{mutableIntStateOf(0)}
@@ -554,7 +543,16 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
                     }
                 }
             }
-            items(rows){entry->UnifiedEntryCard(entry){selected=entry}}
+            items(rows){entry->UnifiedEntryCard(entry){
+                if(!acquiring){
+                    acquiring=true;message="Resolving selected original"
+                    scope.launch{
+                        try{message=withContext(Dispatchers.IO){acquireNexusEntry(ctx,entry)};onLibraryRefresh()}
+                        catch(e:Exception){message="Not acquired: "+e.message.orEmpty().take(150)}
+                        finally{acquiring=false}
+                    }
+                }
+            }}
             if(rows.isEmpty()&&!busy)item{Text("No indexed candidates",color=C_MUTED)}
             if(!suggestions)item{
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
@@ -589,21 +587,6 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
                 }
             }){Text("Register")}},
             dismissButton={TextButton(onClick={enrollment=false}){Text("Cancel")}})
-    }
-    selected?.let{entry->
-        AlertDialog(onDismissRequest={selected=null},title={Text(entry.title)},
-            text={Text("Acquire this selected original using its native route.")},
-            confirmButton={TextButton(onClick={
-                selected=null
-                scope.launch{
-                    busy=true
-                    runCatching{withContext(Dispatchers.IO){acquireNexusEntry(ctx,entry)}}
-                        .onSuccess{message=it;onLibraryRefresh()}
-                        .onFailure{message="Not acquired: "+it.message.orEmpty().take(150)}
-                    busy=false
-                }
-            }){Text("Acquire")}},
-            dismissButton={TextButton(onClick={selected=null}){Text("Cancel")}})
     }
 }
 

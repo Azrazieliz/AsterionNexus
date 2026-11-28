@@ -202,7 +202,9 @@
     "export_as_independent_item": true,
     "source_originals_untouched": true,
     "assembled_output": "Series Name.mp4",
-    "film_output": "Film Title.mp4"
+    "film_output": "Film Title.mp4",
+    "output_audio": "one_main_audio_track_or_mute",
+    "multi_track_production_export_required": false
   },
   "broader_capabilities": [
     "fusion_visual_semantic_search",

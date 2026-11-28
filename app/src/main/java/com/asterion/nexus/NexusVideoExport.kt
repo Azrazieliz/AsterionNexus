@@ -42,7 +42,7 @@ object NexusVideoExport {
                 val mime=format.getString("mime").orEmpty()
                 when{
                     mime.startsWith("video/")->{require(video<0){"Multiple video tracks require dedicated mapping"};video=i;duration=if(format.containsKey("durationUs"))format.getLong("durationUs")/1000 else 0}
-                    mime.startsWith("audio/")->audio.add(AudioTrack(i,format.getString("language").orEmpty().ifBlank{"und"},mime))
+                    mime.startsWith("audio/")->{val track=AudioTrack(i,format.getString("language").orEmpty().ifBlank{"und"},mime);if(format.containsKey("is-default")&&format.getInteger("is-default")==1)audio.add(0,track)else audio.add(track)}
                     else->other++
                 }
             }
@@ -65,7 +65,8 @@ object NexusVideoExport {
         require(title.isNotBlank()&&title.length<=150&&title.none{it=='/'||it=='\\'||it.isISOControl()}){"Invalid output name"}
         require(clips.size in 1..100&&profile.width in 320..3840&&profile.height in 240..2160&&profile.width%2==0&&profile.height%2==0&&profile.bitrate in 500000..50000000)
         val registry=NexusRegistry(context)
-        val sources=clips.map{stopped(cancel);source(context,it.sha)}
+        val inputs=clips.map{it.sha}.distinct().associateWith{stopped(cancel);source(context,it)}
+        val sources=clips.map{inputs.getValue(it.sha)}
         val duration=clips.zip(sources).fold(0L){total,(clip,source)->
             require(clip.startMs>=0&&clip.startMs<clip.endMs&&clip.endMs<=source.duration){"Trim outside source duration"}
             Math.addExact(total,clip.endMs-clip.startMs)
@@ -99,7 +100,7 @@ object NexusVideoExport {
         val mime=if(profile.hevc)MimeTypes.VIDEO_H265 else MimeTypes.VIDEO_H264
         fun publish():NexusRegistry.Item{
             validate(output,duration,profile,mime,hasAudio)
-            sources.forEach{stopped(cancel);check(NexusOriginalStore.matches(it.file,it.item.length,it.item.sha256)){"Original changed during export"}}
+            sources.distinctBy{it.item.sha256}.forEach{stopped(cancel);check(NexusOriginalStore.matches(it.file,it.item.length,it.item.sha256)){"Original changed during export"}}
             save(receipt,spec.put("state","VERIFIED"))
             registry.job(identity,"VERIFIED",output.length(),null)
             val item=output.inputStream().use{registry.ingest(it,title.trim().removeSuffix(".mp4")+".mp4","video/mp4","nexus-video-edit","device",identity,output.length(),null)}
@@ -192,7 +193,7 @@ object NexusVideoExport {
             handler.post{runCatching{transformer.get()?.cancel()};worker.quitSafely()}
             // Never remove a file while codec cancellation may still write to it.
             worker.join(10000)
-            if(!worker.isAlive){output.delete();stageDir.deleteRecursively()}
+            if(!worker.isAlive){output.delete();stageDir.deleteRecursively()}else{Thread{worker.join();output.delete();stageDir.deleteRecursively()}.start()}
         }
     }
     private fun validate(file:File,duration:Long,profile:Profile,mime:String,audio:Boolean){

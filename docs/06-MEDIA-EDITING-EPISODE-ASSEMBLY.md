@@ -33,7 +33,7 @@ Use complementary evidence rather than fixed timestamps:
 5. Preserve first opening and final ending by default. Intermediate repeated openings and endings are candidate cuts. Detect/remove redundant recaps and next-episode previews **only at sufficient validated reliability**.
 6. Each candidate cut has exact timestamp/frame bounds, classification, score/calibration, cross-episode matching evidence, model/policy version and decision `CUT|KEEP|REVIEW`. Do not fake precision or confidence.
 7. Low-confidence/missing evidence means **KEEP** and optionally propose a review; do not delete unique story scenes to maximize cut rate.
-8. Keep original subtitle/audio metadata and route-language, and retain multiple tracks where media support allows.
+8. Keep source metadata and original files intact. Owner clarification 2026-11-28: a normal MP4 with the main audio track (or mute) is sufficient; professional multi-track export is not required.
 
 ### Editable non-destructive timeline and rendering
 
@@ -41,7 +41,7 @@ Use complementary evidence rather than fixed timestamps:
 
 - Render with accurate timestamp normalization, track mapping and concatenation; prefer safe stream-copy when codecs/profile/timebases/container/segment boundaries permit, otherwise transcode only needed segments or whole output where necessary.
 - Maintain motion continuity and avoid accidental black-frame insertions, audio pops, loudness jumps, discontinuities, wrong color range/aspect, codec mismatches, subtitle desync and broken seeking.
-- Preserve chosen audio/subtitle language or multiple tracks where possible, add optional meaningful chapter markers at source episode starts, and retain source episode provenance in metadata.
+- Use the main audio track or mute, and retain source episode provenance. Multiple audio/subtitle tracks and professional authoring are outside the immediate export scope.
 - Validate output with independent parser/decoder or representative playback: nonzero duration, exact ordered segment coverage, expected audio/video tracks, frame continuity, seek integrity, no truncation and correct stored destination.
 - Android isolated, resumable processing with CPU/GPU budgets; checkpoint segmentation, EDL, temporary output and final checksum; prevent duplicate publications and orphan caches on process death.
 - Actual export support constrained by licensed codec/runtime and device performance; never claim hardware acceleration without measured proof.
