@@ -214,6 +214,10 @@ public final class NexusReaderActivity extends Activity {
             }
             if(count<=0)throw new IOException("No readable pages in this source");
             int saved=getPreferences(Context.MODE_PRIVATE).getInt(sourceKey,0);
+            if(NexusArchiveOperation.available(this,source)){
+                int canonical=new NexusRegistry(this).readingPosition(source.getLastPathSegment());
+                if(canonical>=0)saved=canonical;
+            }
             int requested=getIntent().getIntExtra("chapter",-1);
             final int initial=Math.max(0,Math.min(count-1,requested>=0?requested:saved));
             runOnUiThread(()->display(initial));
@@ -239,6 +243,13 @@ public final class NexusReaderActivity extends Activity {
         prev.setEnabled(current>0);next.setEnabled(current+1<count);
         prev.setAlpha(current>0?1f:.3f);next.setAlpha(current+1<count?1f:.3f);
         getPreferences(Context.MODE_PRIVATE).edit().putInt(sourceKey,current).apply();
+        if(mode!=5&&count>0&&NexusArchiveOperation.available(this,source)){
+            final int p=current,n=count;final String sha=source.getLastPathSegment();
+            if(!work.isShutdown())work.execute(()->{
+                try{new NexusRegistry(getApplicationContext()).noteReadingProgress(sha,p,n);}
+                catch(RuntimeException ignored){}
+            });
+        }
     }
     private void switchLayout(){
         if(count<=0||mode==5)return;
