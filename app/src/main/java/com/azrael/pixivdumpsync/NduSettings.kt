@@ -142,7 +142,7 @@ object NduSettings {
     }
     /** Encrypted, immutable account lease for a queued upload. Selection of
      * another destination never changes credentials used by an existing job. */
-    internal class UploadAccount(val browserScope:String,val scope:String,val token:String,val host:String)
+    internal class UploadAccount(val browserScope:String,val scope:String,val token:String,val host:String,internal val cipherIdentity:String)
     @Synchronized internal fun uploadAccount(ctx:Context,browserScope:String):UploadAccount?{
         val vault=ctx.getSharedPreferences(ACCOUNT_VAULT,0)
         val encoded=vault.getString(browserScope+":cipher",null)?:return null
@@ -156,7 +156,7 @@ object NduSettings {
             cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(parts[0],Base64.NO_WRAP)))
             String(cipher.doFinal(Base64.decode(parts[1],Base64.NO_WRAP)),Charsets.UTF_8)
         }.getOrNull()?:return null
-        return UploadAccount(browserScope,scope,token,host)
+        return UploadAccount(browserScope,scope,token,host,encoded)
     }
     @Synchronized internal fun uploadAccounts(ctx:Context):List<UploadAccount>{
         val authorized=com.openlocal.office.core.FgTeraboxClient.accounts(ctx).map{it.scope}.toSet()
@@ -165,9 +165,10 @@ object NduSettings {
         return accounts.groupBy{it.scope}.values.filter{it.size==1}.map{it.single()}
     }
     @Synchronized internal fun stillAuthorized(ctx:Context,account:UploadAccount):Boolean{
-        val current=uploadAccount(ctx,account.browserScope)?:return false
-        return current.scope==account.scope&&current.host==account.host&&current.token==account.token&&
-            runCatching{com.openlocal.office.core.FgTeraboxClient.forScope(ctx,account.browserScope).requireScope(account.browserScope)}.isSuccess
+        val vault=ctx.getSharedPreferences(ACCOUNT_VAULT,0)
+        return vault.getString(account.browserScope+":scope",null)==account.scope&&
+            vault.getString(account.browserScope+":domain",null)==account.host&&
+            vault.getString(account.browserScope+":cipher",null)==account.cipherIdentity
     }
     internal fun hasAccount(ctx:Context,browserScope:String):Boolean=
         ctx.getSharedPreferences(ACCOUNT_VAULT,0).contains(browserScope+":cipher")
