@@ -3282,6 +3282,11 @@ object StandaloneRuntime {
         return response
     }
 
+    fun ensureBundledBookOcr(): Boolean {
+        ensureInitialized()
+        return localAiManager.ensureBundledBookOcr()
+    }
+
     fun runOcrPipeline(payload: Map<String, Any>): Map<String, Any> {
         return runAiPipeline(payload + mapOf("task_type" to "ocr"))
     }
