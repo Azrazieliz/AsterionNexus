@@ -90,7 +90,7 @@ object NexusCloudOperations {
     @Synchronized fun move(context:Context,expected:Remote,directory:String,name:String):Move{
         val destination=target(directory,name)
         require(destination!=expected.path){"Source and destination are identical"}
-        require(destination.substringBeforeLast('/').isNotEmpty()){"Choose an existing non-root destination"}
+        // Root is a valid same-account destination; the server must fail on conflicts.
         val client=FgTeraboxClient.forScope(context,expected.account)
         val current=inspect(client,expected.account,expected.path)
         check(expected.same(current)){"Selected source changed"}
@@ -101,7 +101,7 @@ object NexusCloudOperations {
         try{
             entry=state(context,entry,"REQUESTED")
             registry.job(job,"RECEIVING",0,null)
-            client.moveFileChecked(current.path,destination.substringBeforeLast('/'),destination.substringAfterLast('/'),current.bytes)
+            client.moveFileChecked(current.path,destination.substringBeforeLast('/').ifEmpty{"/"},destination.substringAfterLast('/'),current.bytes)
             return reconcileInternal(context,entry,false)
         }catch(e:Exception){
             registry.job(job,"FAILED",0,e.javaClass.simpleName)
@@ -137,10 +137,10 @@ object NexusCloudOperations {
         val current=inspect(client,entry.original.account,entry.target)
         check(entry.original.same(current)){"Moved object has changed"}
         val previous=entry.original.path
-        check(previous.substringBeforeLast('/').isNotEmpty()){"Root rollback requires provider support"}
+
         entry=state(context,entry,"UNDO_REQUESTED")
         try{
-            client.moveFileChecked(current.path,previous.substringBeforeLast('/'),previous.substringAfterLast('/'),current.bytes)
+            client.moveFileChecked(current.path,previous.substringBeforeLast('/').ifEmpty{"/"},previous.substringAfterLast('/'),current.bytes)
             return reconcileInternal(context,entry,true)
         }catch(e:Exception){return state(context,entry,"UNDO_UNKNOWN",e.javaClass.simpleName)}
     }
