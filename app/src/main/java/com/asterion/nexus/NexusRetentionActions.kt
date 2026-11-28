@@ -22,7 +22,7 @@ object NexusRetentionActions{
             val result=runCatching{
                 val registry=NexusRegistry(ctx)
                 val item=registry.find(sha)?:error("Original unavailable")
-                Triple(item,registry.evictedLocation(item),NexusCloudRetention.candidates(ctx,sha))
+                Triple(item,if(registry.localPresent(item))null else registry.evictedLocation(item)?:registry.verifiedCloudLocations(sha).firstOrNull(),NexusCloudRetention.candidates(ctx,sha))
             }
             a.runOnUiThread{
                 if(!alive(a))return@runOnUiThread
