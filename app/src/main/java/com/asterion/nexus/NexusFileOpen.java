@@ -15,6 +15,7 @@ public final class NexusFileOpen {
         if(uri==null)throw new IllegalArgumentException("File location missing");
         String resolved=mime==null||mime.isBlank()?
             FgTeraboxClient.mime(title==null?"":title):mime;
+        resolved=NexusRegistry.canonicalComicMime(title,resolved);
         Intent intent;
         if(resolved.startsWith("image/")){
             intent=new Intent(activity,NexusImageViewerActivity.class);
@@ -22,16 +23,17 @@ public final class NexusFileOpen {
             intent=new Intent(activity,NexusRounderPlaybackActivity.class);
         }else if(resolved.equals("application/pdf")||resolved.equals("application/epub+zip")||
             resolved.equals("application/zip")||resolved.equals("text/plain")||
-            resolved.equals("application/vnd.comicbook+zip")||
+            resolved.equals("application/vnd.comicbook+zip")||NexusRarBook.supported(resolved)||
             resolved.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")){
             intent=new Intent(activity,NexusReaderActivity.class);
         }else{
+            final String externalType=resolved;
             final Intent external=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,resolved);
             external.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             NexusFileDetails.showWithOpen(activity,uri,resolved,title,()->{
                 try{activity.startActivity(external);}
                 catch(android.content.ActivityNotFoundException error){
-                    new android.app.AlertDialog.Builder(activity).setMessage("No compatible viewer installed for "+resolved).setPositiveButton("Close",null).show();
+                    new android.app.AlertDialog.Builder(activity).setMessage("No compatible viewer installed for "+externalType).setPositiveButton("Close",null).show();
                 }
             });
             return;
