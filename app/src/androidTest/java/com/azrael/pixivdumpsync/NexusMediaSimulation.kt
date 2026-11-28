@@ -3,6 +3,10 @@ package com.azrael.pixivdumpsync
 import android.app.Instrumentation
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Bundle
+import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.Button
+import android.widget.SeekBar
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
@@ -91,7 +95,50 @@ internal object NexusMediaSimulation{
                 }
             }
             check(verified){"Rendered texture missing: bins="+lastBins+" primary pixels="+lastChannels}
-            status("GLTF_RENDER_OK textured model, animation clip and verified rendered primary-color texture pixels")
+            fun seekFrame(position:Int){
+                instrumentation.runOnMainSync{
+                    val views=descendants(activity.window.decorView).toList()
+                    val pause=views.filterIsInstance<Button>().firstOrNull{it.text.toString()=="Pause"}
+                    pause?.performClick()
+                    val slider=views.filterIsInstance<SeekBar>().single{it.contentDescription=="Animation position"}
+                    if(slider.progress!=position){
+                        check(slider.performAccessibilityAction(
+                            AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.id,
+                            Bundle().apply{putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE,position.toFloat())}
+                        )){"Animation seek did not accept the requested position"}
+                    }
+                }
+            }
+            fun framePixels():IntArray?{
+                var result:IntArray?=null
+                instrumentation.runOnMainSync{
+                    val view=surface!!
+                    if(view.isAvailable)view.getBitmap(128,128)?.let{frame->
+                        try{result=IntArray(128*128).also{frame.getPixels(it,0,128,0,0,128,128)}}
+                        finally{frame.recycle()}
+                    }
+                }
+                return result
+            }
+            seekFrame(100)
+            Thread.sleep(2500)
+            val first=framePixels()?:error("First paused animation frame unavailable")
+            seekFrame(500)
+            val motionDeadline=android.os.SystemClock.elapsedRealtime()+30000
+            var moved=false
+            while(!moved&&android.os.SystemClock.elapsedRealtime()<motionDeadline){
+                Thread.sleep(1000)
+                val second=framePixels()?:continue
+                val changed=first.indices.count{idx->
+                    val a=first[idx];val b=second[idx]
+                    val ar=a ushr 16 and 255;val ag=a ushr 8 and 255;val ab=a and 255
+                    val br=b ushr 16 and 255;val bg=b ushr 8 and 255;val bb=b and 255
+                    kotlin.math.abs(ar-br)+kotlin.math.abs(ag-bg)+kotlin.math.abs(ab-bb)>55
+                }
+                moved=changed>=40&&second.map{it and 0x00f0f0f0}.distinct().size>=3
+            }
+            check(moved){"Seeking animation did not change actual rendered pixels"}
+            status("GLTF_RENDER_OK textured model, verified RGB texture pixels and real animation seek motion")
         }finally{instrumentation.runOnMainSync{activity.finish()}}
     }
 }
