@@ -555,6 +555,7 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
     }
     @Override public boolean isChildDocument(String parentDocumentId, String documentId) {
         try {
+            if(scopeOf(parentDocumentId)!=null||scopeOf(documentId)!=null)return false;
             String parent = path(parentDocumentId), child = path(documentId);
             if(isContinuation(documentId))
                 return parent.equals(child)&&firstPage(documentId)>firstPage(parentDocumentId);
@@ -564,6 +565,7 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
     @Override public String getDocumentType(String documentId) throws java.io.FileNotFoundException {
         try{
             String p=path(documentId);
+            if(scopeOf(documentId)!=null){clientForDocument(documentId);return FgTeraboxClient.mime(p);}
             if("/".equals(p)||isContinuation(documentId))
                 return DocumentsContract.Document.MIME_TYPE_DIR;
             JSONObject item;

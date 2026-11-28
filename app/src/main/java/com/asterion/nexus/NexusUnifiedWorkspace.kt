@@ -96,7 +96,8 @@ data class NexusUnifiedEntry(
     val area:String="",
     val kind:String="",
     val origin:String="",
-    val filename:String?=null
+    val filename:String?=null,
+    val account:String=""
 )
 @Composable private fun UnifiedHeading(title:String,subtitle:String){
     Text(title,color=C_TEXT,fontSize=23.sp,fontWeight=FontWeight.SemiBold)
@@ -715,12 +716,17 @@ private fun NexusUnifiedCloud(
     val registry=remember(ctx){NexusSourceRegistry(ctx)}
     var cookie by remember{mutableStateOf("")}
     var connected by remember{mutableStateOf(cloud.configured())}
-    var accountScope by remember{mutableStateOf(cloud.metadataScope())}
+    var accounts by remember{mutableStateOf(FgTeraboxClient.accounts(ctx))}
+    var accountScope by remember{mutableStateOf("")}
+    var accountLabel by remember{mutableStateOf("")}
+    var addingAccount by remember{mutableStateOf(false)}
+    var connecting by remember{mutableStateOf(false)}
     var mediaFilter by remember{mutableStateOf("All")}
     var showSources by remember{mutableStateOf(!cloud.configured()||!NexusCloudPublication.canPublish(ctx))}
     var status by remember{mutableStateOf("Source bytes stay in their original location")}
     var folder by remember{mutableStateOf("/")}
     var page by remember{mutableIntStateOf(1)}
+    var hasNextCloudPage by remember{mutableStateOf(false)}
     var rows by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
     var sourceRoots by remember{mutableStateOf(registry.roots())}
     var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
@@ -740,29 +746,41 @@ private fun NexusUnifiedCloud(
         }
     }
     fun refresh(){
-        if(!connected)return
         val path=folder;val current=page;val requestedScope=accountScope
+        val chosen=accounts.filter{requestedScope.isEmpty()||it.scope==requestedScope}
+        if(chosen.isEmpty()){rows=emptyList();return}
         scope.launch{
             status="Reading "+path
             runCatching{withContext(Dispatchers.IO){
-                val raw=cloud.listPageCached(path,current)
                 val found=mutableListOf<NexusUnifiedEntry>()
-                for(i in 0 until raw.length()){
-                    val j=FgTeraboxClient.mapEntry(raw.optJSONObject(i)?:continue)
-                    val loc=j.optString("path")
-                    if(!loc.startsWith("/"))continue
-                    val name=j.optString("name",loc)
-                    val isFolder=j.optBoolean("folder",j.optInt("isdir")!=0)
-                    found.add(NexusUnifiedEntry(name,
-                        if(isFolder)"Folder" else (j.optLong("size",0)/1024).toString()+" KiB",
-                        "Cloud",mime=FgTeraboxClient.mime(name),
-                        path=loc,size=j.optLong("size",-1),folder=isFolder))
+                val errors=mutableListOf<String>()
+                var more=false
+                for(account in chosen){
+                    runCatching{
+                        val client=FgTeraboxClient.forScope(ctx,account.scope)
+                        val raw=client.listPageCached(path,current)
+                        client.requireScope(account.scope)
+                        if(raw.length()>=FgTeraboxClient.pageSize())more=true
+                        for(i in 0 until raw.length()){
+                            val j=FgTeraboxClient.mapEntry(raw.optJSONObject(i)?:continue)
+                            val loc=j.optString("path")
+                            if(!loc.startsWith("/"))continue
+                            val name=j.optString("name",loc)
+                            val isFolder=j.optBoolean("folder",j.optInt("isdir")!=0)
+                            found.add(NexusUnifiedEntry(name,
+                                if(isFolder)"Folder" else (j.optLong("size",0)/1024).toString()+" KiB",
+                                account.label,mime=FgTeraboxClient.mime(name),
+                                path=loc,size=j.optLong("size",-1),folder=isFolder,account=account.scope))
+                        }
+                    }.onFailure{errors.add(account.label+": "+it.javaClass.simpleName)}
                 }
-                found
-            }}.onSuccess{
-                if(path==folder&&current==page&&requestedScope==accountScope&&
-                    requestedScope==cloud.metadataScope()){rows=it;status=it.size.toString()+" files"}
-            }.onFailure{status="Cloud unavailable: "+it.message.orEmpty().take(120)}
+                Triple(found,errors,more)
+            }}.onSuccess{(items,errors,more)->
+                if(path==folder&&current==page&&requestedScope==accountScope){
+                    rows=items;hasNextCloudPage=more
+                    status=items.size.toString()+" files"+if(errors.isEmpty())"" else " · "+errors.joinToString(", ")
+                }
+            }.onFailure{status="Cloud unavailable: "+it.javaClass.simpleName}
         }
     }
     fun browseTree(tree:Uri,id:String,offset:Int){
@@ -815,14 +833,32 @@ private fun NexusUnifiedCloud(
             }.onFailure{status="Folder read failed: "+it.message.orEmpty().take(120)}
         }
     }
-    LaunchedEffect(connected,folder,page){if(connected)refresh()}
+    LaunchedEffect(accounts,accountScope,folder,page){refresh()}
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
             Text(if(selectedTree==null)"TeraBox" else "Device folders",color=C_TEXT,
                 fontSize=16.sp,modifier=Modifier.weight(1f))
             TextButton(onClick={showSources=!showSources}){Text("Sources")}
         }
-        if(!connected||(showSources&&!NexusCloudPublication.canPublish(ctx))){
+        if(showSources&&accounts.isNotEmpty()){
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                UnifiedButton("Add account",!connecting){addingAccount=!addingAccount}
+            }
+        }
+        if(addingAccount){
+            UnifiedField(accountLabel,{accountLabel=it},"Account label")
+            UnifiedField(cookie,{cookie=it},"TeraBox session (ndus)",true)
+            UnifiedButton("Connect account",!connecting&&accountLabel.isNotBlank()&&cookie.trim().length>=12){
+                val token=cookie.trim();val label=accountLabel.trim();cookie="";connecting=true
+                scope.launch{
+                    runCatching{withContext(Dispatchers.IO){FgTeraboxClient.addAccount(ctx,label,token)}}
+                        .onSuccess{accounts=FgTeraboxClient.accounts(ctx);accountScope="";folder="/";page=1;rows=emptyList();selected=null;addingAccount=false;accountLabel="";status="Account connected"}
+                        .onFailure{status="Account connection failed: "+it.javaClass.simpleName}
+                    connecting=false
+                }
+            }
+        }
+        if(!addingAccount&&(!connected||(showSources&&!NexusCloudPublication.canPublish(ctx)))){
             UnifiedField(cookie,{cookie=it},"TeraBox session (ndus)",true)
             UnifiedButton("Connect",cookie.trim().length>=12){
                 val token=cookie.trim();cookie=""
@@ -831,7 +867,7 @@ private fun NexusUnifiedCloud(
                     runCatching{withContext(Dispatchers.IO){NexusCloudPublication.connect(ctx,cloud,token)}}
                         .onSuccess{
                             rows=emptyList();selected=null;folder="/";page=1
-                            accountScope=cloud.metadataScope();connected=true;showSources=false
+                            accounts=FgTeraboxClient.accounts(ctx);accountScope="";connected=true;showSources=false
                             status="TeraBox connected"
                             refresh()
                         }.onFailure{status="TeraBox connection failed: "+it.javaClass.simpleName}
@@ -853,6 +889,12 @@ private fun NexusUnifiedCloud(
             Text("Authorized folders",color=C_TEXT,fontSize=15.sp,
                 modifier=Modifier.weight(1f))
             UnifiedButton("Add source"){picker.launch(null)}
+        }
+        if(selectedTree==null&&accounts.isNotEmpty())Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
+            FilterChip(selected=accountScope.isEmpty(),onClick={accountScope="";folder="/";page=1;rows=emptyList();selected=null},label={Text("All accounts")})
+            accounts.forEach{account->FilterChip(selected=accountScope==account.scope,onClick={
+                accountScope=account.scope;folder="/";page=1;rows=emptyList();selected=null
+            },label={Text(account.label)})}
         }
         Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.padding(vertical=10.dp))
         if(selectedTree==null)Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -929,18 +971,19 @@ private fun NexusUnifiedCloud(
                         else->true
                     }
                 }
-                items(visibleRows,key={accountScope+":"+it.path}){entry->
-                    NexusCloudContentTile(entry,cloud,accountScope,folder,page,onDetails={selected=entry},onOpen={
+                items(visibleRows,key={it.account+":"+it.path}){entry->
+                    val entryClient=remember(entry.account){runCatching{FgTeraboxClient.forScope(ctx,entry.account)}.getOrNull()}
+                    NexusCloudContentTile(entry,entryClient,entry.account,folder,page,onDetails={selected=entry},onOpen={
                         when{
-                            entry.path!=null&&entry.folder->{folder=entry.path;page=1}
-                            entry.path!=null&&accountScope==cloud.metadataScope()->
-                                onOpen(FgTeraboxDocumentsProvider.uriFor(entry.path,entry.size),entry.mime,entry.title,-1)
+                            entry.path!=null&&entry.folder->{accountScope=entry.account;folder=entry.path;page=1;rows=emptyList()}
+                            entry.path!=null&&entryClient!=null&&entry.size>=0->
+                                onOpen(FgTeraboxDocumentsProvider.uriForAccount(entry.account,entry.path,entry.size),entry.mime,entry.title,-1)
                             entry.uri!=null&&!entry.folder->onOpen(entry.uri,entry.mime,entry.title,-1)
                             else->status="Select the folder in the authorized source list"
                         }
                     })
                 }
-                if(connected&&rows.size>=FgTeraboxClient.pageSize())item(span={GridItemSpan(maxLineSpan)}){
+                if(hasNextCloudPage)item(span={GridItemSpan(maxLineSpan)}){
                     UnifiedButton("Next cloud page"){page++}
                 }
             }
@@ -954,7 +997,7 @@ private fun NexusUnifiedCloud(
                 TextButton(onClick={
                     selected=null
                     val path=entry.path?:return@TextButton
-                    onOpen(FgTeraboxDocumentsProvider.uriFor(path,entry.size),
+                    if(entry.size>=0)onOpen(FgTeraboxDocumentsProvider.uriForAccount(entry.account,path,entry.size),
                         entry.mime,entry.title,-1)
                 }){Text("Open")}
             },
@@ -962,8 +1005,8 @@ private fun NexusUnifiedCloud(
                 TextButton(onClick={
                     selected=null
                     val path=entry.path?:return@TextButton
-                    if(accountScope==cloud.metadataScope())NexusFileDetails.show(ctx as Activity,
-                        FgTeraboxDocumentsProvider.uriFor(path,entry.size),entry.mime,entry.title)
+                    if(entry.size>=0)NexusFileDetails.show(ctx as Activity,
+                        FgTeraboxDocumentsProvider.uriForAccount(entry.account,path,entry.size),entry.mime,entry.title)
                 }){Text("Details")}
                 TextButton(onClick={
                     selected=null
@@ -971,11 +1014,13 @@ private fun NexusUnifiedCloud(
                     scope.launch {
                         status="Saving verified original"
                         runCatching{withContext(Dispatchers.IO){
-                            cloud.open(path).use{input->
-                                val account=cloud.metadataScope()
+                            val source=FgTeraboxClient.forScope(ctx,entry.account)
+                            source.open(path).use{input->
+                                val account=entry.account
+                                source.requireScope(account)
                                 NexusRegistry(ctx).ingest(input,entry.title,entry.mime,
                                     "terabox",account,"terabox:"+account+":"+path,
-                                    entry.size,null)
+                                    entry.size,null).also{source.requireScope(account)}
                             }
                         }}.onSuccess{status="Verified saved: "+it.displayName;onRefresh()}
                             .onFailure{status="Offline copy failed: "+it.message.orEmpty().take(120)}

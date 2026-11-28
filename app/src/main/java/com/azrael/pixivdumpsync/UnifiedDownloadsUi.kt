@@ -1155,7 +1155,7 @@ object UnifiedDownloadsUi {
                 if(complete)null else "Retry publication",if(complete)null else ({
                     NduCloudQueue(activity).use{it.retryNexus(row.uri)}
                     NduCloudScheduler.requestImmediate(activity);Unit
-                }),null,if(complete&&aligned)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriFor(row.path,row.size).toString() else null,
+                }),null,if(complete&&aligned)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriForAccount(com.openlocal.office.core.FgTeraboxClient(activity).metadataScope(),row.path,row.size).toString() else null,
                 com.openlocal.office.core.FgTeraboxClient.mime(row.name))
         }
         val stagedUris=NduCloudQueue(activity).use{it.nexusPublications().map{row->row.uri}.toSet()}
