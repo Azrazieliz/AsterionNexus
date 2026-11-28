@@ -15,7 +15,7 @@ public final class NexusRegistry {
     private static final String DB_NAME="nexus_registry_v1.sqlite";
 
     private static final class Database extends SQLiteOpenHelper {
-        Database(Context app){super(app,DB_NAME,null,3);setWriteAheadLoggingEnabled(true);}
+        Database(Context app){super(app,DB_NAME,null,4);setWriteAheadLoggingEnabled(true);}
         @Override public void onConfigure(SQLiteDatabase db){
             super.onConfigure(db);db.setForeignKeyConstraintsEnabled(true);
         }
@@ -25,7 +25,7 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX idx_nexus_library_names ON locations(display_name COLLATE NOCASE)");
             db.execSQL("CREATE INDEX idx_nexus_library_sources ON locations(source_kind,account_key)");
             db.execSQL("CREATE TABLE jobs(job_key TEXT PRIMARY KEY,stage TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,error_code TEXT)");
-            createFileRatings(db);createRemoteLocations(db);
+            createFileRatings(db);createRemoteLocations(db);createCollections(db);
         }
         private void createFileRatings(SQLiteDatabase db){
             db.execSQL("CREATE TABLE IF NOT EXISTS file_ratings(sha256 TEXT PRIMARY KEY CHECK(length(sha256)=64),score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),updated_at INTEGER NOT NULL)");
@@ -36,10 +36,21 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_nexus_remote_path ON remote_locations(account,path)");
             db.execSQL("CREATE TABLE IF NOT EXISTS content_relations(output_sha TEXT NOT NULL REFERENCES originals(sha256),source_sha TEXT NOT NULL REFERENCES originals(sha256),kind TEXT NOT NULL,operation TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(output_sha,source_sha,kind,operation))");
         }
+        private void createCollections(SQLiteDatabase db){
+            // Collection definitions remain in Fusion. This extension holds
+            // only non-Fusion content membership and SHA-based progress.
+            db.execSQL("CREATE TABLE IF NOT EXISTS collection_members(collection_id TEXT NOT NULL,sha256 TEXT NOT NULL REFERENCES originals(sha256),added_at INTEGER NOT NULL,PRIMARY KEY(collection_id,sha256))");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_collection_member_sha ON collection_members(sha256,collection_id)");
+            db.execSQL("CREATE TABLE IF NOT EXISTS reading_progress(sha256 TEXT PRIMARY KEY REFERENCES originals(sha256),position INTEGER NOT NULL,total INTEGER NOT NULL,updated_at INTEGER NOT NULL,CHECK(position>=0 AND total>0 AND position<total))");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_reading_progress_recent ON reading_progress(updated_at DESC)");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_nexus_rating_score ON file_ratings(score,sha256)");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_nexus_locations_sha ON locations(sha256,id)");
+        }
         @Override public void onUpgrade(SQLiteDatabase db,int old,int current){
-            if(old<1||current!=3||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
+            if(old<1||current!=4||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
             if(old==1)createFileRatings(db);
-            createRemoteLocations(db);
+            if(old<3)createRemoteLocations(db);
+            createCollections(db);
         }
     }
     public static final class Item {
@@ -261,6 +272,80 @@ public final class NexusRegistry {
         return rows;
     }
 
+    public void addCollectionMember(String collection,String sha){
+        requireRatingIdentity(sha);
+        if(collection==null||collection.isBlank()||collection.length()>256)throw new IllegalArgumentException("Invalid collection");
+        Database helper=new Database(app);
+        try{
+            ContentValues row=new ContentValues();
+            row.put("collection_id",collection);row.put("sha256",sha);row.put("added_at",System.currentTimeMillis());
+            helper.getWritableDatabase().insertWithOnConflict("collection_members",null,row,SQLiteDatabase.CONFLICT_IGNORE);
+        }finally{helper.close();}
+    }
+    public void removeCollectionMember(String collection,String sha){
+        requireRatingIdentity(sha);
+        Database helper=new Database(app);
+        try{helper.getWritableDatabase().delete("collection_members","collection_id=? AND sha256=?",new String[]{collection,sha});}
+        finally{helper.close();}
+    }
+    public void noteReadingProgress(String sha,int position,int total){
+        requireRatingIdentity(sha);
+        if(position<0||total<1||position>=total)throw new IllegalArgumentException("Invalid reading progress");
+        Database helper=new Database(app);
+        try{
+            ContentValues row=new ContentValues();
+            row.put("sha256",sha);row.put("position",position);row.put("total",total);row.put("updated_at",System.currentTimeMillis());
+            helper.getWritableDatabase().insertWithOnConflict("reading_progress",null,row,SQLiteDatabase.CONFLICT_REPLACE);
+        }finally{helper.close();}
+    }
+    public int readingPosition(String sha){
+        requireRatingIdentity(sha);
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT position FROM reading_progress WHERE sha256=?",new String[]{sha})){
+            return c.moveToFirst()?c.getInt(0):-1;
+        }finally{helper.close();}
+    }
+    /** Membership is computed on demand over canonical SHA identities.
+     * Each result is one content item irrespective of multiple proven locations. */
+    public List<Item> collectionPage(String kind,String value,long after,int limit){
+        if(after<0||limit<1||limit>100)throw new IllegalArgumentException("Invalid collection page");
+        String filter;
+        ArrayList<String> args=new ArrayList<>();
+        args.add(Long.toString(after));
+        switch(kind){
+            case "manual":
+                filter="EXISTS(SELECT 1 FROM collection_members m WHERE m.sha256=o.sha256 AND m.collection_id=?)";args.add(value);break;
+            case "local_rating":
+                int score=Integer.parseInt(value);
+                if(score<0||score>100)throw new IllegalArgumentException("Invalid rating");
+                filter="EXISTS(SELECT 1 FROM file_ratings r WHERE r.sha256=o.sha256 AND r.score>=?)";args.add(value);break;
+            case "offline_pin":
+                filter="EXISTS(SELECT 1 FROM remote_locations r WHERE r.sha256=o.sha256 AND r.pinned=1)";break;
+            case "continue_reading":
+                filter="EXISTS(SELECT 1 FROM reading_progress r WHERE r.sha256=o.sha256 AND r.position<r.total-1)";break;
+            case "related_output":
+                filter="EXISTS(SELECT 1 FROM content_relations r WHERE r.output_sha=o.sha256)";break;
+            case "media_type":
+                switch(value){
+                    case "image":filter="o.mime LIKE 'image/%'";break;
+                    case "video":filter="o.mime LIKE 'video/%'";break;
+                    case "audio":filter="o.mime LIKE 'audio/%'";break;
+                    case "books":filter="(o.mime IN ('application/pdf','text/plain','application/epub+zip','application/x-cbz','application/x-cbr') OR o.mime LIKE '%comic%' OR o.mime LIKE '%wordprocessingml%')";break;
+                    case "assets":filter="(o.mime NOT LIKE 'image/%' AND o.mime NOT LIKE 'video/%' AND o.mime NOT LIKE 'audio/%' AND o.mime NOT IN ('application/pdf','text/plain','application/epub+zip','application/x-cbz','application/x-cbr') AND o.mime NOT LIKE '%comic%' AND o.mime NOT LIKE '%wordprocessingml%')";break;
+                    default:throw new IllegalArgumentException("Invalid media rule");
+                }break;
+            default:throw new IllegalArgumentException("Unsupported content collection");
+        }
+        args.add(Integer.toString(limit));
+        ArrayList<Item> rows=new ArrayList<>();
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery(
+            "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON o.sha256=l.sha256 WHERE l.id>? AND l.id=(SELECT MIN(other.id) FROM locations other WHERE other.sha256=l.sha256) AND "+filter+" ORDER BY l.id LIMIT ?",
+            args.toArray(new String[0]))){
+            while(c.moveToNext())rows.add(item(c));
+        }finally{helper.close();}
+        return rows;
+    }
     public static final class BookSeedPage {
         public final List<Item> items;
         public final long cursor;
