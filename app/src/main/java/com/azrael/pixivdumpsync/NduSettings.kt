@@ -20,6 +20,7 @@ object NduSettings {
     private const val KYORA_DIR = "kyora_dir"
     private const val DOMAIN = "domain"
     private const val ACCOUNT_SCOPE = "account_scope"
+    private const val ACCOUNT_VAULT = "nexus_upload_account_vault"
 
     /** Opaque account binding, not a credential-derived identifier. */
     fun currentAccountScope(ctx:Context):String=ctx.getSharedPreferences(PREF,0).getString(ACCOUNT_SCOPE,"").orEmpty()
@@ -124,6 +125,32 @@ object NduSettings {
         val b=Base64.encodeToString(cipher.doFinal(cookie.toByteArray()),Base64.NO_WRAP)
         check(ctx.getSharedPreferences(PREF,0).edit().putString(SECRET,"$a:$b")
             .putString(ACCOUNT_SCOPE,scope).commit()){"Encrypted session not saved"}
+    }
+    /** Persist encrypted upload sessions separately from the active donor slot.
+     * The browser scope is an opaque local account namespace, never a token.
+     */
+    @Synchronized internal fun saveAccount(ctx:Context,browserScope:String,input:String,uploadScope:String=browserScope){
+        require(browserScope.matches(Regex("[0-9a-f-]{36}"))&&uploadScope.matches(Regex("[0-9a-f-]{36}")))
+        val token=parseNdus(input)
+        val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE,key())
+        val encoded=Base64.encodeToString(cipher.iv,Base64.NO_WRAP)+":"+
+            Base64.encodeToString(cipher.doFinal(token.toByteArray()),Base64.NO_WRAP)
+        check(ctx.getSharedPreferences(ACCOUNT_VAULT,0).edit()
+            .putString(browserScope+":cipher",encoded).putString(browserScope+":scope",uploadScope)
+            .putString(browserScope+":domain",domain(ctx)).commit()){"Account upload session not saved"}
+    }
+    internal fun hasAccount(ctx:Context,browserScope:String):Boolean=
+        ctx.getSharedPreferences(ACCOUNT_VAULT,0).contains(browserScope+":cipher")
+    @Synchronized internal fun activateAccount(ctx:Context,browserScope:String):String{
+        val vault=ctx.getSharedPreferences(ACCOUNT_VAULT,0)
+        val cipher=vault.getString(browserScope+":cipher",null)?:error("Account upload session unavailable")
+        val scope=vault.getString(browserScope+":scope",null)?:error("Account identity unavailable")
+        val host=vault.getString(browserScope+":domain","www.terabox.com")?:error("Account host unavailable")
+        require(host in allowedDomains)
+        check(ctx.getSharedPreferences(PREF,0).edit().putString(SECRET,cipher)
+            .putString(ACCOUNT_SCOPE,scope).putString(DOMAIN,host).commit()){"Upload account selection failed"}
+        return scope
     }
     fun parseNdus(input: String): String {
         val cleaned=input.trim()

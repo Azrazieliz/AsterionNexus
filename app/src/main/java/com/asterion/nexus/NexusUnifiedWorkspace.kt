@@ -719,6 +719,7 @@ private fun NexusUnifiedCloud(
     var accounts by remember{mutableStateOf(FgTeraboxClient.accounts(ctx))}
     var accountScope by remember{mutableStateOf("")}
     var accountLabel by remember{mutableStateOf("")}
+    var publicationScope by remember{mutableStateOf(NexusCloudPublication.publicationScope(ctx))}
     var addingAccount by remember{mutableStateOf(false)}
     var connecting by remember{mutableStateOf(false)}
     var mediaFilter by remember{mutableStateOf("All")}
@@ -853,7 +854,7 @@ private fun NexusUnifiedCloud(
             UnifiedButton("Connect account",!connecting&&accountLabel.isNotBlank()&&cookie.trim().length>=12){
                 val token=cookie.trim();val label=accountLabel.trim();cookie="";connecting=true
                 scope.launch{
-                    runCatching{withContext(Dispatchers.IO){FgTeraboxClient.addAccount(ctx,label,token)}}
+                    runCatching{withContext(Dispatchers.IO){NexusCloudPublication.addAccount(ctx,label,token)}}
                         .onSuccess{accounts=FgTeraboxClient.accounts(ctx);accountScope="";folder="/";page=1;rows=emptyList();selected=null;addingAccount=false;accountLabel="";status="Account connected"}
                         .onFailure{status="Account connection failed: "+it.javaClass.simpleName}
                     connecting=false
@@ -870,6 +871,7 @@ private fun NexusUnifiedCloud(
                         .onSuccess{
                             rows=emptyList();selected=null;folder="/";page=1
                             accounts=FgTeraboxClient.accounts(ctx);accountScope="";connected=true;showSources=false
+                            publicationScope=NexusCloudPublication.publicationScope(ctx)
                             status="TeraBox connected"
                             refresh()
                         }.onFailure{status="TeraBox connection failed: "+it.javaClass.simpleName}
@@ -891,6 +893,19 @@ private fun NexusUnifiedCloud(
             Text("Authorized folders",color=C_TEXT,fontSize=15.sp,
                 modifier=Modifier.weight(1f))
             UnifiedButton("Add source"){picker.launch(null)}
+        }
+        if(showSources&&accounts.isNotEmpty()){
+            Text("Download destination",color=C_TEXT,fontSize=13.sp)
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+                accounts.forEach{account->FilterChip(selected=publicationScope==account.scope,
+                    enabled=!connecting&&NexusCloudPublication.hasUploadAccount(ctx,account.scope),
+                    onClick={connecting=true;scope.launch{
+                        runCatching{withContext(Dispatchers.IO){NexusCloudPublication.selectAccount(ctx,account.scope)}}
+                            .onSuccess{publicationScope=account.scope;status="New acquisitions use "+account.label+"; previous account jobs retained"}
+                            .onFailure{status="Destination not changed: "+it.javaClass.simpleName}
+                        connecting=false
+                    }},label={Text(account.label)})}
+            }
         }
         if(selectedTree==null&&accounts.isNotEmpty())Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             FilterChip(selected=accountScope.isEmpty(),onClick={accountScope="";folder="/";page=1;rows=emptyList();selected=null},label={Text("All accounts")})

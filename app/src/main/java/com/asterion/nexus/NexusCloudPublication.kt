@@ -17,12 +17,30 @@ object NexusCloudPublication {
     fun canPublish(context:Context):Boolean{
         if(!NduSettings.enabled(context)||!NduSettings.cloudOnly(context))return false
         val scope=NduSettings.currentAccountScope(context)
-        val browser=FgTeraboxClient(context).metadataScope()
         val binding=context.getSharedPreferences(PREF,0)
-        return scope.isNotBlank()&&browser.isNotBlank()&&
-            binding.getString("upload",null)==scope&&binding.getString("browser",null)==browser
+        val browser=binding.getString("browser",null).orEmpty()
+        return scope.isNotBlank()&&browser.isNotBlank()&&binding.getString("upload",null)==scope&&
+            runCatching{FgTeraboxClient.forScope(context,browser).requireScope(browser)}.isSuccess
     }
-    fun connect(context:Context,cloud:FgTeraboxClient,input:String){
+    fun publicationScope(context:Context):String=if(canPublish(context))context.getSharedPreferences(PREF,0).getString("browser","").orEmpty() else ""
+    fun hasUploadAccount(context:Context,scope:String):Boolean=NduSettings.hasAccount(context,scope)
+    @Synchronized fun addAccount(context:Context,label:String,input:String):FgTeraboxClient.Account{
+        val token=NduSettings.parseNdus(input)
+        NduTeraboxClient(token,NduSettings.domain(context)).connect()
+        val account=FgTeraboxClient.addAccount(context,label,token)
+        NduSettings.saveAccount(context,account.scope,token)
+        return account
+    }
+    @Synchronized fun selectAccount(context:Context,browserScope:String){
+        FgTeraboxClient.forScope(context,browserScope).requireScope(browserScope)
+        val binding=context.getSharedPreferences(PREF,0)
+        binding.edit().clear().commit()
+        val uploadScope=NduSettings.activateAccount(context,browserScope)
+        check(binding.edit().putString("upload",uploadScope).putString("browser",browserScope).commit()){"Account binding failed"}
+        NduSettings.setCloudOnly(context,true);NduSettings.setEnabled(context,true)
+        NduCloudScheduler.requestImmediate(context)
+    }
+    @Synchronized fun connect(context:Context,cloud:FgTeraboxClient,input:String){
         val token=NduSettings.parseNdus(input)
         val uploader=NduTeraboxClient(token,NduSettings.domain(context))
         uploader.connect()
@@ -32,6 +50,7 @@ object NexusCloudPublication {
         check(cloud.setCookie(token)){"Unable to persist browsing session"}
         cloud.listPage("/",1)
         NduSettings.save(context,token)
+        NduSettings.saveAccount(context,cloud.metadataScope(),token,NduSettings.accountScope(context))
         check(binding.edit().putString("upload",NduSettings.accountScope(context))
             .putString("browser",cloud.metadataScope()).commit()){"Account binding not saved"}
         NduSettings.setCloudOnly(context,true)
@@ -96,7 +115,8 @@ object NexusCloudPublication {
         val existing=runCatching{client.verifyExisting(context,uri,safeName,folder,::stop)}.getOrNull()
         if(existing?.hashVerified==true)return existing
         check(!stop()){"Publication cancelled"}
-        val cloud=FgTeraboxClient(context)
+        val browserScope=publicationScope(context)
+        val cloud=FgTeraboxClient.forScope(context,browserScope)
         val stageFolder=NduSettings.validateDirectory(folder+"/Nexus publishing")
         val stageName=sha+"-"+safeName.takeLast(120)
         val staged=runCatching{client.verifyExisting(context,uri,stageName,stageFolder,::stop)}
@@ -104,6 +124,7 @@ object NexusCloudPublication {
             ?:client.upload(context,uri,stageName,stageFolder,cancelled=::stop,progress=progress)
         check(staged.size==item.length){"Remote staging length mismatch"}
         check(!stop()){"Publication cancelled"}
+        cloud.requireScope(browserScope)
         cloud.moveFileChecked(staged.path,folder,safeName,item.length)
         check(!stop()){"Publication account changed before receipt"}
         val final=client.verifyExisting(context,uri,safeName,folder,::stop)

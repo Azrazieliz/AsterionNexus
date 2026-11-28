@@ -145,7 +145,8 @@ class NduCloudQueue(context: Context) :
 
     fun status():Status {
         var pending=0;var complete=0;var rechecking=0
-        readableDatabase.rawQuery("SELECT state,COUNT(*) FROM jobs GROUP BY state",null).use { c ->
+        val scope=NduSettings.currentAccountScope(app)
+        readableDatabase.rawQuery("SELECT state,COUNT(*) FROM jobs WHERE account_scope=? AND account_scope<>'' GROUP BY state",arrayOf(scope)).use { c ->
             while(c.moveToNext()){
                 val state=c.getString(0)
                 if(state=="VERIFIED")complete+=c.getInt(1)
@@ -156,13 +157,13 @@ class NduCloudQueue(context: Context) :
             }
         }
         val err=readableDatabase.rawQuery(
-            "SELECT last_error FROM jobs WHERE last_error IS NOT NULL " +
-                "ORDER BY retry_after DESC LIMIT 1",null).use {
+            "SELECT last_error FROM jobs WHERE last_error IS NOT NULL AND account_scope=? AND account_scope<>'' " +
+                "ORDER BY retry_after DESC LIMIT 1",arrayOf(scope)).use {
             if(it.moveToFirst()) it.getString(0) else null
         }
         val last=readableDatabase.rawQuery(
-            "SELECT remote_path FROM jobs WHERE state='VERIFIED' "+
-                "ORDER BY verified_at DESC LIMIT 1",null).use{
+            "SELECT remote_path FROM jobs WHERE state='VERIFIED' AND account_scope=? AND account_scope<>'' "+
+                "ORDER BY verified_at DESC LIMIT 1",arrayOf(scope)).use{
             if(it.moveToFirst())it.getString(0)else null
         }
         return Status(pending,complete,err,rechecking,last)
