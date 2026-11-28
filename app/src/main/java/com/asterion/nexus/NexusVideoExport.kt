@@ -109,13 +109,14 @@ object NexusVideoExport {
                             .setEffects(Effects(emptyList(),listOf(Presentation.createForWidthAndHeight(profile.width,profile.height,Presentation.LAYOUT_SCALE_TO_FIT))))
                             .build()
                     }
-                    val composition=Composition.Builder(EditedMediaItemSequence.Builder(edited).build())
+                    val sequence=if(!profile.mute&&sources.first().audio) EditedMediaItemSequence.withAudioAndVideoFrom(edited) else EditedMediaItemSequence.withVideoFrom(edited)
+                    val composition=Composition.Builder(sequence)
                         .setTransmuxAudio(false).setTransmuxVideo(false).build()
                     val encoder=DefaultEncoderFactory.Builder(context)
                         .setEnableFallback(false)
                         .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(profile.bitrate).build()).build()
                     val t=Transformer.Builder(context).setLooper(worker.looper).setVideoMimeType(mime)
-                        .setAudioMimeType(MimeTypes.AUDIO_AAC).setEncoderFactory(encoder)
+                        .setAudioMimeType(MimeTypes.AUDIO_AAC).setPortraitEncodingEnabled(true).setEncoderFactory(encoder)
                         .addListener(object:Transformer.Listener{
                             override fun onCompleted(composition:Composition,exportResult:ExportResult){done.countDown()}
                             override fun onError(composition:Composition,exportResult:ExportResult,exportException:ExportException){error.set(exportException);done.countDown()}

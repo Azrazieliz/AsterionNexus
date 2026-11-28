@@ -53,7 +53,8 @@ class NexusGltfActivity : Activity() {
                 }
                 previous=now
                 v.render(now)
-                status.text=if(v.progress<1f) "Loading model resources…" else if((animator?.animationCount?:0)>0) "Textured model · ${animator!!.animationCount} animation clips" else "Textured model"
+                val label=if(v.progress<1f) "Loading model resources…" else if((animator?.animationCount?:0)>0) "Model · ${animator!!.animationCount} animation clips" else "Model"
+                if(status.text.toString()!=label)status.text=label
                 Choreographer.getInstance().postFrameCallback(this)
             } catch(e:Exception) {
                 status.text="Rendering stopped: "+(e.message?:e.javaClass.simpleName)

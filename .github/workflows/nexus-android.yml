@@ -1,7 +1,8 @@
 name: Nexus Android native compile and regression
 on:
+  workflow_dispatch:
   push:
-    branches: [work/merge-core-downloader-rounder]
+    branches: [work/merge-core-downloader-rounder, work/nexus-completion-20261128b]
     paths:
       - 'app/**'
       - 'fusion/**'
