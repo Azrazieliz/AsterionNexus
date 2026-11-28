@@ -14,5 +14,6 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/sentencepiece/CMakeLists.txt"
   add_subdirectory(third_party/sentencepiece sentencepiece-build EXCLUDE_FROM_ALL)
   add_library(nexus_sentencepiece SHARED nexus_sentencepiece.cpp)
   target_include_directories(nexus_sentencepiece PRIVATE third_party/sentencepiece/src)
-  target_link_libraries(nexus_sentencepiece PRIVATE sentencepiece-static)
+  find_library(NEXUS_ANDROID_LOG log REQUIRED)
+  target_link_libraries(nexus_sentencepiece PRIVATE sentencepiece-static ${NEXUS_ANDROID_LOG})
 endif()
