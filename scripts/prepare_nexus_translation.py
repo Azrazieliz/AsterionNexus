@@ -181,7 +181,7 @@ def prepare_spm():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--languages", nargs="+", choices=list(REVISIONS), default=list(REVISIONS))
+    parser.add_argument("--languages", nargs="+", choices=list(REVISIONS), default=["ja", "ko"])
     args = parser.parse_args()
     prepare_spm()
     evidence = {}
