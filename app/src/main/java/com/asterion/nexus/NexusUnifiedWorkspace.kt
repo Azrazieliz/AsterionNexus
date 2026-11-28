@@ -318,9 +318,7 @@ private fun NexusUnifiedSearch(
                                     "Indexed image","Gallery",Uri.parse(uri),"image/*"))
                         }
                     }
-                    all.addAll(SourceIndex.items(ctx,null,250).filter{
-                        it.title.contains(query,true)&&!it.queued
-                    }.map{it.nexusEntry()})
+                    all.addAll(SourceIndex.nexusPage(ctx,query,limit=250,unqueuedOnly=true).map{it.nexusEntry()})
                     all
                 }
                 if(token!=generation.get())return@launch
@@ -480,7 +478,11 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
     var busy by remember{mutableStateOf(false)}
     var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
     var refresh by remember{mutableIntStateOf(0)}
-    LaunchedEffect(area,refresh){
+    var catalogQuery by remember{mutableStateOf("")}
+    var catalogPage by remember{mutableIntStateOf(0)}
+    var sourceFilter by remember{mutableStateOf<String?>(null)}
+    var enrollment by remember{mutableStateOf(false)}
+    LaunchedEffect(area,refresh,catalogQuery,catalogPage,sourceFilter){
         busy=true
         runCatching{withContext(Dispatchers.IO){
             if(suggestions){
@@ -489,7 +491,7 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
                         preview=it.preview,area=it.area,kind=it.kind,origin=it.source)
                 } to emptyList<IndexedSource>()
             }else{
-                SourceIndex.items(ctx,area,250).map{it.nexusEntry()} to SourceIndex.status(ctx,area)
+                SourceIndex.nexusPage(ctx,catalogQuery,area,sourceFilter,catalogPage*100,100).map{it.nexusEntry()} to SourceIndex.status(ctx,area)
             }
         }}.onSuccess{(entries,sources)->
             rows=entries;providers=sources;message=entries.size.toString()+" indexed candidates"
@@ -500,19 +502,31 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
         UnifiedHeading(if(suggestions)"Suggestions" else "Modules","Native source engines")
         Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){
             (if(suggestions)listOf("ALL" to "All")+modules else modules).forEach{(id,label)->
-                FilterChip(selected=area==id,onClick={area=id},label={Text(label)})
+                FilterChip(selected=area==id,onClick={area=id;catalogPage=0;sourceFilter=null},label={Text(label)})
             }
         }
         Row(verticalAlignment=Alignment.CenterVertically){
             Text(message,color=C_MUTED,fontSize=12.sp,modifier=Modifier.weight(1f))
             UnifiedButton("Refresh",!busy){refresh++}
         }
+        if(!suggestions){
+            UnifiedField(catalogQuery,{catalogQuery=it;catalogPage=0},"Find indexed source media")
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                UnifiedButton("Add source",!busy){enrollment=true}
+                UnifiedButton("Manage sources",!busy){com.azrael.pixivdumpsync.SourceIndexPanel.showStatus(ctx,listOf(area),modules.firstOrNull{it.first==area}?.second?:area)}
+            }
+            if(sourceFilter!=null)TextButton(onClick={sourceFilter=null;catalogPage=0}){Text("Clear selected source filter")}
+        }
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)){
-            if(!suggestions)items(providers,key={it.url}){provider->
+            if(!suggestions&&catalogPage==0&&sourceFilter==null&&catalogQuery.isBlank())items(providers,key={it.url}){provider->
                 var live by remember(provider.url,refresh){mutableStateOf(SiteControls.sync(ctx,provider.url))}
                 Card(colors=CardDefaults.cardColors(containerColor=C_CARD)){
                     Column(Modifier.fillMaxWidth().padding(12.dp)){
                         Text(provider.name,color=C_TEXT,fontWeight=FontWeight.Medium)
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            TextButton(onClick={sourceFilter=provider.url;catalogPage=0}){Text("Browse items")}
+                            TextButton(onClick={ctx.startActivity(Intent(ctx,com.azrael.galleryflow.SiteLoginActivity::class.java).putExtra(com.azrael.galleryflow.SiteLoginActivity.EXTRA_URL,provider.url))}){Text("Account")}
+                        }
                         Text(provider.discovered.toString()+" indexed · "+(provider.error?:
                             if(provider.historyComplete)"History complete" else "History not complete"),color=C_MUTED,fontSize=12.sp)
                         Row(verticalAlignment=Alignment.CenterVertically){
@@ -542,7 +556,39 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
             }
             items(rows){entry->UnifiedEntryCard(entry){selected=entry}}
             if(rows.isEmpty()&&!busy)item{Text("No indexed candidates",color=C_MUTED)}
+            if(!suggestions)item{
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    UnifiedButton("Previous",!busy&&catalogPage>0){catalogPage--}
+                    Text("Page "+(catalogPage+1),color=C_MUTED,modifier=Modifier.align(Alignment.CenterVertically))
+                    UnifiedButton("Next",!busy&&rows.isNotEmpty()){catalogPage++}
+                }
+            }
         }
+    }
+    if(enrollment){
+        var address by remember{mutableStateOf("")}
+        var name by remember{mutableStateOf("")}
+        var error by remember{mutableStateOf("")}
+        AlertDialog(onDismissRequest={enrollment=false},title={Text("Register source")},
+            text={Column{
+                UnifiedField(address,{address=it},"HTTPS source URL")
+                UnifiedField(name,{name=it},"Source name")
+                Text("Registering a source does not authorize bulk downloads.",color=C_MUTED,fontSize=12.sp)
+                if(error.isNotBlank())Text(error,color=C_MUTED)
+            }},
+            confirmButton={TextButton(onClick={
+                val url=address.trim()
+                val label=name.trim()
+                if(!SourceIndexParser.safe(url)||label.isBlank()||label.length>120){error="Enter a valid HTTPS address and name";return@TextButton}
+                scope.launch{
+                    runCatching{withContext(Dispatchers.IO){
+                        SourceIndex.enroll(ctx,url,area,label)
+                        check(SourceIndex.status(ctx,area).any{it.url==url}){"Source rejected or unavailable"}
+                    }}.onSuccess{enrollment=false;refresh++;message="Source registered · configure sync separately"}
+                        .onFailure{error=it.message.orEmpty().take(140)}
+                }
+            }){Text("Register")}},
+            dismissButton={TextButton(onClick={enrollment=false}){Text("Cancel")}})
     }
     selected?.let{entry->
         AlertDialog(onDismissRequest={selected=null},title={Text(entry.title)},

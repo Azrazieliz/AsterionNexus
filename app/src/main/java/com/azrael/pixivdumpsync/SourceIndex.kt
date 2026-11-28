@@ -454,6 +454,25 @@ class SourceIndexDb(context:Context):
         }
         return out
     }
+    /** Filter the actual index before paging; never search only the newest N rows. */
+    fun nexusPage(term:String,area:String?,source:String?,offset:Int,limit:Int,unqueuedOnly:Boolean):List<IndexedItem>{
+        val out=ArrayList<IndexedItem>()
+        val where=ArrayList<String>()
+        val args=ArrayList<String>()
+        if(term.isNotBlank()){where.add("instr(lower(title),lower(?))>0");args.add(term)}
+        if(area!=null){where.add("area=?");args.add(area)}
+        if(source!=null){where.add("source=?");args.add(source)}
+        if(unqueuedOnly)where.add("queued=0")
+        args.add(limit.coerceIn(1,250).toString());args.add(offset.coerceAtLeast(0).toString())
+        val sql="SELECT url,title,preview,source,area,kind,discovered_at,queued FROM entries "+
+            (if(where.isEmpty())"" else "WHERE "+where.joinToString(" AND ")+" ")+
+            "ORDER BY discovered_at DESC,url ASC LIMIT ? OFFSET ?"
+        readableDatabase.rawQuery(sql,args.toTypedArray()).use{c->
+            while(c.moveToNext())out+=IndexedItem(c.getString(0),c.getString(1),c.getString(2),
+                c.getString(3),c.getString(4),c.getString(5),c.getLong(6),c.getInt(7)==1)
+        }
+        return out
+    }
     fun items(area:String?=null,limit:Int=60):List<IndexedItem>{
         val out=ArrayList<IndexedItem>()
         val sql="""SELECT url,title,preview,source,area,kind,discovered_at,queued
@@ -1725,6 +1744,13 @@ object SourceIndex {
         SourceIndexDb(context).use{db->
             db.sources().filter{src->src.area==area &&
                 !ProviderRetirement.isRetired(src.url)}
+        }
+    fun nexusPage(context:Context,term:String,area:String?=null,source:String?=null,offset:Int=0,
+                  limit:Int=100,unqueuedOnly:Boolean=false):List<IndexedItem> =
+        SourceIndexDb(context).use{db->
+            db.nexusPage(term.trim().take(180),area,source,offset,limit,unqueuedOnly).filter{entry->
+                !ProviderRetirement.isRetired(entry.url)&&!ProviderRetirement.isRetired(entry.source)
+            }
         }
     fun items(context:Context,area:String?=null,limit:Int=40):List<IndexedItem> =
         SourceIndexDb(context).use{db->
