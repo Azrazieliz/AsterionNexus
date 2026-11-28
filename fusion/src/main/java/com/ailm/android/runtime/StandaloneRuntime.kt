@@ -4308,6 +4308,16 @@ object StandaloneRuntime {
     }
 
     /** Nexus must reuse Core's manual artwork rating, not duplicate it. */
+    fun nexusVisualSimilar(imageId: Int, limit: Int = 40): Map<String, Any> {
+        ensureInitialized()
+        val result = FusionVisualSearchIndex(database.writableDatabase).similar(imageId,limit)
+        val matches = result.matches.mapNotNull { match ->
+            repository.searchImages(LibraryQueryOptions(imageId=match.imageId,page=1,pageSize=1))
+                .firstOrNull()?.plus("visual_score" to match.score)
+        }
+        return mapOf("indexed" to result.indexed, "compared" to result.compared, "matches" to matches)
+    }
+
     fun nexusArtworkId(uri:String,sha256:String?):Int?{
         ensureInitialized()
         val db=database.readableDatabase
