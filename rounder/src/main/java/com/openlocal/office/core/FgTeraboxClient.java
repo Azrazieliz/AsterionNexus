@@ -29,6 +29,9 @@ public final class FgTeraboxClient {
     private static final int PAGE=100;
     private final Context app;
     private final SharedPreferences prefs;
+    private final String accountSlot;
+    private static final String DEFAULT_PREFS="fg_terabox_secure";
+    private static final String ACCOUNTS_PREFS="fg_terabox_account_slots";
     private final java.util.concurrent.atomic.AtomicInteger thumbnailWrites=
         new java.util.concurrent.atomic.AtomicInteger();
     private final Map<String,String> thumbUrls=Collections.synchronizedMap(
@@ -56,9 +59,66 @@ public final class FgTeraboxClient {
             hotPages.put(key,new HotPage(rows,android.os.SystemClock.elapsedRealtime()));
         }
     }
-    public FgTeraboxClient(Context context){
+    public FgTeraboxClient(Context context){this(context,null);}
+    private FgTeraboxClient(Context context,String slot){
         app=context.getApplicationContext();
-        prefs=app.getSharedPreferences("fg_terabox_secure",Context.MODE_PRIVATE);
+        accountSlot=slot;
+        prefs=app.getSharedPreferences(slot==null?DEFAULT_PREFS:DEFAULT_PREFS+"_"+slot,Context.MODE_PRIVATE);
+    }
+    private static boolean validScope(String scope){
+        return scope!=null&&scope.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    }
+    public static final class Account {
+        public final String scope,label;
+        public final boolean primary;
+        Account(String scope,String label,boolean primary){this.scope=scope;this.label=label;this.primary=primary;}
+    }
+    /** Only opaque account IDs and owner labels are stored in the account directory.
+     * Each independent credential remains encrypted inside its own private slot.
+     */
+    public static java.util.List<Account> accounts(Context context){
+        Context app=context.getApplicationContext();
+        java.util.List<Account> result=new java.util.ArrayList<>();
+        FgTeraboxClient primary=new FgTeraboxClient(app);
+        if(primary.configured()&&validScope(primary.metadataScope()))
+            result.add(new Account(primary.metadataScope(),"Primary",true));
+        java.util.Map<String,?> slots=app.getSharedPreferences(ACCOUNTS_PREFS,Context.MODE_PRIVATE).getAll();
+        java.util.ArrayList<String> ids=new java.util.ArrayList<>(slots.keySet());
+        java.util.Collections.sort(ids);
+        for(String id:ids)if(validScope(id)&&slots.get(id) instanceof String){
+            FgTeraboxClient candidate=new FgTeraboxClient(app,id);
+            if(candidate.configured()&&id.equals(candidate.metadataScope()))
+                result.add(new Account(id,(String)slots.get(id),false));
+        }
+        return result;
+    }
+    public static FgTeraboxClient forScope(Context context,String scope)throws IOException{
+        if(!validScope(scope))throw new IOException("Cloud account identity unavailable");
+        FgTeraboxClient primary=new FgTeraboxClient(context);
+        if(primary.configured()&&scope.equals(primary.metadataScope()))return primary;
+        if(!context.getSharedPreferences(ACCOUNTS_PREFS,Context.MODE_PRIVATE).contains(scope))
+            throw new IOException("Cloud account is no longer authorized");
+        FgTeraboxClient account=new FgTeraboxClient(context,scope);
+        account.requireScope(scope);
+        return account;
+    }
+    public void requireScope(String scope)throws IOException{
+        if(!configured()||!validScope(scope)||!scope.equals(metadataScope()))
+            throw new IOException("Cloud account changed or disconnected");
+    }
+    public static synchronized Account addAccount(Context context,String label,String token)throws Exception{
+        String name=label==null?"":label.trim();
+        if(name.isEmpty()||name.length()>60||name.contains("\\n")||name.contains("\\r"))
+            throw new IllegalArgumentException("Account label must contain 1–60 characters");
+        String id=java.util.UUID.randomUUID().toString();
+        FgTeraboxClient candidate=new FgTeraboxClient(context,id);
+        try{
+            if(!candidate.setCookie(token))throw new IOException("Invalid cloud session");
+            candidate.listPage("/",1);
+            if(!context.getSharedPreferences(ACCOUNTS_PREFS,Context.MODE_PRIVATE).edit().putString(id,name).commit())
+                throw new IOException("Account directory could not be saved");
+            return new Account(id,name,false);
+        }catch(Exception error){candidate.disconnect();throw error;}
     }
     public static int pageSize(){return PAGE;}
     private SecretKey key() throws Exception {
@@ -91,7 +151,7 @@ public final class FgTeraboxClient {
             fgWriteJsToken="";fgWriteJsTokenTime=0L;
             synchronized(hotPages){hotPages.clear();}
             linkCache.clear();thumbUrls.clear();
-            prefs.edit().putString("preview_scope",java.util.UUID.randomUUID().toString())
+            prefs.edit().putString("preview_scope",accountSlot==null?java.util.UUID.randomUUID().toString():accountSlot)
                 .putString("ndus",Base64.encodeToString(ciphertext,Base64.NO_WRAP))
                 .putString("iv",Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP))
                 .apply();
@@ -139,6 +199,18 @@ public final class FgTeraboxClient {
         if(low.endsWith(".pdf"))return "application/pdf";
         if(low.endsWith(".mp4"))return "video/mp4";
         if(low.endsWith(".webm"))return "video/webm";
+        if(low.endsWith(".mkv"))return "video/x-matroska";
+        if(low.endsWith(".mov"))return "video/quicktime";
+        if(low.endsWith(".m4v"))return "video/mp4";
+        if(low.endsWith(".mp3"))return "audio/mpeg";
+        if(low.endsWith(".flac"))return "audio/flac";
+        if(low.endsWith(".wav"))return "audio/wav";
+        if(low.endsWith(".m4a"))return "audio/mp4";
+        if(low.endsWith(".ogg")||low.endsWith(".opus"))return "audio/ogg";
+        if(low.endsWith(".glb"))return "model/gltf-binary";
+        if(low.endsWith(".gltf"))return "model/gltf+json";
+        if(low.endsWith(".obj"))return "model/obj";
+        if(low.endsWith(".stl"))return "model/stl";
         if(low.endsWith(".epub"))return "application/epub+zip";
         if(low.endsWith(".cbz"))return "application/vnd.comicbook+zip";
         if(low.endsWith(".docx"))return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";

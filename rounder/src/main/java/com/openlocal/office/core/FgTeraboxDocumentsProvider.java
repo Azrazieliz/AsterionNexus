@@ -118,6 +118,28 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
             android.util.Base64.NO_PADDING);
         return DocumentsContract.buildDocumentUri(AUTHORITY,"tb2:"+encoded+"."+size);
     }
+    /** Scoped file IDs never reinterpret a same-named path in another account. */
+    public static Uri uriForAccount(String scope,String path,long size){
+        if(scope==null||!scope.matches("[0-9a-f-]{36}")||path==null||!path.startsWith("/")||size<0)
+            throw new IllegalArgumentException("Invalid scoped document");
+        String encoded=android.util.Base64.encodeToString(path.getBytes(StandardCharsets.UTF_8),
+            android.util.Base64.URL_SAFE|android.util.Base64.NO_WRAP|android.util.Base64.NO_PADDING);
+        return DocumentsContract.buildDocumentUri(AUTHORITY,"tb3:"+scope+":"+encoded+"."+size);
+    }
+    private static String scopeOf(String documentId)throws IOException{
+        if(documentId==null||!documentId.startsWith("tb3:"))return null;
+        int split=documentId.indexOf(':',4);
+        if(split<0)throw new IOException("Invalid scoped document");
+        return documentId.substring(4,split);
+    }
+    public static FgTeraboxClient clientForUri(Context context,Uri uri)throws IOException{
+        String scope=scopeOf(DocumentsContract.getDocumentId(uri));
+        return scope==null?new FgTeraboxClient(context):FgTeraboxClient.forScope(context,scope);
+    }
+    private FgTeraboxClient clientForDocument(String documentId)throws IOException{
+        String scope=scopeOf(documentId);
+        return scope==null?client:FgTeraboxClient.forScope(getContext(),scope);
+    }
     private static boolean isContinuation(String documentId){
         return documentId!=null&&documentId.startsWith("tbmore:");
     }
@@ -153,11 +175,13 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
             }catch(IllegalArgumentException ex){
                 throw new IOException("Invalid continuation folder",ex);
             }
-        }else if(docId.startsWith("tb2:")){
+        }else if(docId.startsWith("tb2:")||docId.startsWith("tb3:")){
+            int start=docId.startsWith("tb3:")?docId.indexOf(':',4)+1:4;
+            if(start<4)throw new IOException("Malformed scoped document");
             int split=docId.lastIndexOf('.');
             if(split<=4)throw new IOException("Malformed TeraBox document ID");
             try{
-                p=new String(android.util.Base64.decode(docId.substring(4,split),
+                p=new String(android.util.Base64.decode(docId.substring(start,split),
                     android.util.Base64.URL_SAFE|android.util.Base64.NO_WRAP),
                     java.nio.charset.StandardCharsets.UTF_8);
                 long size=Long.parseLong(docId.substring(split+1));
@@ -182,7 +206,7 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
         catch(Exception ignored){return -1;}
     }
     private static long hintedLength(String docId){
-        if(docId==null||!docId.startsWith("tb2:"))return -1;
+        if(docId==null||!(docId.startsWith("tb2:")||docId.startsWith("tb3:")))return -1;
         try{return Long.parseLong(docId.substring(docId.lastIndexOf('.')+1));}
         catch(Exception ignored){return -1;}
     }
@@ -199,7 +223,8 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
             String cloud=path(documentId);
             if(!FgTeraboxClient.image(cloud))
                 throw new IOException("Not an image with a cloud thumbnail");
-            try(java.io.InputStream source=client.openThumbnail(cloud)){
+            FgTeraboxClient selected=clientForDocument(documentId);
+            try(java.io.InputStream source=selected.openThumbnail(cloud)){
                 if(!(source instanceof java.io.FileInputStream))
                     throw new IOException("Thumbnail was not file backed");
                 ParcelFileDescriptor fd=ParcelFileDescriptor.dup(
@@ -270,6 +295,16 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
         MatrixCursor rows = new MatrixCursor(projection == null ? DOC_COLUMNS : projection);
         try {
             String p = path(documentId);
+            if(scopeOf(documentId)!=null){
+                clientForDocument(documentId);
+                MatrixCursor.RowBuilder row=rows.newRow();
+                add(row,rows,DocumentsContract.Document.COLUMN_DOCUMENT_ID,documentId);
+                add(row,rows,DocumentsContract.Document.COLUMN_DISPLAY_NAME,p.substring(p.lastIndexOf('/')+1));
+                add(row,rows,DocumentsContract.Document.COLUMN_MIME_TYPE,FgTeraboxClient.mime(p));
+                add(row,rows,DocumentsContract.Document.COLUMN_SIZE,hintedLength(documentId));
+                add(row,rows,DocumentsContract.Document.COLUMN_FLAGS,FgTeraboxClient.image(p)?DocumentsContract.Document.FLAG_SUPPORTS_THUMBNAIL:0);
+                return rows;
+            }
             if(isContinuation(documentId)){
                 addContinuation(rows,p,firstPage(documentId));
                 return rows;
@@ -544,9 +579,12 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
         try {
             if(isContinuation(documentId))throw new IOException("Cannot open a pagination folder as a file");
             String cloudPath = path(documentId);
+            final FgTeraboxClient selected=clientForDocument(documentId);
+            final String openedScope=selected.metadataScope();
+            selected.requireScope(openedScope);
             long size=hintedLength(documentId);
             if(size<0){
-                JSONObject details=client.fileDetails(cloudPath);
+                JSONObject details=selected.fileDetails(cloudPath);
                 if(details.optInt("isdir",0)!=0)throw new IOException("Cannot open a cloud folder");
                 size=details.optLong("size",-1);
             }
@@ -561,6 +599,7 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
                     @Override public synchronized int onRead(long offset, int request, byte[] data)
                             throws android.system.ErrnoException {
                         try {
+                            selected.requireScope(openedScope);
                             if (signal != null && signal.isCanceled()) throw new IOException("Read cancelled");
                             if (request == 0 || offset >= fileSize) return 0;
                             if (offset < 0) throw new IOException("Negative file offset");
@@ -577,7 +616,8 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
                                     long blockSize=cloudPath.toLowerCase(java.util.Locale.ROOT)
                                         .matches(".*\\.(zip|cbz|epub)$")?2L*1024*1024:512L*1024;
                                     int fetch = (int)Math.min(blockSize, fileSize - position);
-                                    block = client.readRange(cloudPath, position, fetch);
+                                    block = selected.readRange(cloudPath, position, fetch);
+                                    selected.requireScope(openedScope);
                                     if (block.length == 0) throw new IOException("Unexpected end of cloud file");
                                 }
                                 int index = (int)(position - blockOffset);
@@ -585,6 +625,7 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
                                 System.arraycopy(block, index, data, done, count);
                                 done += count;
                             }
+                            selected.requireScope(openedScope);
                             return done;
                         } catch (Exception ex) {
                             android.util.Log.w("FG_TERA_PROVIDER", "Range read unavailable: " + ex.getClass().getSimpleName());
