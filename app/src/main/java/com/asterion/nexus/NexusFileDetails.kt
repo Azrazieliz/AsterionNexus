@@ -120,6 +120,12 @@ object NexusFileDetails {
                 text="Media inspection"
                 setOnClickListener{NexusMediaActions.inspect(activity,uri)}
             })
+            if(type.startsWith("video/")||type.startsWith("audio/")){
+                body.addView(android.widget.Button(activity).apply{
+                    text="Extract audio track"
+                    setOnClickListener{NexusMediaActions.audio(activity,uri)}
+                })
+            }
             if(type.startsWith("image/")||type.startsWith("video/")){
                 body.addView(android.widget.Button(activity).apply{
                     text=if(type.startsWith("video/"))"Extract video frame" else "Resize or convert"
