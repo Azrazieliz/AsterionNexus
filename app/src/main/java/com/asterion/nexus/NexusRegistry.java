@@ -160,6 +160,34 @@ public final class NexusRegistry {
         }finally{helper.close();}
         return rows;
     }
+
+    public static final class BookSeedPage {
+        public final List<Item> items;
+        public final long cursor;
+        public final boolean more;
+        BookSeedPage(List<Item> items,long cursor,boolean more){this.items=items;this.cursor=cursor;this.more=more;}
+    }
+    /** Capture the high-water mark before scanning so concurrent imports
+     * cannot be skipped. Historical books are seeded without rewriting data. */
+    public BookSeedPage bookCandidatesAfter(long after,int limit){
+        if(after<0||limit<1||limit>200)throw new IllegalArgumentException("Invalid seed cursor");
+        ArrayList<Item> items=new ArrayList<>();
+        Database helper=new Database(app);
+        try{
+            SQLiteDatabase db=helper.getReadableDatabase();
+            long ceiling=after;
+            try(Cursor c=db.rawQuery("SELECT COALESCE(MAX(id),0) FROM locations",null)){
+                if(c.moveToFirst())ceiling=Math.max(after,c.getLong(0));
+            }
+            long cursor=after;
+            try(Cursor c=db.rawQuery("SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.id>? AND l.id<=? AND o.mime IN ('application/pdf','text/plain','application/epub+zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.comicbook+zip','application/x-cbz') ORDER BY l.id LIMIT ?",
+                new String[]{Long.toString(after),Long.toString(ceiling),Integer.toString(limit)})){
+                while(c.moveToNext()){Item row=item(c);items.add(row);cursor=row.locationId;}
+            }
+            boolean more=items.size()==limit&&cursor<ceiling;
+            return new BookSeedPage(items,more?cursor:ceiling,more);
+        }finally{helper.close();}
+    }
     public Item find(String sha){
         if(sha==null||!sha.matches("[0-9a-f]{64}"))return null;
         Database helper=new Database(app);
