@@ -240,6 +240,9 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <!-- Boot restoration is a deferred JobService. No provider sync or
              Python initialization may occupy the BOOT_COMPLETED broadcast. -->
+        <service android:name="com.asterion.nexus.NexusTranslationJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"/>
         <service android:name="com.asterion.nexus.NexusBookIndexJob"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
