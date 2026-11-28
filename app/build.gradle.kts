@@ -38,6 +38,7 @@ android {
 
     defaultConfig {
         applicationId = "com.asterion.nexus"
+        externalNativeBuild { cmake { targets += listOf("asterioncwd", "nexus_sentencepiece").filter { it == "asterioncwd" || file("src/main/cpp/third_party/sentencepiece/CMakeLists.txt").isFile } } }
         minSdk = 30
         targetSdk = 35
         versionCode = 10000
