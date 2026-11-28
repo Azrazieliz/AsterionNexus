@@ -15,7 +15,7 @@ public final class NexusRegistry {
     private static final String DB_NAME="nexus_registry_v1.sqlite";
 
     private static final class Database extends SQLiteOpenHelper {
-        Database(Context app){super(app,DB_NAME,null,4);setWriteAheadLoggingEnabled(true);}
+        Database(Context app){super(app,DB_NAME,null,5);setWriteAheadLoggingEnabled(true);}
         @Override public void onConfigure(SQLiteDatabase db){
             super.onConfigure(db);db.setForeignKeyConstraintsEnabled(true);
         }
@@ -25,7 +25,7 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX idx_nexus_library_names ON locations(display_name COLLATE NOCASE)");
             db.execSQL("CREATE INDEX idx_nexus_library_sources ON locations(source_kind,account_key)");
             db.execSQL("CREATE TABLE jobs(job_key TEXT PRIMARY KEY,stage TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,error_code TEXT)");
-            createFileRatings(db);createRemoteLocations(db);createCollections(db);
+            createFileRatings(db);createRemoteLocations(db);createCollections(db);createEvictions(db);
         }
         private void createFileRatings(SQLiteDatabase db){
             db.execSQL("CREATE TABLE IF NOT EXISTS file_ratings(sha256 TEXT PRIMARY KEY CHECK(length(sha256)=64),score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),updated_at INTEGER NOT NULL)");
@@ -46,11 +46,15 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_nexus_rating_score ON file_ratings(score,sha256)");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_nexus_locations_sha ON locations(sha256,id)");
         }
+        private void createEvictions(SQLiteDatabase db){
+            db.execSQL("CREATE TABLE IF NOT EXISTS local_evictions(sha256 TEXT PRIMARY KEY REFERENCES originals(sha256),account TEXT NOT NULL,fs_id INTEGER NOT NULL,remote_md5 TEXT NOT NULL,bytes INTEGER NOT NULL,verified_at INTEGER NOT NULL,state TEXT NOT NULL CHECK(state IN ('PREPARED','EVICTED')))");
+        }
         @Override public void onUpgrade(SQLiteDatabase db,int old,int current){
-            if(old<1||current!=4||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
+            if(old<1||current!=5||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
             if(old==1)createFileRatings(db);
             if(old<3)createRemoteLocations(db);
-            createCollections(db);
+            if(old<4)createCollections(db);
+            createEvictions(db);
         }
     }
     public static final class Item {
@@ -112,6 +116,7 @@ public final class NexusRegistry {
                 location.put("display_name",label(displayName,bytes.sha256));
                 location.put("created_at",now);
                 db.insertWithOnConflict("locations",null,location,SQLiteDatabase.CONFLICT_IGNORE);
+                db.delete("local_evictions","sha256=?",new String[]{bytes.sha256});
                 db.setTransactionSuccessful();
             }finally{db.endTransaction();}
             try(Cursor c=db.rawQuery("SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.sha256=? AND l.source_kind=? AND l.account_key=? AND l.origin_key=? LIMIT 1",new String[]{bytes.sha256,kind,account,origin})){
@@ -204,11 +209,12 @@ public final class NexusRegistry {
     }
     public void bindRemote(Item item,String account,long fsId,String path,long bytes,String md5,boolean pinned)throws IOException{
         remoteIdentity(account,fsId,path,bytes,md5);
-        if(item==null||item.length!=bytes||!verifyOriginal(item))throw new IOException("Verified content required for remote binding");
+        if(item==null||item.length!=bytes)throw new IOException("Verified content required for remote binding");
         Database helper=new Database(app);
         SQLiteDatabase db=helper.getWritableDatabase();
         db.beginTransaction();
         try{
+            if(!verifyOriginal(item))throw new IOException("Verified content required for remote binding");
             try(Cursor c=db.rawQuery("SELECT sha256,bytes,remote_md5,pinned FROM remote_locations WHERE account=? AND fs_id=?",
                 new String[]{account,Long.toString(fsId)})){
                 if(c.moveToFirst()){
@@ -272,6 +278,75 @@ public final class NexusRegistry {
         return rows;
     }
 
+    public boolean localPresent(Item item){
+        if(item==null||!item.sha256.matches("[0-9a-f]{64}"))return false;
+        return java.nio.file.Files.exists(new File(new File(privateRoot,"originals"),item.sha256).toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS);
+    }
+    private boolean eligibleForEviction(SQLiteDatabase db,String sha){
+        try(Cursor c=db.rawQuery("SELECT 1 FROM locations WHERE sha256=? AND source_kind NOT IN ('downloader-direct','nexus-comic','nexus-novel','nexus-assembly') LIMIT 1",new String[]{sha})){
+            if(c.moveToFirst())return false;
+        }
+        try(Cursor c=db.rawQuery("SELECT 1 FROM remote_locations WHERE sha256=? AND pinned=1 LIMIT 1",new String[]{sha})){
+            return !c.moveToFirst();
+        }
+    }
+    public List<RemoteLocation> cleanupCandidates(String sha){
+        requireRatingIdentity(sha);
+        Database helper=new Database(app);ArrayList<RemoteLocation> rows=new ArrayList<>();
+        try{
+            SQLiteDatabase db=helper.getReadableDatabase();
+            if(!eligibleForEviction(db,sha))return rows;
+            try(Cursor c=db.rawQuery("SELECT account,fs_id,path,bytes,remote_md5,sha256,pinned,verified_at FROM remote_locations WHERE sha256=? AND pinned=0 AND length(remote_md5)=32 ORDER BY verified_at DESC LIMIT 20",new String[]{sha})){
+                while(c.moveToNext())rows.add(new RemoteLocation(c));
+            }
+        }finally{helper.close();}
+        return rows;
+    }
+    public RemoteLocation evictedLocation(Item item){
+        if(item==null||localPresent(item))return null;
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery(
+            "SELECT r.account,r.fs_id,r.path,r.bytes,r.remote_md5,r.sha256,r.pinned,r.verified_at FROM local_evictions e JOIN remote_locations r ON r.account=e.account AND r.fs_id=e.fs_id AND r.sha256=e.sha256 AND r.bytes=e.bytes AND r.remote_md5=e.remote_md5 WHERE e.sha256=? AND e.state IN ('PREPARED','EVICTED')",
+            new String[]{item.sha256})){
+            return c.moveToFirst()?new RemoteLocation(c):null;
+        }finally{helper.close();}
+    }
+    private void checkEviction(SQLiteDatabase db,Item item,RemoteLocation remote)throws IOException{
+        if(!eligibleForEviction(db,item.sha256))throw new IOException("Pinned or non-acquisition source must be retained");
+        try(Cursor c=db.rawQuery("SELECT bytes,remote_md5,path FROM remote_locations WHERE account=? AND fs_id=? AND sha256=? AND pinned=0",new String[]{remote.account,Long.toString(remote.fsId),item.sha256})){
+            if(!c.moveToFirst()||c.getLong(0)!=item.length||!remote.md5.equals(c.getString(1))||!remote.path.equals(c.getString(2)))
+                throw new IOException("Remote binding changed");
+        }
+    }
+    /** The caller independently read back the complete remote SHA-256.
+     * Prepare is committed before unlink so crash recovery can reopen the
+     * known surviving remote identity. No physical donor file is touched. */
+    void evictAfterReadback(Item item,RemoteLocation remote,long verifiedAt)throws IOException{
+        if(item==null||remote==null||!item.sha256.equals(remote.sha256)||remote.length!=item.length||
+            !remote.md5.matches("[0-9a-f]{32}")||verifiedAt<=0||Math.abs(System.currentTimeMillis()-verifiedAt)>300000L)
+            throw new IOException("Fresh complete cloud readback required");
+        Database helper=new Database(app);
+        try{
+            SQLiteDatabase db=helper.getWritableDatabase();
+            db.beginTransaction();
+            try{
+                checkEviction(db,item,remote);
+                if(!verifyOriginal(item))throw new IOException("Local bytes failed verification");
+                ContentValues row=new ContentValues();
+                row.put("sha256",item.sha256);row.put("account",remote.account);row.put("fs_id",remote.fsId);
+                row.put("remote_md5",remote.md5);row.put("bytes",item.length);row.put("verified_at",verifiedAt);row.put("state","PREPARED");
+                if(db.insertWithOnConflict("local_evictions",null,row,SQLiteDatabase.CONFLICT_REPLACE)<0)throw new IOException("Cleanup journal failed");
+                db.setTransactionSuccessful();
+            }finally{db.endTransaction();}
+            db.beginTransaction();
+            try{
+                checkEviction(db,item,remote);
+                if(!NexusOriginalStore.evictVerified(privateRoot,item.length,item.sha256))throw new IOException("Local original disappeared");
+                db.execSQL("UPDATE local_evictions SET state='EVICTED' WHERE sha256=? AND account=? AND fs_id=?",new Object[]{item.sha256,remote.account,remote.fsId});
+                db.setTransactionSuccessful();
+            }finally{db.endTransaction();}
+        }finally{helper.close();}
+    }
     public void addCollectionMember(String collection,String sha){
         requireRatingIdentity(sha);
         if(collection==null||collection.isBlank()||collection.length()>256)throw new IllegalArgumentException("Invalid collection");
@@ -422,7 +497,7 @@ public final class NexusRegistry {
         if(item==null||!item.sha256.matches("[0-9a-f]{64}"))
             throw new IOException("Invalid library identity");
         File file=new File(new File(privateRoot,"originals"),item.sha256);
-        if(!file.isFile()||file.length()!=item.length)
+        if(!java.nio.file.Files.isRegularFile(file.toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS)||file.length()!=item.length)
             throw new IOException("Verified original unavailable or modified");
         return file;
     }
@@ -434,7 +509,10 @@ public final class NexusRegistry {
         if(item==null)throw new IOException("Unknown verified original");
         Item recorded=find(item.sha256);
         if(recorded==null||recorded.length!=item.length)throw new IOException("Original identity no longer recorded");
-        return NexusOriginalStore.recoverExact(replacement,privateRoot,recorded.length,recorded.sha256);
+        NexusOriginalStore.Recovery result=NexusOriginalStore.recoverExact(replacement,privateRoot,recorded.length,recorded.sha256);
+        Database helper=new Database(app);
+        try{helper.getWritableDatabase().delete("local_evictions","sha256=?",new String[]{recorded.sha256});}finally{helper.close();}
+        return result;
     }
     public void job(String sourceIdentifier,String stage,long received,String errorCode){
         if(!Set.of("QUEUED","RECEIVING","BYTES_COMPLETE","VERIFIED","INDEXED","FAILED")
