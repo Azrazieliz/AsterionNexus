@@ -123,6 +123,9 @@ public final class FgTeraboxDocumentsProvider extends DocumentsProvider {
         if(size<0)throw new IllegalArgumentException("Invalid file length");
         return DocumentsContract.buildDocumentUri(AUTHORITY,scopedId(scope,path,size));
     }
+    public static Uri folderUriForAccount(String scope,String path){
+        return DocumentsContract.buildDocumentUri(AUTHORITY,scopedId(scope,path,-1L));
+    }
     private static String scopedId(String scope,String path,long size){
         if(scope==null||!scope.matches("[0-9a-f-]{36}")||path==null||!path.startsWith("/")||size< -1)
             throw new IllegalArgumentException("Invalid scoped document");
