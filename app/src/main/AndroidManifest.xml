@@ -15,6 +15,10 @@
     <!-- Package visibility is needed to validate the installed peer certificate
          on Android 11+. Unknown apps still fail the UID/approval check. -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
         <package android:name="com.azrael.pixivdumpsync"/>
         <package android:name="com.asterion.control"/>
         <package android:name="com.asterion.art"/>
