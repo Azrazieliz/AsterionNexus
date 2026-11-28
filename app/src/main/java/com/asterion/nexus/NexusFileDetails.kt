@@ -277,7 +277,10 @@ object NexusFileDetails {
                 saving=true;save.isEnabled=false;neutral.isEnabled=false;slider.isEnabled=false
                 status.text="Saving rating…"
                 worker.execute{
-                    val result=runCatching{write(activity,identity,value)}
+                    val result=runCatching{
+                        check(identify(activity,uri,type)==identity){"File identity changed; reopen details before saving"}
+                        write(activity,identity,value)
+                    }
                     activity.runOnUiThread{
                         if(!dialog.isShowing||activity.isFinishing)return@runOnUiThread
                         saving=false;slider.isEnabled=true;neutral.isEnabled=true
