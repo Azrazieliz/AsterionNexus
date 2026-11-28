@@ -146,6 +146,8 @@ android {
 
     buildFeatures { compose = true }
     packaging { jniLibs { useLegacyPackaging = true } }
+    // These are already bundled binary models or archives; avoid duplicate deflation and its large heap allocations.
+    androidResources { noCompress += listOf("zip", "onnx", "spm", "whl") }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -57,8 +57,13 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "ndk;26.3.11579264" "cmake;3.22.1"
           bash scripts/restore_downloader_wheel.sh
+      - name: Verify native regressions before release packaging
+        run: gradle --no-daemon --max-workers=2 :app:verifyFrozenVideoProviders :fusion:testDebugUnitTest :app:testDebugUnitTest --stacktrace
       - name: Build full release payload for private owner signing
-        run: gradle --no-daemon --max-workers=2 :app:verifyFrozenVideoProviders :fusion:testDebugUnitTest :app:testDebugUnitTest :app:assembleRelease --stacktrace
+        run: |
+          free -h
+          df -h .
+          gradle --no-daemon --max-workers=1 -Dorg.gradle.jvmargs="-Xmx5g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process :app:assembleRelease --stacktrace
       - name: Verify actual model and native components in release payload
         run: |
           python - <<'PY'

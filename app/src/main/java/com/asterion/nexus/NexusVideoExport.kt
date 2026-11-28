@@ -106,7 +106,7 @@ object NexusVideoExport {
             save(receipt,spec.put("state","VERIFIED"))
             registry.job(identity,"VERIFIED",output.length(),null)
             val item=output.inputStream().use{registry.ingest(it,title.trim().removeSuffix(".mp4")+".mp4","video/mp4","nexus-video-edit","device",identity,output.length(),null)}
-            clips.map{it.sha}.distinct().forEach{registry.linkDerivative(item.sha256,it,"video","timeline-export")}
+            clips.map{it.sha}.distinct().forEach{registry.linkDerivative(item.sha256,it,if(inputs.size>1)"assembled_from" else "derived_from","timeline-export")}
             save(receipt,spec.put("state","INDEXED").put("output_sha256",item.sha256).put("validation","track, duration and representative decode"))
             registry.job(identity,"INDEXED",item.length,null)
             return item

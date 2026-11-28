@@ -83,6 +83,7 @@ jobs:
             adb logcat -b crash -d -v threadtime > nexus-android-crashes.txt
             adb logcat -d -v threadtime > nexus-android-logcat.txt
             set -e
+            cat nexus-android-instrumentation.txt
             grep -Fx '0' nexus-android-exit.txt
             if grep -Fq 'Process crashed' nexus-android-instrumentation.txt; then cat nexus-android-crashes.txt; exit 1; fi
             grep -F 'AST_SIM: NATIVE_OK' nexus-android-instrumentation.txt

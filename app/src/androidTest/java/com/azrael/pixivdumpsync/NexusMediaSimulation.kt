@@ -33,6 +33,7 @@ internal object NexusMediaSimulation{
             val item=NexusVideoExport.export(context,"CI media montage",clips,profile,AtomicBoolean(false)){ }
             check(registry.verifyOriginal(item)&&registry.verifyOriginal(a)&&registry.verifyOriginal(b))
             check(registry.search("CI media montage",10).any{it.sha256==item.sha256})
+            check(registry.related(item.sha256,10).map{it.sha256}.toSet()==setOf(a.sha256,b.sha256)){"Export provenance missing"}
             val again=NexusVideoExport.export(context,"CI media montage",clips,profile,AtomicBoolean(false)){ }
             check(again.sha256==item.sha256){"Repeated export changed the output identity"}
             status("MEDIA_EXPORT_OK "+item.sha256+"; two real decoded and transcoded sources")
