@@ -75,6 +75,6 @@ object NexusCloudRetention{
     fun restore(context:Context,item:NexusRegistry.Item):NexusRegistry.Item{
         val remote=NexusRegistry(context).evictedLocation(item)?:error("No verified cloud-only location")
         requireRemote(context,remote)
-        return NexusCloudOperations.pin(context,remote.account,remote.path,item.displayName,item.mime,item.length)
+        return NexusCloudOperations.pin(context,remote.account,remote.path,item.displayName,item.mime,item.length).also{check(it.sha256==item.sha256){"Restored identity mismatch"}}
     }
 }
