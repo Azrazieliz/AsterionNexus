@@ -140,6 +140,7 @@ class NexusPremiumHomeActivity : ComponentActivity() {
             if(com.ailm.android.startup.AppBootstrap.isRuntimeInitialized()){
                 kotlinx.coroutines.delay(8000)
                 com.ailm.android.runtime.StandaloneRuntime.beginDeferredBundledModelSetup()
+                withContext(Dispatchers.IO){NexusBookIndex(applicationContext).retryBlocked()}
             }
         }
     }
