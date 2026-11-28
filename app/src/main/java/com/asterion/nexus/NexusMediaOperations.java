@@ -98,12 +98,15 @@ public final class NexusMediaOperations {
                     try{
                         long duration=row.optLong("duration_us",-1);
                         JSONArray probes=new JSONArray();
+                        ByteBuffer packet=ByteBuffer.allocateDirect(65536);
                         for(long time:new long[]{0,Math.max(0,duration/2),Math.max(0,duration-1000000)}){
                             checkStop();ex.seekTo(time,MediaExtractor.SEEK_TO_CLOSEST_SYNC);
                             long size=ex.getSampleSize();
                             JSONObject probe=new JSONObject().put("requested_us",time);
                             if(size>0&&size<=MAX_SAMPLE){
-                                int read=ex.readSampleData(ByteBuffer.allocateDirect((int)size),0);
+                                if(packet.capacity()<size)packet=ByteBuffer.allocateDirect((int)size);
+                                packet.clear();
+                                int read=ex.readSampleData(packet,0);
                                 probe.put("packet_read",read==size).put("sample_bytes",size)
                                     .put("sample_time_us",ex.getSampleTime())
                                     .put("sync",(ex.getSampleFlags()&MediaExtractor.SAMPLE_FLAG_SYNC)!=0)
