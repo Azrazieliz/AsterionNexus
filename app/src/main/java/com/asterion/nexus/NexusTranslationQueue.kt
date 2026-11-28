@@ -9,7 +9,6 @@ import android.app.job.JobScheduler
 import android.content.ComponentName
 import android.util.AtomicFile
 import org.jsoup.Jsoup
-import org.jsoup.nodes.TextNode
 import org.jsoup.parser.Parser
 import java.io.*
 import java.nio.charset.CodingErrorAction
