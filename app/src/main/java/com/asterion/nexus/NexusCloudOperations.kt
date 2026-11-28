@@ -196,6 +196,7 @@ object NexusCloudOperations {
             val after=inspect(client,account,location)
             check(remote.same(after)&&(after.md5.isEmpty()||downloadedMd5==after.md5)){"Remote changed during pin"}
             val digest=sha.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
+            check(existing==null||existing.sha256==digest){"Previously verified content identity changed"}
             registry.job(job,"VERIFIED",count,null)
             val item=staged.inputStream().use{registry.ingest(it,title,mime,"terabox",account,
                 "terabox:"+account+":"+remote.fsId,count,digest)}
