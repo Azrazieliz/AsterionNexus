@@ -130,6 +130,23 @@ object NexusFileDetails {
             })
         }
         if(NexusArchiveOperation.available(activity,uri)&&NexusBookIndex.supported(type)){
+            body.addView(android.widget.Button(activity).apply{
+                text="Offline translation"
+                setOnClickListener{
+                    worker.execute{
+                        val sha=uri.lastPathSegment.orEmpty()
+                        val queue=NexusTranslationQueue(activity)
+                        val state=runCatching{queue.status(sha)}.getOrDefault("Translation status unavailable")
+                        activity.runOnUiThread{
+                            if(!activity.isFinishing&&!activity.isDestroyed)AlertDialog.Builder(activity)
+                                .setTitle("Private offline translation").setMessage(state)
+                                .setPositiveButton("Close",null)
+                                .setNeutralButton("Retry / resume"){_,_->worker.execute{queue.retry(sha)}}
+                                .setNegativeButton("Pause"){_,_->worker.execute{queue.pause(sha)}}.show()
+                        }
+                    }
+                }
+            })
             val indexButton=android.widget.Button(activity).apply{text="Book index"}
             body.addView(indexButton)
             indexButton.setOnClickListener{
