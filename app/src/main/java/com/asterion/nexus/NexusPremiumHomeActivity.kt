@@ -283,7 +283,7 @@ private fun NexusHome(
     val destinations=listOf("Library","Organising","Downloading")
     val contexts=mapOf(
         "Library" to listOf("TeraBox","Gallery","Books","Videos","Collections","Assets/Files"),
-        "Organising" to listOf("Activity","Taxonomy","Review"),
+        "Organising" to listOf("Activity","Taxonomy","Review","Asterion Bridges"),
         "Downloading" to listOf("Modules","Search","Suggestions","Transfers")
     )
     var libraryContext by rememberSaveable { mutableStateOf("TeraBox") }
@@ -292,7 +292,7 @@ private fun NexusHome(
     var showMore by remember { mutableStateOf(false) }
     var cloudMedia by rememberSaveable { mutableStateOf(true) }
     val destination=when(section){
-        "Organize","Intelligence","Activity","Taxonomy","Review"->"Organising"
+        "Organize","Intelligence","Activity","Taxonomy","Review","Asterion Bridges"->"Organising"
         "Modules","Search","Suggestions","Transfers"->"Downloading"
         else->"Library"
     }
