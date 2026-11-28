@@ -702,9 +702,10 @@ object StandaloneRuntime {
         }
 
         val response = localAiManager.semanticSearch(semanticPayload)
+        if (response["ok"] != true) return emptyList()
         val matches = extractSemanticMatches(response)
         if (matches.isEmpty()) {
-            return candidateRows.take(topK)
+            return emptyList()
         }
 
         val rowsById = candidateRows.mapNotNull { row ->
@@ -715,16 +716,15 @@ object StandaloneRuntime {
         val ranked = mutableListOf<Map<String, Any>>()
         matches.forEachIndexed { index, match ->
             val imageId = match["image_id"].toIntOrNullValue() ?: return@forEachIndexed
-            val source = rowsById[imageId] ?: repository.searchByImageId(imageId) ?: return@forEachIndexed
+            val source = rowsById[imageId] ?: return@forEachIndexed
             val enriched = source.toMutableMap()
-            match["score"].toDoubleOrNullValue()?.let { score ->
-                enriched["semantic_score"] = score
-            }
+            val score = match["score"].toDoubleOrNullValue()?.takeIf(Double::isFinite) ?: return@forEachIndexed
+            enriched["semantic_score"] = score
             enriched["semantic_rank"] = index + 1
             ranked += enriched
         }
 
-        return if (ranked.isEmpty()) candidateRows.take(topK) else ranked
+        return ranked.distinctBy { it["image_id"] }.take(topK)
     }
 
     fun advancedSearch(payload: Map<String, Any>): Map<String, Any> {
