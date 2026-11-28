@@ -35,6 +35,48 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 object StandaloneRuntime {
+    /** Optional host implementation for scoped cloud artwork. The same
+     * Core workflow and path policy remain authoritative. Null means the
+     * host does not own this URI. A non-null refusal never falls back to SAF. */
+    data class NexusCloudArtworkRequest(val imageId:Int,val sourceUri:String,val sourceFolder:String,val sourceRelative:String,val bytes:Long,val sha:String,val folders:List<String>,val prefix:String,val extension:String)
+    @Volatile private var nexusCloudArtworkMover: ((NexusCloudArtworkRequest)->Map<String,Any>?)? = null
+
+    fun installNexusCloudArtworkMover(mover:(NexusCloudArtworkRequest)->Map<String,Any>?) {
+        nexusCloudArtworkMover=mover
+    }
+
+    private fun hostArtworkMove(record:LocalRepository.ImageRecord,folders:List<String>,prefix:String,extension:String):Map<String,Any>? {
+        val mover=nexusCloudArtworkMover?:return null
+        if(Uri.parse(record.uri).authority!="com.asterion.nexus.terabox.documents")return null
+        val size=record.sizeBytes?:0L
+        val sha=database.readableDatabase.rawQuery(
+            "SELECT sha256 FROM fusion_image_fingerprints WHERE image_id=? AND source_size_bytes=?",
+            arrayOf(record.imageId.toString(),size.toString())
+        ).use{if(it.moveToFirst())it.getString(0).orEmpty() else ""}
+        if(size<=0||!sha.matches(Regex("[a-f0-9]{64}")))return mapOf("ok" to false,"status" to "cloud_identity_missing","message" to "Verified source fingerprint required.")
+        return mover(NexusCloudArtworkRequest(record.imageId,record.uri,record.folderUri,record.relativePath,size,sha,folders.map(::safeAutomationPathSegment),prefix,extension))
+            ?:mapOf("ok" to false,"status" to "cloud_unavailable","message" to "Scoped cloud routing unavailable.")
+    }
+
+    /** Idempotent exact-source catalog reconciliation, including rollback.
+     * Retain ratings, character evidence, fingerprints and all other IDs. */
+    fun nexusCommitCloudArtworkPath(imageId:Int,oldUri:String,newUri:String,folderUri:String,folderName:String,filename:String,relativePath:String,sha:String,bytes:Long):Boolean{
+        ensureInitialized()
+        val db=database.writableDatabase
+        db.beginTransaction()
+        try{
+            val row=repository.getImageRecordsByIds(listOf(imageId)).firstOrNull()?:return false
+            if(row.sizeBytes!=bytes||row.uri !in setOf(oldUri,newUri))return false
+            val fingerprint=db.rawQuery("SELECT 1 FROM fusion_image_fingerprints WHERE image_id=? AND sha256=? AND source_size_bytes=?",
+                arrayOf(imageId.toString(),sha,bytes.toString())).use{it.moveToFirst()}
+            if(!fingerprint)return false
+            val changed=row.uri==newUri||repository.updateImagePathAndClearThumbnails(imageId,newUri,filename,folderUri,folderUri,folderName,relativePath,row.modifiedAtMs,oldUri)
+            if(!changed)return false
+            db.setTransactionSuccessful()
+            return true
+        }finally{db.endTransaction()}
+    }
+
     private const val RUNTIME_TRACE_TAG = "AilmTraceRuntime"
     private const val AUTOMATION_PREFS = "ailm_automation"
     private const val DIAGNOSTIC_PREFS = "ailm_diagnostic_display"
@@ -2714,6 +2756,9 @@ object StandaloneRuntime {
             "message" to "Resolved character is missing canonical Character Knowledge path data.",
         )
 
+        val cloudPrefix = pathPlan.filenameParts.map(::safeAutomationPathSegment).joinToString(" - ")
+        hostArtworkMove(record,pathPlan.folderSegments,cloudPrefix,extension)?.let { return it }
+
         var targetFolder = root
         val safeFolderSegments = mutableListOf<String>()
         pathPlan.folderSegments.forEach { rawSegment ->
@@ -2791,6 +2836,9 @@ object StandaloneRuntime {
         if (root.isBlank()) {
             return mapOf("ok" to false, "status" to "no_root", "message" to "No writable library root is available.")
         }
+
+        val cloudExtension=record.filename.substringAfterLast('.', "")
+        hostArtworkMove(record,folderSegments,safeAutomationPathSegment(filenamePrefix),cloudExtension)?.let { return it }
 
         var targetFolder = root
         val safeSegments = mutableListOf<String>()
