@@ -25,6 +25,8 @@ object NexusFileDetails {
             val item=registry.find(uri.lastPathSegment)
                 ?:throw IllegalStateException("Verified original unavailable")
             item.sha256
+        }else if(uri.authority==com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY){
+            NexusCloudIdentity.known(activity,uri)
         }else if(uri.authority in setOf("com.android.externalstorage.documents",
                 "com.android.providers.media.documents","media")){
             // Local authorized content only: no whole-cloud-file downloads for ratings.
@@ -44,7 +46,7 @@ object NexusFileDetails {
             }?:throw IllegalStateException("File cannot be read")
             digest.digest().joinToString(""){ "%02x".format(it.toInt() and 255) }
         }else null
-        val core=if(mime.startsWith("image/")){
+        val core=if(mime.startsWith("image/")&&(uri.authority!=com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY||sha!=null)){
             StandaloneRuntime.initialize(activity.applicationContext)
             StandaloneRuntime.nexusArtworkId(uri.toString(),sha)
         }else null
@@ -76,6 +78,7 @@ object NexusFileDetails {
     }
     private fun showInternal(activity:Activity,uri:Uri,mime:String?,title:String?,open:Runnable?){
         val type=mime?:activity.contentResolver.getType(uri)?:"application/octet-stream"
+        lateinit var dialog:AlertDialog
         val body=LinearLayout(activity).apply{
             orientation=LinearLayout.VERTICAL
             val pad=(20*resources.displayMetrics.density).toInt()
@@ -92,6 +95,10 @@ object NexusFileDetails {
             })
         }
         if(uri.authority==com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY){
+            body.addView(android.widget.Button(activity).apply{
+                text="Verify cloud identity"
+                setOnClickListener{NexusCloudActions.verifyIdentity(activity,uri,title?:"File",type){dialog.dismiss();showInternal(activity,uri,type,title,open)}}
+            })
             body.addView(android.widget.Button(activity).apply{
                 text="Pin offline"
                 setOnClickListener{NexusCloudActions.pin(activity,uri,title?: "File",type)}
@@ -259,7 +266,7 @@ object NexusFileDetails {
             .setView(android.widget.ScrollView(activity).apply{addView(body)}).setPositiveButton("Save rating",null)
             .setNegativeButton("Close",null)
             .setNeutralButton(if(open==null)"Clear rating" else "Open file",null)
-        val dialog=builder.create()
+        dialog=builder.create()
         dialog.setOnShowListener{
             val save=dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val neutral=dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
@@ -297,7 +304,7 @@ object NexusFileDetails {
             worker.execute{
                 val result=runCatching{
                     val identity=identify(activity,uri,type)
-                    check(identity.sha!=null||identity.coreId!=null){"Verified stable identity unavailable; open a verified offline original"}
+                    check(identity.sha!=null||identity.coreId!=null){"Verified stable identity unavailable; verify the selected cloud file or open a verified original"}
                     identity to read(activity,identity)
                 }
                 activity.runOnUiThread{
