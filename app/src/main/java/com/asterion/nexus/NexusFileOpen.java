@@ -24,7 +24,7 @@ public final class NexusFileOpen {
         }else if(resolved.equals("application/pdf")||resolved.equals("application/epub+zip")||
             resolved.equals("application/zip")||resolved.equals("text/plain")||
             resolved.equals("application/vnd.comicbook+zip")||NexusRarBook.supported(resolved)||
-            resolved.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")){
+            resolved.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")||NexusSpreadsheet.supported(resolved,title)){
             intent=new Intent(activity,NexusReaderActivity.class);
         }else{
             final String externalType=resolved;
