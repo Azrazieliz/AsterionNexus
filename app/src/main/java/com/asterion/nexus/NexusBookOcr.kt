@@ -10,8 +10,9 @@ import java.io.InputStream
  * No cloud translator, external application or speculative text generation. */
 object NexusBookOcr {
     class EngineUnavailable(message:String):IOException(message)
+    data class Region(val text:String,val x:Double,val y:Double,val width:Double,val height:Double,val confidence:Double)
     data class Result(val text:String,val modelId:String,val modelVersion:String,
-                      val boxesDetected:Int,val linesRecognized:Int)
+                      val boxesDetected:Int,val linesRecognized:Int,val regions:List<Region>,val sourceWidth:Int,val sourceHeight:Int)
     @JvmStatic fun recognize(context:Context,input:InputStream):Result{
         val app=context.applicationContext
         val file=File.createTempFile("nexus-book-ocr-",".page",app.cacheDir)
@@ -57,7 +58,21 @@ object NexusBookOcr {
             val boxes=(result["boxes_detected"] as? Number)?.toInt()
                 ?:throw IOException("OCR detector receipt unavailable")
             if(boxes<0||lines.size>boxes)throw IOException("Inconsistent OCR region receipt")
-            return Result(text,model,version,boxes,lines.size)
+            val width=(result["source_width"] as? Number)?.toInt()?:0
+            val height=(result["source_height"] as? Number)?.toInt()?:0
+            val regions=if(width>0&&height>0)lines.mapNotNull{raw->
+                val line=raw as? Map<*,*>?:return@mapNotNull null
+                val rect=line["bbox"] as? Map<*,*>?:return@mapNotNull null
+                val x=(rect["x"] as? Number)?.toDouble()?:return@mapNotNull null
+                val y=(rect["y"] as? Number)?.toDouble()?:return@mapNotNull null
+                val w=(rect["w"] as? Number)?.toDouble()?:return@mapNotNull null
+                val h=(rect["h"] as? Number)?.toDouble()?:return@mapNotNull null
+                val score=(line["confidence"] as? Number)?.toDouble()?:return@mapNotNull null
+                val value=line["text"] as? String?:return@mapNotNull null
+                if(value.isBlank()||!listOf(x,y,w,h,score).all{it.isFinite()}||x<0||y<0||w<=0||h<=0||x+w>width||y+h>height||score !in 0.0..1.0)return@mapNotNull null
+                Region(value,x/width,y/height,w/width,h/height,score)
+            }else emptyList()
+            return Result(text,model,version,boxes,lines.size,regions,width,height)
         }finally{file.delete()}
     }
 }
