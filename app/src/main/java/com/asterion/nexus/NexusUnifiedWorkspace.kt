@@ -894,6 +894,7 @@ private fun NexusUnifiedCloud(
             Text("Authorized folders",color=C_TEXT,fontSize=15.sp,
                 modifier=Modifier.weight(1f))
             UnifiedButton("Add source"){picker.launch(null)}
+            UnifiedButton("Offline pins"){NexusCloudActions.pins(ctx as Activity)}
         }
         if(showSources&&accounts.isNotEmpty()){
             Text("Download destination",color=C_TEXT,fontSize=13.sp)
@@ -1029,21 +1030,14 @@ private fun NexusUnifiedCloud(
                 TextButton(onClick={
                     selected=null
                     val path=entry.path?:return@TextButton
-                    scope.launch {
-                        status="Saving verified original"
+                    scope.launch{
+                        status="Verifying selected offline pin"
                         runCatching{withContext(Dispatchers.IO){
-                            val source=FgTeraboxClient.forScope(ctx,entry.account)
-                            source.open(path).use{input->
-                                val account=entry.account
-                                source.requireScope(account)
-                                NexusRegistry(ctx).ingest(input,entry.title,entry.mime,
-                                    "terabox",account,"terabox:"+account+":"+path,
-                                    entry.size,null).also{source.requireScope(account)}
-                            }
-                        }}.onSuccess{status="Verified saved: "+it.displayName;onRefresh()}
-                            .onFailure{status="Offline copy failed: "+it.message.orEmpty().take(120)}
+                            NexusCloudOperations.pin(ctx,entry.account,path,entry.title,entry.mime,entry.size)
+                        }}.onSuccess{status="Pinned: "+it.displayName;onRefresh()}
+                            .onFailure{status="Offline pin incomplete: "+it.javaClass.simpleName}
                     }
-                }){Text("Save offline")}
+                }){Text("Pin offline")}
             }
         )
     }
