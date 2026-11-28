@@ -4,6 +4,7 @@ on:
   push:
     branches: [work/nexus-harmonization-20261126, work/nexus-completion-20261128b]
     paths:
+      - app/src/main/java/com/asterion/nexus/**
       - app/src/androidTest/**
       - scripts/prepare_nexus_media_fixtures.py
       - .github/workflows/nexus-unified-device-acceptance.yml
@@ -92,6 +93,7 @@ jobs:
             grep -F 'AST_SIM: PARALLEL_NATIVE_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: PYTHON_RUNTIME_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: EMBEDDED_OK' nexus-android-instrumentation.txt
+            grep -F 'AST_SIM: DONOR_MIGRATION_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: MEDIA_EXPORT_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: GLTF_RENDER_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: PASS' nexus-android-instrumentation.txt

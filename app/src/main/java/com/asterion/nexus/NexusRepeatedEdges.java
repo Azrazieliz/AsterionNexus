@@ -94,8 +94,14 @@ final class NexusRepeatedEdges {
         if(!early)Collections.reverse(edge);
         if(edge.isEmpty()||(early?edge.get(0).start!=current.start:edge.get(0).end!=current.end))return;
         ArrayList<Span> proof=new ArrayList<>();
+        long witnessLimit=Math.min(MAX,witness.duration/4);
         for(Span s:witness.spans)
-            if(s.digest!=null&&s.start>=surviving.start&&s.end<=surviving.end)proof.add(s);
+            if(s.digest!=null&&s.start>=surviving.start&&s.end<=surviving.end&&
+                // An immediate end-to-start repetition cannot distinguish a
+                // preview from a recap. Preserve both unless the other copy
+                // lies inside the opposite edge rather than at its boundary.
+                (early?s.start>=witness.duration-witnessLimit&&s.end<witness.duration:
+                    s.end<=witnessLimit&&s.start>0))proof.add(s);
         if(!early)Collections.reverse(proof);
         Cut best=null, bestProof=null;
         long bestLength=0;

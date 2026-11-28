@@ -240,6 +240,7 @@ class DeviceTransferSimulation:Instrumentation() {
                     "Embedded extractor output did not match HTTP fixture"
                 }
                 status("EMBEDDED_OK "+media.length()+" bytes / exact SHA-equivalent")
+                NexusMigrationSimulation.run(this,::status)
                 NexusMediaSimulation.run(this,::status)
                 status("PASS")
                 finish(0,Bundle().apply{putString("result","PASS")})

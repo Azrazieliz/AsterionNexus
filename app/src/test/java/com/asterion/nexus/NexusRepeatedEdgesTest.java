@@ -30,15 +30,17 @@ public class NexusRepeatedEdgesTest {
         for(NexusRepeatedEdges.Cut cut:cuts){assertEquals(0,cut.start);assertEquals(100_000_000L,cut.end);}
     }
 
-    private static NexusRepeatedEdges.Episode neighbor(String first,String middle,String last){
+    private static NexusRepeatedEdges.Episode neighbor(String first,String early,String middle,String late,String last){
         return new NexusRepeatedEdges.Episode(100_000_000L,Arrays.asList(
             new NexusRepeatedEdges.Span(0,10_000_000L,first),
-            new NexusRepeatedEdges.Span(10_000_000L,90_000_000L,middle),
+            new NexusRepeatedEdges.Span(10_000_000L,20_000_000L,early),
+            new NexusRepeatedEdges.Span(20_000_000L,80_000_000L,middle),
+            new NexusRepeatedEdges.Span(80_000_000L,90_000_000L,late),
             new NexusRepeatedEdges.Span(90_000_000L,100_000_000L,last)));
     }
     @Test public void exactAdjacentRecapRetainsPriorWitness(){
         List<NexusRepeatedEdges.Cut> cuts=NexusRepeatedEdges.plan(Arrays.asList(
-            neighbor("op1","story1","shared"),neighbor("shared","story2","ed2")));
+            neighbor("op1","e1","story1","shared","ed1"),neighbor("shared","e2","story2","l2","ed2")));
         assertEquals(0,cuts.get(0).start);
         assertEquals(100_000_000L,cuts.get(0).end);
         assertEquals(10_000_000L,cuts.get(1).start);
@@ -46,13 +48,19 @@ public class NexusRepeatedEdgesTest {
     }
     @Test public void exactAdjacentPreviewRetainsNextWitness(){
         List<NexusRepeatedEdges.Cut> cuts=NexusRepeatedEdges.plan(Arrays.asList(
-            neighbor("op1","story1","nextScene"),neighbor("op2","story2","nextScene")));
+            neighbor("op1","e1","story1","l1","nextScene"),neighbor("op2","nextScene","story2","l2","ed2")));
         assertEquals(90_000_000L,cuts.get(0).end);
         assertEquals(100_000_000L,cuts.get(1).end);
     }
+    @Test public void ambiguousBoundaryRepetitionPreserved(){
+        List<NexusRepeatedEdges.Cut> cuts=NexusRepeatedEdges.plan(Arrays.asList(
+            neighbor("op1","e1","story1","l1","shared"),neighbor("shared","e2","story2","l2","ed2")));
+        assertEquals(100_000_000L,cuts.get(0).end);
+        assertEquals(0,cuts.get(1).start);
+    }
     @Test public void uncertainAdjacentFootagePreserved(){
         List<NexusRepeatedEdges.Cut> cuts=NexusRepeatedEdges.plan(Arrays.asList(
-            neighbor("op1","story1","a"),neighbor("b","story2","ed2")));
+            neighbor("op1","e1","story1","l1","a"),neighbor("b","e2","story2","l2","ed2")));
         assertEquals(100_000_000L,cuts.get(0).end);
         assertEquals(0,cuts.get(1).start);
     }

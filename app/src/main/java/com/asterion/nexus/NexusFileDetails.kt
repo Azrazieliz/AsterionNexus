@@ -108,7 +108,7 @@ object NexusFileDetails {
                 setOnClickListener{NexusCloudActions.pin(activity,uri,title?: "File",type)}
             })
             if(NexusCanonicalNaming.available(type,title.orEmpty()))body.addView(android.widget.Button(activity).apply{
-                text="Confirm identity and organise"
+                text=if(type.startsWith("image/"))"Confirm cosplay identity" else "Confirm model identity"
                 setOnClickListener{NexusCanonicalNaming.show(activity,uri,title?:"File",type)}
             })
             body.addView(android.widget.Button(activity).apply{

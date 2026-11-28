@@ -98,7 +98,6 @@ object NexusVideoExport {
         }
         var preserveComplete=false
         val estimate=Math.multiplyExact(duration,profile.bitrate.toLong()+512000)/8000
-        check(dir.usableSpace>Math.addExact(Math.multiplyExact(estimate,3),64L*1024*1024)){"Insufficient export storage"}
         val output=File(dir,identity.substringAfter(':')+".partial.mp4")
         val mime=if(profile.hevc)MimeTypes.VIDEO_H265 else MimeTypes.VIDEO_H264
         fun publish():NexusRegistry.Item{
@@ -122,6 +121,7 @@ object NexusVideoExport {
             stopped(cancel)
         }
         if(output.exists())check(output.delete()){"Old partial export cannot be cleared"}
+        check(dir.usableSpace>Math.addExact(Math.multiplyExact(estimate,3),64L*1024*1024)){"Insufficient export storage"}
         val stageDir=File(dir,identity.substringAfter(':')+".staging")
         val worker=HandlerThread("Nexus video codec").apply{start()}
         val handler=Handler(worker.looper)
@@ -193,7 +193,7 @@ object NexusVideoExport {
             return publish()
         }catch(e:Exception){
             save(receipt,spec.put("state",if(preserveComplete)"VERIFIED" else if(cancel.get())"CANCELLED" else "FAILED").put("error",e.message.orEmpty().take(500)))
-            registry.job(identity,"FAILED",0,e.javaClass.simpleName);throw e
+            registry.job(identity,if(preserveComplete)"VERIFIED" else "FAILED",if(preserveComplete)output.length() else 0,e.javaClass.simpleName);throw e
         }finally{
             abort.set(true)
             handler.post{runCatching{transformer.get()?.cancel()};worker.quitSafely()}

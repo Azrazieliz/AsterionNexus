@@ -109,7 +109,7 @@ internal class NexusDonorSqliteMigration(private val context:Context){
         db.execSQL("CREATE TABLE IF NOT EXISTS nexus_donor_imports(digest TEXT PRIMARY KEY,kind TEXT NOT NULL,report TEXT NOT NULL,applied INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE IF NOT EXISTS nexus_donor_import_rows(seq INTEGER PRIMARY KEY AUTOINCREMENT,digest TEXT NOT NULL,table_name TEXT NOT NULL,row_key TEXT NOT NULL,history TEXT NOT NULL,inserted_snapshot TEXT)")
     }
-    private fun activeRow(s:Schema,t:Table,legacy:ContentValues,source:SQLiteDatabase,target:SQLiteDatabase):ContentValues?{
+    private fun activeRow(s:Schema,t:Table,legacy:ContentValues,source:SQLiteDatabase,target:SQLiteDatabase,allowed:Set<String>):ContentValues?{
         val v=ContentValues(legacy)
         fun text(k:String)=legacy.getAsString(k)
         fun link(k:String)=publicLink(text(k))
@@ -153,7 +153,6 @@ internal class NexusDonorSqliteMigration(private val context:Context){
             }
         }
         // Persist only fields supported by this actual current donor schema.
-        val allowed=columnNames(target,t.name)
         v.keySet().toList().filter{it !in allowed}.forEach{v.remove(it)}
         return v
     }
@@ -170,7 +169,9 @@ internal class NexusDonorSqliteMigration(private val context:Context){
                     val prior=db.rawQuery("SELECT report FROM nexus_donor_imports WHERE digest=?",arrayOf(staged.digest)).use{if(it.moveToFirst())JSONObject(it.getString(0))else null}
                     if(prior!=null)return Report(s.id,staged.digest,prior.getLong("seen"),prior.getLong("inserted"),prior.getLong("held"),prior.getLong("skipped"),true)
                     var seen=0L;var inserted=0L;var held=0L;var skipped=0L
-                    for(t in s.tables)records(source,t){legacy->
+                    for(t in s.tables){
+                        val allowed=columnNames(db,t.name)
+                        records(source,t){legacy->
                         require(++seen<=2_000_000L){"Donor migration record limit exceeded"}
                         val key=t.keys.map{k->legacy.getAsString(k)?.takeIf{it.isNotBlank()&&it.length<=4096}?:error("Invalid donor identity")}.toTypedArray()
                         // The source snapshot remains in private staging. Historical
@@ -178,7 +179,7 @@ internal class NexusDonorSqliteMigration(private val context:Context){
                         val history=ContentValues(legacy)
                         history.keySet().toList().filter{it in setOf("url","address","source","photo_url","preview","cursor","live_cursor")}.forEach{history.remove(it)}
                         var insertedSnapshot:String?=null
-                        val active=activeRow(s,t,legacy,source,db)
+                        val active=activeRow(s,t,legacy,source,db,allowed)
                         if(active==null)held++ else if(snapshot(db,t,key)!=null)skipped++ else{
                             db.insertOrThrow(t.name,null,active)
                             insertedSnapshot=snapshot(db,t,key)?:error("Inserted record missing")
@@ -188,6 +189,7 @@ internal class NexusDonorSqliteMigration(private val context:Context){
                         db.insertOrThrow("nexus_donor_import_rows",null,ContentValues().apply{
                             put("digest",staged.digest);put("table_name",t.name);put("row_key",keyJson);put("history",json(history));put("inserted_snapshot",insertedSnapshot)
                         })
+                    }
                     }
                     val report=JSONObject().put("seen",seen).put("inserted",inserted).put("held",held).put("skipped",skipped)
                     db.insertOrThrow("nexus_donor_imports",null,ContentValues().apply{put("digest",staged.digest);put("kind",s.id);put("report",report.toString());put("applied",System.currentTimeMillis())})
