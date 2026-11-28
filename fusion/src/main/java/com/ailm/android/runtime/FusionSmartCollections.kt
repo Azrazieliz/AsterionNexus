@@ -120,6 +120,14 @@ class FusionSmartCollections(private val database:LocalDatabase){
         val (where,args)=if(collection.kind=="manual")
             "i.image_id IN (SELECT image_id FROM fusion_collection_images WHERE collection_id=?)" to listOf(id)
         else predicate(collection.rule!!)
+        return query(db,where,args,after,limit)
+    }
+    fun previewRule(rule:Rule,after:Int,limit:Int):Page{
+        require(rule.coreRule&&after>=0&&limit in 1..100)
+        val (where,args)=predicate(rule)
+        return query(database.readableDatabase,where,args,after,limit)
+    }
+    private fun query(db:SQLiteDatabase,where:String,args:List<String>,after:Int,limit:Int):Page{
         val rows=db.rawQuery("SELECT i.image_id,i.uri,i.filename,i.mime_type FROM images i WHERE i.active=1 AND i.image_id>? AND "+where+" ORDER BY i.image_id LIMIT ?",
             (listOf(after.toString())+args+(limit+1).toString()).toTypedArray()).use{c->
             buildList{while(c.moveToNext())add(Entry(c.getInt(0),c.getString(1),c.getString(2),c.getString(3)?:"image/*"))}
