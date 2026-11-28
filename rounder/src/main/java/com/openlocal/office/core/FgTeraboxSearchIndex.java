@@ -271,7 +271,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                 boolean more=false;
                 boolean affected="affected".equals(category);
                 if(!scope.isEmpty()&&gen>0&&text!=null&&
-                   (!text.trim().isEmpty()||affected||"books".equals(category)||"video".equals(category)||"assets".equals(category))){
+                   (!text.trim().isEmpty()||affected||"books".equals(category)||"video".equals(category)||"assets".equals(category)||"image".equals(category))){
                     ArrayList<String> params=new ArrayList<>();
                     String sql="SELECT o.path,o.name,o.kind,o.folder,o.size,o.modified,o.parent,o.listing_page,o.preview_missing,COALESCE(mark.marked,0) FROM objects o LEFT JOIN preview_marks mark ON mark.scope=o.scope AND mark.path=o.path WHERE o.scope=? AND o.generation=? AND o.needle LIKE ? ESCAPE '\\'";
                     params.add(scope);params.add(Integer.toString(gen));
