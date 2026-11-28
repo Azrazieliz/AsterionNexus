@@ -44,7 +44,7 @@ public final class NexusBookIndexJob extends JobService {
     }
     @Override public boolean onStopJob(JobParameters params){
         Run run=active;
-        if(run!=null&&run.params==params){
+        if(run!=null&&run.params.getJobId()==params.getJobId()){
             active=null;run.stop.set(true);
             if(run.future!=null)run.future.cancel(true);
         }
