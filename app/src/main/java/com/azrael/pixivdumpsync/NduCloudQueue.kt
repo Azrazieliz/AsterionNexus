@@ -148,6 +148,12 @@ class NduCloudQueue(context: Context) :
     }
     internal fun pendingNexus(scope:String):Int=readableDatabase.rawQuery("SELECT COUNT(*) FROM jobs WHERE account_scope=? AND state<>'VERIFIED' AND content_uri LIKE ?",arrayOf(scope,"content://"+app.packageName+".library/original/%")).use{if(it.moveToFirst())it.getInt(0)else 0}
 
+    internal fun relocateVerified(scope:String,fsId:Long,oldPath:String,newPath:String,size:Long){
+        require(scope.isNotBlank()&&fsId>0&&size>0)
+        writableDatabase.execSQL("UPDATE jobs SET remote_path=?,verified_at=? WHERE account_scope=? AND remote_fs_id=? AND remote_path=? AND remote_size=? AND state='VERIFIED'",
+            arrayOf(newPath,System.currentTimeMillis(),scope,fsId,oldPath,size))
+    }
+
     fun status():Status {
         var pending=0;var complete=0;var rechecking=0
         val scope=NduSettings.currentAccountScope(app)
