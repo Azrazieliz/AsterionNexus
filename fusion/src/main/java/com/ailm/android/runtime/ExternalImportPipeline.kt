@@ -39,6 +39,7 @@ data class ExternalImportRequest(
     val replaceExisting: Boolean = false,
     val csvTableName: String? = null,
     val aliasHints: Map<String, Map<String, String>> = emptyMap(),
+    val verifiedImageBindingsOnly: Boolean = false,
 )
 
 data class ExternalImportDuplicateCandidate(
@@ -764,10 +765,7 @@ class ExternalImportPipeline(
 
         private fun readImageSnapshot(db: SQLiteDatabase): JSONArray {
             val result = JSONArray()
-            val sql = """
-                SELECT image_id, uri, filename, folder_uri, metadata_text
-                FROM images
-            """.trimIndent()
+            val sql = imageSnapshotQuery(db)
             db.rawQuery(sql, emptyArray()).use { cursor ->
                 while (cursor.moveToNext()) {
                     val row = JSONObject()
@@ -776,6 +774,8 @@ class ExternalImportPipeline(
                     row.put("filename", cursor.getString(2))
                     row.put("folder_uri", cursor.getString(3))
                     row.put("metadata_text", cursor.getString(4) ?: "")
+                    row.put("sha256", cursor.getString(5) ?: "")
+                    row.put("source_size_bytes", cursor.getLong(6))
                     result.put(row)
                 }
             }
@@ -1104,6 +1104,12 @@ class ExternalImportPipeline(
         checkCancellation(request.importId)
         warnings += normalizationEngine.normalize(model.rowsByTable, model.sourceLabel)
         normalizeModel(model, warnings)
+        if (request.verifiedImageBindingsOnly) {
+            require(!request.replaceExisting && request.conflictStrategy == ExternalImportConflictStrategy.SKIP) {
+                "Verified migration must preserve existing records"
+            }
+            bindVerifiedMigrationImages(model, warnings)
+        }
 
         emitProgress(callback, request.importId, "alias_resolver", 0.42, "Resolving aliases")
         checkCancellation(request.importId)
@@ -1235,6 +1241,55 @@ class ExternalImportPipeline(
                 row["filename"] = normalizeDisplayName(filename)
             }
         }
+    }
+
+    /** Nexus donor IDs are installation-local, never artwork identity. */
+    private fun bindVerifiedMigrationImages(model: CanonicalImportModel, warnings: MutableList<String>) {
+        val source = model.imageSnapshotRows.mapNotNull { row ->
+            VerifiedMigrationIdentity.record(row["image_id"], row["sha256"], row["source_size_bytes"])
+        }
+        // Exclude repeated snapshot IDs even when only one occurrence has a digest.
+        val duplicateIds = model.imageSnapshotRows.mapNotNull { it["image_id"]?.toString()?.toLongOrNull() }
+            .groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+        val target = mutableListOf<VerifiedMigrationIdentity.Record>()
+        val uris = mutableMapOf<Long, String>()
+        database.readableDatabase.rawQuery(
+            """SELECT i.image_id, f.sha256, f.source_size_bytes, i.uri
+                FROM images i JOIN fusion_image_fingerprints f ON f.image_id=i.image_id
+                WHERE i.active=1 AND f.source_size_bytes=i.size_bytes AND f.source_size_bytes>0""".trimIndent(),
+            emptyArray(),
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val row = VerifiedMigrationIdentity.record(cursor.getLong(0), cursor.getString(1), cursor.getLong(2))
+                if (row != null) {
+                    target += row
+                    uris[row.id] = cursor.getString(3).orEmpty()
+                }
+            }
+        }
+        val mapping = VerifiedMigrationIdentity.uniqueBindings(source.filter { it.id !in duplicateIds }, target)
+        var held = 0
+        var bound = 0
+        val imageTables = relationRules.filter { it.targetTable == "images" && it.columnName == "image_id" }
+            .map { it.tableName }.toSet()
+        model.rowsByTable.filterKeys { it in imageTables }.forEach { (_, rows) ->
+            val iterator = rows.iterator()
+            while (iterator.hasNext()) {
+                val row = iterator.next()
+                val id = row["image_id"]?.toString()?.toLongOrNull()
+                val targetId = mapping[id]
+                if (targetId == null || uris[targetId].isNullOrBlank()) {
+                    iterator.remove()
+                    held++
+                    continue
+                }
+                row["image_id"] = targetId.toString()
+                if (row.containsKey("source_uri")) row["source_uri"] = uris.getValue(targetId)
+                if (row.containsKey("thumbnail_uri")) row["thumbnail_uri"] = ""
+                bound++
+            }
+        }
+        warnings += "Verified artwork migration: $bound bound metadata rows; $held held (missing or ambiguous exact fingerprint). Held rows remain in the donor export; no numeric-ID or filename fallback."
     }
 
     private fun normalizeNameFields(tableName: String, row: MutableMap<String, Any?>) {
@@ -2774,6 +2829,26 @@ class ExternalImportPipeline(
         )
     }
 
+    private fun imageSnapshotQuery(db: SQLiteDatabase): String {
+        val columns = mutableSetOf<String>()
+        db.rawQuery("PRAGMA table_info(fusion_image_fingerprints)", emptyArray()).use { cursor ->
+            while (cursor.moveToNext()) columns += cursor.getString(1)
+        }
+        val imageColumns = mutableSetOf<String>()
+        db.rawQuery("PRAGMA table_info(images)", emptyArray()).use { cursor ->
+            while (cursor.moveToNext()) imageColumns += cursor.getString(1)
+        }
+        val verified = columns.containsAll(setOf("image_id", "sha256", "source_size_bytes")) &&
+            "size_bytes" in imageColumns
+        return if (verified) """
+            SELECT i.image_id,i.uri,i.filename,i.folder_uri,i.metadata_text,f.sha256,f.source_size_bytes
+            FROM images i LEFT JOIN fusion_image_fingerprints f
+                ON f.image_id=i.image_id AND f.source_size_bytes=i.size_bytes
+        """.trimIndent() else """
+            SELECT image_id,uri,filename,folder_uri,metadata_text,'',0 FROM images
+        """.trimIndent()
+    }
+
     private fun exportFusionSnapshotJson(pretty: Boolean): String {
         val root = JSONObject()
         root.put("format", SNAPSHOT_FORMAT)
@@ -2806,7 +2881,7 @@ class ExternalImportPipeline(
 
         val imageSnapshot = JSONArray()
         database.readableDatabase.rawQuery(
-            "SELECT image_id, uri, filename, folder_uri, metadata_text FROM images",
+            imageSnapshotQuery(database.readableDatabase),
             emptyArray(),
         ).use { cursor ->
             while (cursor.moveToNext()) {
@@ -2816,6 +2891,8 @@ class ExternalImportPipeline(
                 row.put("filename", cursor.getString(2))
                 row.put("folder_uri", cursor.getString(3))
                 row.put("metadata_text", cursor.getString(4) ?: "")
+                row.put("sha256", cursor.getString(5) ?: "")
+                row.put("source_size_bytes", cursor.getLong(6))
                 imageSnapshot.put(row)
             }
         }

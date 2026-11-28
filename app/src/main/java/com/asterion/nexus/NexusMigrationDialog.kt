@@ -59,7 +59,8 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
                                 "import_id" to UUID.randomUUID().toString(),
                                 "source" to source.file.absolutePath,
                                 "source_type" to if(domain=="Core SQLite")"sqlite" else "json",
-                                "conflict_strategy" to "skip","replace_existing" to false
+                                "conflict_strategy" to "skip","replace_existing" to false,
+                                "verified_image_bindings_only" to true
                             )
                             val preview=StandaloneRuntime.previewImport(request)
                             val validation=StandaloneRuntime.validateImport(request)
@@ -68,6 +69,7 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
                             val message=buildString{
                                 append("Fusion dry run\n")
                                 summary?.forEach{(key,value)->append(key).append(": ").append(value).append("\n")}
+                                (details?.get("warnings") as? List<*>)?.filter { it.toString().startsWith("Verified artwork migration:") }?.forEach { append(it).append("\n") }
                                 append(if(validation["ok"]==true)"Validation passed." else "Validation failed. No changes applied.")
                                 append("\nExisting keys are preserved. Private donor files and permissions are not assumed portable.")
                             }

@@ -6574,6 +6574,7 @@ object StandaloneRuntime {
             replaceExisting = replaceExisting,
             csvTableName = csvTableName,
             aliasHints = aliasHints,
+            verifiedImageBindingsOnly = parseBooleanFlag(this["verified_image_bindings_only"], defaultValue = false),
         )
     }
 
