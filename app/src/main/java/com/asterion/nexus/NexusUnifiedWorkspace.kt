@@ -405,6 +405,7 @@ private fun IndexedItem.nexusEntry()=NexusUnifiedEntry(title,
 private suspend fun acquireNexusEntry(activity:Activity,item:NexusUnifiedEntry):String{
     val url=requireNotNull(item.web){"No original source selected"}
     require(url.startsWith("https://")||url.startsWith("magnet:?",true)){"Only HTTPS or supported torrent originals"}
+    check(com.azrael.pixivdumpsync.AppPower.enabled(activity)){"Resume downloads first"}
     check(NexusCloudPublication.canPublish(activity)){"Connect the same TeraBox browsing and upload account first"}
     val area=item.area.uppercase(java.util.Locale.ROOT)
     val source=item.origin.takeIf{SourceIndexParser.safe(it)}?:url
@@ -412,7 +413,7 @@ private suspend fun acquireNexusEntry(activity:Activity,item:NexusUnifiedEntry):
     when(plan){
         NexusProviderDispatch.Route.ALREADY_TRACKED->return "Already submitted · see Transfers for verified status"
         NexusProviderDispatch.Route.TORRENT->{
-            val folder=if(area=="VIDEOS")"Videos" else "Games"
+            val folder=when(area){"VIDEOS"->"Videos";"BOOKS"->"Books";"ASSETS","KOIKATSU"->"Assets";else->"Games"}
             withContext(Dispatchers.Main){ResourceDownloads.route(activity,url,folder)}
             return "Torrent file selection requested; transfer and security verification pending"
         }
@@ -471,6 +472,16 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
     var catalogPage by remember{mutableIntStateOf(0)}
     var sourceFilter by remember{mutableStateOf<String?>(null)}
     var enrollment by remember{mutableStateOf(false)}
+    var directImport by remember{mutableStateOf(false)}
+    var following by remember{mutableStateOf(false)}
+    val torrentFolder=when(area){"BOOKS"->"Books";"VIDEOS"->"Videos";"ASSETS","KOIKATSU"->"Assets";else->"Games"}
+    val torrentPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->
+        if(uri!=null){
+            if(!NexusCloudPublication.canPublish(ctx))message="Connect TeraBox first"
+            else if(!com.azrael.pixivdumpsync.AppPower.enabled(ctx))message="Resume downloads first"
+            else ResourceDownloads.onTorrentPicked(ctx,uri,torrentFolder)
+        }
+    }
     LaunchedEffect(area,refresh,catalogQuery,catalogPage,sourceFilter){
         busy=true
         runCatching{withContext(Dispatchers.IO){
@@ -486,6 +497,10 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
             rows=entries;providers=sources;message=entries.size.toString()+" indexed candidates"
         }.onFailure{message="Index unavailable: "+it.javaClass.simpleName}
         busy=false
+    }
+    if(following){
+        NexusFollowingPane(area,onBack={following=false;refresh++})
+        return
     }
     Column(Modifier.fillMaxSize().padding(horizontal=16.dp,vertical=10.dp)){
         UnifiedHeading(if(suggestions)"Suggestions" else "Modules","Native source engines")
@@ -503,6 +518,13 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 UnifiedButton("Add source",!busy){enrollment=true}
                 UnifiedButton("Manage sources",!busy){com.azrael.pixivdumpsync.SourceIndexPanel.showStatus(ctx,listOf(area),modules.firstOrNull{it.first==area}?.second?:area)}
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                UnifiedButton("Add link",!acquiring){directImport=true}
+                if(area in setOf("GAMES","BOOKS","VIDEOS","ASSETS","KOIKATSU"))UnifiedButton("Import .torrent",!acquiring){
+                    torrentPicker.launch(arrayOf("application/x-bittorrent","application/octet-stream"))
+                }
+                if(area in setOf("ARTWORK","X","COMICS","COSPLAY","CREATORS"))UnifiedButton("Following"){following=true}
             }
             if(sourceFilter!=null)TextButton(onClick={sourceFilter=null;catalogPage=0}){Text("Clear selected source filter")}
         }
@@ -563,6 +585,32 @@ private fun NexusAcquisitionCatalog(suggestions:Boolean,onLibraryRefresh:()->Uni
             }
         }
     }
+    if(directImport){
+        var address by remember{mutableStateOf("")}
+        var name by remember{mutableStateOf("")}
+        var error by remember{mutableStateOf("")}
+        AlertDialog(onDismissRequest={directImport=false},title={Text("Acquire selected link")},
+            text={Column{
+                UnifiedField(address,{address=it},"HTTPS address or magnet")
+                UnifiedField(name,{name=it},"Title (optional)")
+                if(error.isNotBlank())Text(error,color=C_MUTED)
+            }},
+            confirmButton={TextButton(enabled=!acquiring,onClick={
+                val url=address.trim()
+                val isMagnet=url.startsWith("magnet:?",true)
+                if(!isMagnet&&!SourceIndexParser.safe(url)){error="Enter a valid HTTPS address or magnet";return@TextButton}
+                val kind=if(isMagnet)"torrent" else SourceIndexParser.kind(url,area)
+                val label=name.trim().ifBlank{if(isMagnet)"Selected torrent" else Uri.parse(url).lastPathSegment.orEmpty().ifBlank{"Selected original"}}
+                val entry=NexusUnifiedEntry(label,"Selected address","Direct",web=url,area=area,kind=kind,origin=url)
+                directImport=false;acquiring=true;message="Resolving selected original"
+                scope.launch{
+                    try{message=withContext(Dispatchers.IO){acquireNexusEntry(ctx,entry)};onLibraryRefresh()}
+                    catch(e:Exception){message="Original unavailable: "+e.message.orEmpty().take(150)}
+                    finally{acquiring=false}
+                }
+            }){Text("Acquire")}},
+            dismissButton={TextButton(onClick={directImport=false}){Text("Cancel")}})
+    }
     if(enrollment){
         var address by remember{mutableStateOf("")}
         var name by remember{mutableStateOf("")}
@@ -603,6 +651,7 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
     var status by remember{mutableStateOf("Reading saved transfer receipts")}
     var refreshing by remember{mutableStateOf(false)}
     var pendingRemove by remember{mutableStateOf<UnifiedDownloadsUi.NexusQueueEntry?>(null)}
+    var powered by remember{mutableStateOf(com.azrael.pixivdumpsync.AppPower.enabled(ctx))}
     fun refresh(){
         scope.launch{
             refreshing=true
@@ -640,6 +689,12 @@ private fun NexusUnifiedTransfers(onOpen:(Uri,String,String,Int)->Unit){
             Text(status,color=C_MUTED,fontSize=12.sp,modifier=Modifier.weight(1f),
                 maxLines=2)
             UnifiedButton(if(refreshing)"Reading…" else "Refresh",!refreshing){refresh()}
+        }
+        Row(verticalAlignment=Alignment.CenterVertically){
+            Text(if(powered)"Downloads enabled" else "Downloads paused",color=C_TEXT,modifier=Modifier.weight(1f))
+            Switch(checked=powered,onCheckedChange={enabled->
+                powered=enabled;scope.launch{runCatching{withContext(Dispatchers.IO){com.azrael.pixivdumpsync.AppPower.set(ctx,enabled)}}.onFailure{powered=com.azrael.pixivdumpsync.AppPower.enabled(ctx);status="Download setting unavailable"}}
+            })
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(
             rememberScrollState()).padding(vertical=10.dp),

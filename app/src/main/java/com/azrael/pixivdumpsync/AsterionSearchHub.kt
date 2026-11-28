@@ -41,7 +41,7 @@ object AsterionSearchHub {
     private val ui=NocturneDesign
     private val modes=listOf("All videos","Adult videos","Hentai videos","Games / visual novels","EPUB books")
     private data class Found(val title:String,val url:String,val source:String,
-                             val thumbnail:String="",val filename:String="",val detail:String="")
+                             val thumbnail:String="",val filename:String="",val detail:String="",val kind:String="")
     private data class Reply(val results:List<Found>,val errors:List<String>,val searched:Int)
     private fun preferences(a:Activity)=a.getSharedPreferences("asterion_unified_search",0)
     private fun stored(a:Activity,mode:Int):List<Found> = runCatching{
@@ -59,14 +59,14 @@ object AsterionSearchHub {
                 !SearchExactness.mediaMatches(persistedTerm,x.optString("title")))
                 return@mapNotNull null
             Found(x.optString("title"),url,x.optString("source"),x.optString("thumbnail"),
-                x.optString("filename"),x.optString("detail"))
+                x.optString("filename"),x.optString("detail"),x.optString("kind"))
         }
     }.getOrDefault(emptyList())
     private fun save(a:Activity,mode:Int,term:String,results:List<Found>){
         val data=JSONArray()
         for(hit in results.take(1200))data.put(JSONObject().apply{
             put("title",hit.title);put("url",hit.url);put("source",hit.source)
-            put("thumbnail",hit.thumbnail);put("filename",hit.filename);put("detail",hit.detail)
+            put("thumbnail",hit.thumbnail);put("filename",hit.filename);put("detail",hit.detail);put("kind",hit.kind)
         })
         preferences(a).edit().putString("results_"+mode,data.toString())
             .putString("query_"+mode,term).apply()
@@ -91,7 +91,7 @@ object AsterionSearchHub {
                     it.kind==CatalogKind.APK) && !GameTorrentPolicy.clearlyNonGameTitle(it.title)
             }else catalog.hits.filter{it.kind==CatalogKind.EPUB}
             return Reply(results.map{Found(it.title,it.url,it.source,it.coverUrl,
-                it.filename,it.details)},catalog.failures,catalog.successful)
+                it.filename,it.details,it.kind.name.lowercase(java.util.Locale.ROOT))},catalog.failures,catalog.successful)
         }
         val areas=when(mode){
             1->listOf(VideoSearchArea.PORN)
@@ -202,7 +202,7 @@ object AsterionSearchHub {
             rows.put(JSONObject().put("title",hit.title)
                 .put("url",hit.url).put("source",hit.source)
                 .put("thumbnail",hit.thumbnail).put("filename",hit.filename)
-                .put("detail",hit.detail))
+                .put("detail",hit.detail).put("kind",hit.kind))
         }
         val errors=JSONArray()
         for(error in answer.errors.take(20))errors.put(error.take(180))
