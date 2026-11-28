@@ -37,38 +37,61 @@ internal class NexusMarianEngine private constructor(
             OnnxTensor.createTensor(env,arrayOf(LongArray(tokens.size){1L})).use{mask->
                 encoder.run(mapOf("input_ids" to sourceIds,"attention_mask" to mask),setOf("last_hidden_state")).use{encoded->
                     val hidden=encoded[0] as OnnxTensor
-                    val output=ArrayList<Long>()
-                    output.add(pad)
+                    data class Beam(val ids:List<Long>,val total:Double){
+                        val rank:Double get()=total/(ids.size-1).coerceAtLeast(1)
+                    }
+                    val width=4
+                    var beams=listOf(Beam(listOf(pad),0.0))
+                    var completed=emptyList<Beam>()
                     val maximum=(tokens.size*4+32).coerceIn(48,384)
                     for(step in 0 until maximum){
-                        if(stop()||Thread.currentThread().isInterrupted)throw InterruptedException("Translation paused")
-                        OnnxTensor.createTensor(env,arrayOf(output.toLongArray())).use{prefix->
-                            decoder.run(mapOf("input_ids" to prefix,"encoder_hidden_states" to hidden,
-                                "encoder_attention_mask" to mask),setOf("logits")).use{decoded->
-                                val logits=(decoded[0] as OnnxTensor).floatBuffer
-                                val dimensions=(decoded[0].info as ai.onnxruntime.TensorInfo).shape
-                                val vocabSize=dimensions.last().toInt()
-                                require(vocabSize>0&&vocabSize<=500000&&logits.limit()>=vocabSize)
-                                val start=logits.limit()-vocabSize
-                                var best=-1L;var score=Float.NEGATIVE_INFINITY
-                                for(i in 0 until vocabSize){
-                                    if(i.toLong()==pad||i.toLong()==unknown)continue
-                                    val value=logits.get(start+i)
-                                    if(value>score){best=i.toLong();score=value}
+                        val candidates=ArrayList<Beam>()
+                        val finished=ArrayList<Beam>(completed)
+                        for(beam in beams){
+                            if(stop()||Thread.currentThread().isInterrupted)throw InterruptedException("Translation paused")
+                            OnnxTensor.createTensor(env,arrayOf(beam.ids.toLongArray())).use{prefix->
+                                decoder.run(mapOf("input_ids" to prefix,"encoder_hidden_states" to hidden,
+                                    "encoder_attention_mask" to mask),setOf("logits")).use{decoded->
+                                    val logits=(decoded[0] as OnnxTensor).floatBuffer
+                                    val dimensions=(decoded[0].info as ai.onnxruntime.TensorInfo).shape
+                                    val vocabSize=dimensions.last().toInt()
+                                    require(vocabSize>0&&vocabSize<=500000&&logits.limit()>=vocabSize)
+                                    val start=logits.limit()-vocabSize
+                                    var peak=Double.NEGATIVE_INFINITY
+                                    for(i in 0 until vocabSize)peak=maxOf(peak,logits.get(start+i).toDouble())
+                                    check(peak.isFinite()){"Model produced no finite target scores"}
+                                    var sum=0.0
+                                    val top=ArrayList<Pair<Long,Double>>()
+                                    for(i in 0 until vocabSize){
+                                        val value=logits.get(start+i).toDouble()
+                                        sum+=kotlin.math.exp(value-peak)
+                                        val id=i.toLong()
+                                        if(!value.isFinite()||id==pad||id==unknown||(beam.ids.size==1&&id==eos))continue
+                                        if(top.size<width||value>top.last().second){
+                                            top.add(id to value)
+                                            top.sortWith(compareByDescending<Pair<Long,Double>>{it.second}.thenBy{it.first})
+                                            if(top.size>width)top.removeAt(top.lastIndex)
+                                        }
+                                    }
+                                    val normalizer=peak+kotlin.math.ln(sum)
+                                    check(normalizer.isFinite())
+                                    for((id,value) in top){
+                                        val candidate=Beam(beam.ids+id,beam.total+value-normalizer)
+                                        if(id==eos)finished.add(candidate)else candidates.add(candidate)
+                                    }
                                 }
-                                check(best>=0&&score.isFinite()){"Model produced no finite target scores"}
-                                output.add(best)
                             }
                         }
-                        if(output.last()==eos){
-                            val pieces=output.drop(1).dropLast(1).map{reverse[it]?:error("Unknown output token")}
-                            check(pieces.isNotEmpty()){"Model produced no translation"}
-                            val translated=String(NexusSentencePiece.decode(target,pieces.map{it.toByteArray(Charsets.UTF_8)}.toTypedArray()),Charsets.UTF_8).trim()
-                            check(translated.isNotBlank()&&translated!=text.trim()){"Empty or unchanged translation"}
-                            return translated
-                        }
+                        completed=finished.sortedByDescending{it.rank}.take(width)
+                        beams=candidates.sortedByDescending{it.total}.take(width)
+                        if(beams.isEmpty()||(completed.size>=width&&beams.maxOf{it.rank}<=completed.last().rank))break
                     }
-                    error("Model did not complete within bounded generation budget")
+                    val output=completed.firstOrNull()?.ids?:error("Model did not complete within bounded generation budget")
+                    val pieces=output.drop(1).dropLast(1).map{reverse[it]?:error("Unknown output token")}
+                    check(pieces.isNotEmpty()){"Model produced no translation"}
+                    val translated=String(NexusSentencePiece.decode(target,pieces.map{it.toByteArray(Charsets.UTF_8)}.toTypedArray()),Charsets.UTF_8).trim()
+                    check(translated.isNotBlank()&&translated!=text.trim()){"Empty or unchanged translation"}
+                    return translated
                 }
             }
         }
@@ -89,7 +112,7 @@ internal class NexusMarianEngine private constructor(
             val revision=revisions[language]?:error("Unsupported source language")
             val base="translation-models/"+language
             val manifest=context.assets.open(base+"/manifest.json").bufferedReader(Charsets.UTF_8).use{JSONObject(it.readText())}
-            check(manifest.getString("revision")==revision&&manifest.getString("language")==language&&manifest.getBoolean("reference_smoke_passed")){"Unvalidated model bundle"}
+            check(manifest.getString("revision")==revision&&manifest.getString("language")==language&&manifest.getBoolean("reference_smoke_passed")&&manifest.optString("decode_policy")=="beam4-v1"){"Unvalidated model bundle"}
             val hashes=manifest.getJSONObject("sha256")
             val directory=File(context.noBackupFilesDir,"translation-models/"+revision).apply{check(isDirectory||mkdirs()||isDirectory)}
             for(name in files){
@@ -123,7 +146,7 @@ internal class NexusMarianEngine private constructor(
                 }
                 check(encoder!!.inputNames==setOf("input_ids","attention_mask"))
                 check(decoder!!.inputNames==setOf("input_ids","encoder_attention_mask","encoder_hidden_states"))
-                return NexusMarianEngine(source,target,encoder!!,decoder!!,vocabulary,reverse,eos,pad,unknown,"marian-"+language+"-"+revision)
+                return NexusMarianEngine(source,target,encoder!!,decoder!!,vocabulary,reverse,eos,pad,unknown,"marian-"+language+"-"+revision+"-beam4-v1")
             }catch(t:Throwable){
                 runCatching{encoder?.close()};runCatching{decoder?.close()}
                 if(source!=0L)NexusSentencePiece.close(source)
