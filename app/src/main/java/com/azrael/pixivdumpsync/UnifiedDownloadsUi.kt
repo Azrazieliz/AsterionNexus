@@ -1147,7 +1147,8 @@ object UnifiedDownloadsUi {
     fun snapshotForNexus(activity:Activity):List<NexusQueueEntry> {
         val accounts=NduSettings.uploadAccounts(activity).associateBy{it.scope}
         val labels=com.openlocal.office.core.FgTeraboxClient.accounts(activity).associate{it.scope to it.label}
-        val staged=NduCloudQueue(activity).use{it.nexusPublications()}.map{row->
+        val publications=NduCloudQueue(activity).use{it.nexusPublications()}
+        val staged=publications.map{row->
             val complete=row.state=="VERIFIED"&&row.size>0&&!row.path.isNullOrBlank()
             val account=accounts[row.scope]
             val state=if(complete)"DONE" else if(account==null)"HELD" else if(row.error!=null)"FAILED" else "QUEUED"
@@ -1160,8 +1161,8 @@ object UnifiedDownloadsUi {
                 }),null,if(complete&&account!=null)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriForAccount(account.browserScope,row.path,row.size).toString() else null,
                 com.openlocal.office.core.FgTeraboxClient.mime(row.name))
         }
-        val stagedUris=NduCloudQueue(activity).use{it.nexusPublications().map{row->row.uri}.toSet()}
-        return (staged+collect(activity).filterNot{row->row.saved?.let{it in stagedUris}==true}.take(350).map{row->
+        val stagedUris=publications.map{row->row.uri}.toSet()
+        return (staged+collect(activity).filterNot{row->row.saved?.let{it in stagedUris}==true}.map{row->
             NexusQueueEntry(
                 rowId(row),row.source,row.filename,
                 row.info,row.state.name,
@@ -1171,8 +1172,22 @@ object UnifiedDownloadsUi {
                     row.actionText!="COOLDOWN")row.action else null,
                 row.onRemove,row.saved,row.mime
             )
-        }).distinctBy{it.key}.take(500)
+        }).distinctBy{it.key}.let(::boundedNexusRows)
     }
+
+    /** Preserve each state's recent records independently. A large saved
+     * history or cloud publication queue must not hide failed/active jobs. */
+    internal fun boundedNexusRows(rows:List<NexusQueueEntry>):List<NexusQueueEntry> =
+        listOf("ACTIVE","FAILED","HELD","QUEUED","PAUSED","DONE").flatMap{state->
+            rows.filter{it.state==state}.take(100)
+        }
+
+    data class NexusQueueTotals(val saved:Int,val failed:Int,val queued:Int,val active:Int,val paused:Int)
+
+    /** Full source-ledger counters are independent of recent row limits.
+     * They are NOT summed across local receipts and remote publications. */
+    fun totalsForNexus(activity:Activity):Map<String,NexusQueueTotals> =
+        exactModuleTotals(activity).mapValues{(_,t)->NexusQueueTotals(t.saved,t.failed,t.queued,t.active,t.paused)}
 
     fun render(a:Activity,parent:LinearLayout,refresh:()->Unit){
         val surface=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL}
