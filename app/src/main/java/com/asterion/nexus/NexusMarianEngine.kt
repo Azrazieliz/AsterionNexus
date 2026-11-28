@@ -21,7 +21,8 @@ internal class NexusMarianEngine private constructor(
     private val source:Long,private val target:Long,
     private val encoder:OrtSession,private val decoder:OrtSession,
     private val vocabulary:Map<String,Long>,private val reverse:Map<Long,String>,
-    private val eos:Long,private val pad:Long,private val unknown:Long,
+    private val eos:Long,private val unknown:Long,
+    private val sourcePrefix:LongArray,private val targetPrefix:List<Long>,private val suppressed:Set<Long>,
     val identity:String
 ):Closeable{
     private val env=OrtEnvironment.getEnvironment()
@@ -32,16 +33,16 @@ internal class NexusMarianEngine private constructor(
         val input=ids(text)
         require(input.isNotEmpty()&&input.size<=224){"Translation segment exceeds model input budget"}
         require(input.none{it==unknown}){"Translation would discard unknown source tokens"}
-        val tokens=input+eos
+        val tokens=sourcePrefix+input+eos
         OnnxTensor.createTensor(env,arrayOf(tokens)).use{sourceIds->
             OnnxTensor.createTensor(env,arrayOf(LongArray(tokens.size){1L})).use{mask->
                 encoder.run(mapOf("input_ids" to sourceIds,"attention_mask" to mask),setOf("last_hidden_state")).use{encoded->
                     val hidden=encoded[0] as OnnxTensor
                     data class Beam(val ids:List<Long>,val total:Double){
-                        val rank:Double get()=total/(ids.size-1).coerceAtLeast(1)
+                        val rank:Double get()=total/(ids.size-targetPrefix.size).coerceAtLeast(1)
                     }
                     val width=4
-                    var beams=listOf(Beam(listOf(pad),0.0))
+                    var beams=listOf(Beam(targetPrefix,0.0))
                     var completed=emptyList<Beam>()
                     val maximum=(tokens.size*4+32).coerceIn(48,384)
                     for(step in 0 until maximum){
@@ -66,7 +67,7 @@ internal class NexusMarianEngine private constructor(
                                         val value=logits.get(start+i).toDouble()
                                         sum+=kotlin.math.exp(value-peak)
                                         val id=i.toLong()
-                                        if(!value.isFinite()||id==pad||id==unknown||(beam.ids.size==1&&id==eos))continue
+                                        if(!value.isFinite()||id in suppressed||(beam.ids.size==targetPrefix.size&&id==eos))continue
                                         if(top.size<width||value>top.last().second){
                                             top.add(id to value)
                                             top.sortWith(compareByDescending<Pair<Long,Double>>{it.second}.thenBy{it.first})
@@ -87,7 +88,7 @@ internal class NexusMarianEngine private constructor(
                         if(beams.isEmpty()||(completed.size>=width&&beams.maxOf{it.rank}<=completed.last().rank))break
                     }
                     val output=completed.firstOrNull()?.ids?:error("Model did not complete within bounded generation budget")
-                    val pieces=output.drop(1).dropLast(1).map{reverse[it]?:error("Unknown output token")}
+                    val pieces=output.drop(targetPrefix.size).dropLast(1).map{reverse[it]?:error("Unknown output token")}
                     check(pieces.isNotEmpty()){"Model produced no translation"}
                     val translated=String(NexusSentencePiece.decode(target,pieces.map{it.toByteArray(Charsets.UTF_8)}.toTypedArray()),Charsets.UTF_8).trim()
                     check(translated.isNotBlank()&&translated!=text.trim()){"Empty or unchanged translation"}
@@ -102,7 +103,7 @@ internal class NexusMarianEngine private constructor(
     companion object{
         private val files=listOf("encoder.onnx","decoder.onnx","source.spm","target.spm","vocab.json","config.json")
         private val revisions=mapOf("ja" to "1a906cfaaf7c8f4193f67f5885c082aa6dbd9d16",
-            "ko" to "d9fa1ac6008242100fecb4fff9b0a5917a1be81f","zh" to "39d480d52a9ea3065a1f117adfe4dbc55de10e6f")
+            "ko" to "d9fa1ac6008242100fecb4fff9b0a5917a1be81f")
         private fun digest(file:File):String{
             val md=MessageDigest.getInstance("SHA-256")
             file.inputStream().use{stream->val b=ByteArray(131072);while(true){val n=stream.read(b);if(n<0)break;md.update(b,0,n)}}
@@ -111,9 +112,11 @@ internal class NexusMarianEngine private constructor(
         fun open(context:Context,language:String):NexusMarianEngine{
             val revision=revisions[language]?:error("Unsupported source language")
             val base="translation-models/"+language
-            val precision=if(language=="ja")"int8" else "fp32"
+            val multilingual=language=="zh"
+            val precision=if(language=="ko")"fp32" else "int8"
+            val policy=if(multilingual)"beam4-m2m100-v1" else "beam4-v1"
             val manifest=context.assets.open(base+"/manifest.json").bufferedReader(Charsets.UTF_8).use{JSONObject(it.readText())}
-            check(manifest.getString("revision")==revision&&manifest.getString("language")==language&&manifest.getBoolean("reference_smoke_passed")&&manifest.optString("decode_policy")=="beam4-v1"&&manifest.optString("precision")==precision){"Unvalidated model bundle"}
+            check(manifest.getString("revision")==revision&&manifest.getString("language")==language&&manifest.getBoolean("reference_smoke_passed")&&manifest.optString("decode_policy")==policy&&manifest.optString("precision")==precision){"Unvalidated model bundle"}
             val hashes=manifest.getJSONObject("sha256")
             val directory=File(context.noBackupFilesDir,"translation-models/"+revision+"-"+precision).apply{check(isDirectory||mkdirs()||isDirectory)}
             for(name in files){
@@ -133,8 +136,18 @@ internal class NexusMarianEngine private constructor(
             val data=JSONObject(File(directory,"vocab.json").readText(Charsets.UTF_8))
             val vocabulary=data.keys().asSequence().associateWith{data.getLong(it)}
             val reverse=vocabulary.entries.associate{it.value to it.key}
-            val eos=config.getLong("eos_token_id");val pad=config.getLong("decoder_start_token_id")
+            val eos=config.getLong("eos_token_id");val start=config.getLong("decoder_start_token_id")
             val unknown=vocabulary["<unk>"]?:error("Missing unknown token")
+            fun ids(key:String):List<Long>{val a=config.optJSONArray(key)?:return emptyList();return (0 until a.length()).map{a.getLong(it)}}
+            val sourcePrefix=if(multilingual)ids("nexus_source_prefix") else emptyList()
+            val targetPrefix=listOf(start)+(if(multilingual)ids("nexus_target_prefix") else emptyList())
+            val suppressed=if(multilingual)ids("nexus_suppressed_ids").toSet()+unknown else setOf(start,unknown)
+            if(multilingual){
+                check(manifest.optString("repo")=="Xenova/m2m100_418M"&&config.optString("model_type")=="m2m_100")
+                check(sourcePrefix==listOf(vocabulary.getValue("__zh__"))&&targetPrefix==listOf(start,vocabulary.getValue("__en__")))
+                check(eos !in suppressed&&suppressed.contains(unknown)&&suppressed.contains(config.getLong("nexus_pad")))
+            }
+            check((sourcePrefix+targetPrefix+suppressed+eos).all{it in reverse})
             var source=0L;var target=0L;var encoder:OrtSession?=null;var decoder:OrtSession?=null
             try{
                 source=NexusSentencePiece.open(File(directory,"source.spm").absolutePath.toByteArray(StandardCharsets.UTF_8))
@@ -147,7 +160,7 @@ internal class NexusMarianEngine private constructor(
                 }
                 check(encoder!!.inputNames==setOf("input_ids","attention_mask"))
                 check(decoder!!.inputNames==setOf("input_ids","encoder_attention_mask","encoder_hidden_states"))
-                return NexusMarianEngine(source,target,encoder!!,decoder!!,vocabulary,reverse,eos,pad,unknown,"marian-"+language+"-"+revision+"-beam4-v1-"+precision)
+                return NexusMarianEngine(source,target,encoder!!,decoder!!,vocabulary,reverse,eos,unknown,sourcePrefix.toLongArray(),targetPrefix,suppressed,(if(multilingual)"m2m100-" else "marian-")+language+"-"+revision+"-"+policy+"-"+precision)
             }catch(t:Throwable){
                 runCatching{encoder?.close()};runCatching{decoder?.close()}
                 if(source!=0L)NexusSentencePiece.close(source)

@@ -34,6 +34,28 @@ object NexusCloudActions {
                 .setNegativeButton("Close",null).show()
         }
     }
+    fun verifyIdentity(a:Activity,uri:Uri,title:String,mime:String,complete:()->Unit){
+        val selected=runCatching{FgTeraboxDocumentsProvider.scopedFile(uri)}.getOrElse{error(a,"Scoped cloud file required");return}
+        AlertDialog.Builder(a).setTitle("Verify file identity")
+            .setMessage("Read all "+android.text.format.Formatter.formatFileSize(a,selected.size)+" to establish the exact SHA-256 identity. No permanent local copy is created.")
+            .setNegativeButton("Cancel",null).setPositiveButton("Verify"){_,_->
+                val stop=java.util.concurrent.atomic.AtomicBoolean(false)
+                val progress=AlertDialog.Builder(a).setTitle("Verifying cloud original")
+                    .setMessage("Checking the selected cloud object").setCancelable(false)
+                    .setNegativeButton("Stop",null).show()
+                val future=worker.submit{
+                    val result=runCatching{NexusCloudIdentity.verify(a.applicationContext,uri,title,mime,{stop.get()||a.isDestroyed||a.isFinishing}){read,total->
+                        a.runOnUiThread{if(active(a)&&progress.isShowing)progress.setMessage(android.text.format.Formatter.formatFileSize(a,read)+" / "+android.text.format.Formatter.formatFileSize(a,total))}
+                    }}
+                    a.runOnUiThread{
+                        if(!active(a)||stop.get())return@runOnUiThread
+                        progress.dismiss()
+                        result.onSuccess{complete()}.onFailure{error(a,it.message.orEmpty().take(180))}
+                    }
+                }
+                progress.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener{stop.set(true);future.cancel(true);progress.dismiss()}
+            }.show()
+    }
     fun move(a:Activity,uri:Uri){
         val file=runCatching{FgTeraboxDocumentsProvider.scopedFile(uri)}.getOrElse{error(a,"Scoped cloud file required");return}
         run(a,"Inspect selected cloud file",{NexusCloudOperations.inspect(a.applicationContext,file.scope,file.path)}){remote->

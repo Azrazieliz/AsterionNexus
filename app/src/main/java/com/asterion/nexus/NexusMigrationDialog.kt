@@ -25,6 +25,8 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
     val scope=rememberCoroutineScope()
     val migration=remember{LegacyCatalogMigration(ctx.applicationContext)}
     var kind by remember{mutableStateOf("Downloader")}
+    var rounder by remember{mutableStateOf(false)}
+    if(rounder){NexusRounderMigrationDialog{rounder=false};return}
     var staged by remember{mutableStateOf<LegacyCatalogMigration.Staged?>(null)}
     var coreRequest by remember{mutableStateOf<Map<String,Any>?>(null)}
     var status by remember{mutableStateOf("Select an authorized donor export. Original apps and files remain unchanged.")}
@@ -91,7 +93,8 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
                 OutlinedButton(enabled=!busy,onClick={picker.launch(arrayOf("*/*"))}){Text("Select export")}
                 if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
                 Text(status)
-                Text("Rounder: reconnect each TeraBox account and authorized SAF root. Private bookmark and account migration requires a supported source export; no foreign credentials are copied.")
+                TextButton(enabled=!busy,onClick={rounder=true}){Text("Rounder reader migration")}
+                Text("Reconnect each TeraBox account and authorized SAF root. No foreign credentials or permissions are copied.")
                 if(receipts.isNotEmpty()){
                     Text("Downloader migration receipts",style=MaterialTheme.typography.titleSmall)
                     receipts.take(10).forEach{(digest,receipt)->

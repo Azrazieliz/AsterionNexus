@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'scripts/prepare_nexus_translation.py'
+      - 'scripts/prepare_nexus_m2m100.py'
       - 'app/src/main/cpp/nexus_sentencepiece.cpp'
       - 'app/src/main/cpp/CMakeLists.txt'
       - 'app/src/main/java/com/asterion/nexus/NexusRasterEdition.kt'
@@ -20,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ja, ko, zh]
+        language: [ja, ko]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -38,7 +39,7 @@ jobs:
       - name: Fetch and verify exact model artifacts and execute reference inference
         run: |
           python -m pip install 'huggingface_hub==0.30.2' 'numpy==1.26.4' 'onnxruntime==1.22.1' 'sentencepiece==0.2.0'
-          python scripts/prepare_nexus_translation.py --languages ${{ matrix.language }}
+          python scripts/prepare_nexus_translation.py --languages '${{ matrix.language }}'
       - name: Install Android SDK and pinned NDK
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
@@ -62,5 +63,7 @@ jobs:
         if: always()
         with:
           name: nexus-translation-${{ matrix.language }}-reference-smoke-not-device-certification
-          path: nexus_translation_smoke.json
+          path: |
+            nexus_translation_smoke.json
+            nexus_m2m100_smoke.json
           retention-days: 7

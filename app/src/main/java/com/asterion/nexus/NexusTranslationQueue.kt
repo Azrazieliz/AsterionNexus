@@ -53,6 +53,7 @@ class NexusTranslationQueue(context:Context){
         if(!hasCjk(sample))return
         val language=language(sample)
         val state=when{
+            language=="zh"->"deferred_language"
             language==null->"language_review"
             mime !in setOf("text/plain","application/epub+zip",NexusDocxEdition.MIME)&&!NexusRasterEdition.supports(mime)->"blocked_layout"
             else->"queued"
@@ -63,6 +64,7 @@ class NexusTranslationQueue(context:Context){
                 put("sha",sha);put("mime",mime);put("language",language?:"und")
                 put("state",state);put("updated",System.currentTimeMillis())
                 if(state=="blocked_layout")put("error","A layout-preserving native edition adapter is not yet validated")
+                if(state=="deferred_language")put("error","Chinese translation is deferred; original and OCR index retained")
                 if(state=="language_review")put("error","Mixed or ambiguous CJK language")
             }
             helper.writableDatabase.insertWithOnConflict("jobs",null,row,SQLiteDatabase.CONFLICT_IGNORE)
@@ -78,8 +80,9 @@ class NexusTranslationQueue(context:Context){
     }
     fun status(sha:String):String{
         val helper=DB(app)
-        try{helper.readableDatabase.rawQuery("SELECT state,next,total,error,output FROM jobs WHERE sha=?",arrayOf(sha)).use{c->
+        try{helper.readableDatabase.rawQuery("SELECT state,next,total,error,output,language FROM jobs WHERE sha=?",arrayOf(sha)).use{c->
             if(!c.moveToFirst())return "Awaiting private text index / CJK language evidence"
+            if(c.getString(5)=="zh"&&c.getString(0)!="draft_verified")return "Chinese translation deferred · original and OCR index retained"
             return c.getString(0)+" · "+c.getInt(1)+" / "+c.getInt(2)+
                 (c.getString(3)?.let{" · "+it}?:"")+(c.getString(4)?.let{" · Independent edition registered"}?:"")
         }}finally{helper.close()}
@@ -88,11 +91,12 @@ class NexusTranslationQueue(context:Context){
         val helper=DB(app)
         try{
             val db=helper.writableDatabase
+            db.execSQL("UPDATE jobs SET state='deferred_language',error='Chinese translation deferred' WHERE language='zh' AND state<>'draft_verified'")
             db.rawQuery("SELECT mime,language FROM jobs WHERE sha=? AND state='blocked_layout'",arrayOf(sha)).use{c->
                 if(c.moveToFirst()&&c.getString(1)!="und"&&(NexusRasterEdition.supports(c.getString(0))||c.getString(0)==NexusDocxEdition.MIME))
                     db.execSQL("UPDATE jobs SET state='queued',error=NULL,updated=? WHERE sha=? AND state='blocked_layout'",arrayOf(System.currentTimeMillis(),sha))
             }
-            db.execSQL("UPDATE jobs SET state='queued',error=NULL,updated=? WHERE sha=? AND state IN ('blocked_engine','failed','paused')",arrayOf(System.currentTimeMillis(),sha))
+            db.execSQL("UPDATE jobs SET state='queued',error=NULL,updated=? WHERE sha=? AND language IN ('ja','ko') AND state IN ('blocked_engine','failed','paused')",arrayOf(System.currentTimeMillis(),sha))
         }
         finally{helper.close()}
         schedule()
@@ -104,7 +108,9 @@ class NexusTranslationQueue(context:Context){
     }
     private fun pending():Work?{
         val helper=DB(app)
-        try{helper.readableDatabase.rawQuery("SELECT sha,mime,language,next,model FROM jobs WHERE state IN ('queued','running') ORDER BY updated ASC LIMIT 1",null).use{c->
+        try{val db=helper.writableDatabase
+            db.execSQL("UPDATE jobs SET state='deferred_language',error='Chinese translation deferred' WHERE language='zh' AND state<>'draft_verified'")
+            db.rawQuery("SELECT sha,mime,language,next,model FROM jobs WHERE language IN ('ja','ko') AND state IN ('queued','running') ORDER BY updated ASC LIMIT 1",null).use{c->
             return if(c.moveToFirst())Work(c.getString(0),c.getString(1),c.getString(2),c.getInt(3),c.getString(4))else null
         }}finally{helper.close()}
     }

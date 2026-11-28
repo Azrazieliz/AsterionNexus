@@ -14,11 +14,13 @@ Use exact **assembled Rounder release source** and accepted on-phone functionali
 ## Translation: owner-updated contract
 
 The historical `ASTERION_NEXUS_INTERNAL_TRANSLATION_CONTRACT_2026-11-11.md` is partially superseded:
-- **Still binding**: Japanese, Korean, simplified/traditional Chinese -> English; quality-first contextual translation with original preservation; self-contained **phone-native offline runtime**; internal OCR for books/comics when needed; embedded/installed validated first-party translation/OCR implementation, no required external app/service, no cloud translator or Windows acceleration; per-format translated edition with exact order, original art and a genuine output.
-- **Changed**: translation is automatically scheduled for **every verified eligible CJK book/comic**, not merely selected collections. OCR use is limited to books/comics (not arbitrary gallery-image OCR). **Full private indexing of all imported books is now explicitly required**, superseding the old `NO INDEX` restriction. **No optional PC execution path is accepted for translation**.
+- **Still binding**: Japanese and Korean -> English (simplified/traditional Chinese translation deferred by owner on 2026-11-28; Chinese OCR and indexing remain enabled); quality-first contextual translation with original preservation; self-contained **phone-native offline runtime**; internal OCR for books/comics when needed; embedded/installed validated first-party translation/OCR implementation, no required external app/service, no cloud translator or Windows acceleration; per-format translated edition with exact order, original art and a genuine output.
+- **Changed**: translation is automatically scheduled for **every verified eligible book/comic in a supported translation language**, not merely selected collections. OCR use is limited to books/comics (not arbitrary gallery-image OCR). **Full private indexing of all imported books is now explicitly required**, superseding the old `NO INDEX` restriction. **No optional PC execution path is accepted for translation**.
 - English/unsupported non-CJK books are never mislabeled translated. If there is no installed supported language model/lexical resource, return a visible `UNSUPPORTED_LANGUAGE` or `ENGINE_UNAVAILABLE` and preserve the original.
 - Eligible supported inputs include EPUB, PDF, CBZ, CBR, ZIP books/comics and TXT; other document formats only after a specific real adapter passes its acceptance. Do not degrade mixed-script/vertical writing/furigana/dialogue handling silently.
 - The user selected **independent derived output items with optional links**; maintain original and translated edition as separate content items. Link by stable related-edition ID if useful, but no forced aggregate card behavior.
+
+Chinese source items retain their originals and private text index, with a visible deferred-language state. Existing checkpoints and independent editions are preserved. No Chinese model is required for the current release.
 
 ## Native translation execution pipeline
 

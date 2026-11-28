@@ -171,18 +171,20 @@
   "books": {
     "translation_sources": [
       "ja",
-      "ko",
-      "zh-Hans",
-      "zh-Hant"
+      "ko"
     ],
     "translation_target": "en",
-    "translation_trigger": "automatic_for_every_verified_eligible_CJK_book_or_comic",
+    "translation_trigger": "automatic_for_every_verified_eligible_supported_language_book_or_comic",
     "translation_execution": "phone_native_offline_only",
     "ocr_scope": "books_and_comics_only",
     "full_private_index_of_all_imported_books": true,
     "external_book_text_search_egress": false,
     "source_preservation": true,
-    "comic_output": "one_complete_title_cbz"
+    "comic_output": "one_complete_title_cbz",
+    "translation_deferred_sources": [
+      "zh-Hans",
+      "zh-Hant"
+    ]
   },
   "editing": {
     "automatic_video_editing_selected_collections": true,

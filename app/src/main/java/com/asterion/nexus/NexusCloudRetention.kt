@@ -67,14 +67,23 @@ object NexusCloudRetention{
         registry.evictAfterReadback(item,candidate,proof.verifiedAt)
     }
     @JvmStatic fun openEvicted(context:Context,item:NexusRegistry.Item):ParcelFileDescriptor{
-        val remote=NexusRegistry(context).evictedLocation(item)?:throw IOException("No verified cloud-only location")
-        requireRemote(context,remote)
-        val uri=FgTeraboxDocumentsProvider.uriForAccount(remote.account,remote.path,remote.length)
-        return context.contentResolver.openFileDescriptor(uri,"r")?:throw IOException("Verified cloud original is not readable")
+        val registry=NexusRegistry(context)
+        val locations=(listOfNotNull(registry.evictedLocation(item))+registry.verifiedCloudLocations(item.sha256)).distinctBy{it.account to it.fsId}
+        for(remote in locations){
+            val opened=runCatching{
+                requireRemote(context,remote)
+                val uri=FgTeraboxDocumentsProvider.uriForAccount(remote.account,remote.path,remote.length)
+                context.contentResolver.openFileDescriptor(uri,"r")
+            }.getOrNull()
+            if(opened!=null)return opened
+        }
+        throw IOException("No accessible verified cloud-only location")
     }
     fun restore(context:Context,item:NexusRegistry.Item):NexusRegistry.Item{
-        val remote=NexusRegistry(context).evictedLocation(item)?:error("No verified cloud-only location")
-        requireRemote(context,remote)
+        val registry=NexusRegistry(context)
+        val remote=(listOfNotNull(registry.evictedLocation(item))+registry.verifiedCloudLocations(item.sha256))
+            .distinctBy{it.account to it.fsId}.firstOrNull{runCatching{requireRemote(context,it)}.isSuccess}
+            ?:error("No accessible verified cloud-only location")
         return NexusCloudOperations.pin(context,remote.account,remote.path,item.displayName,item.mime,item.length).also{check(it.sha256==item.sha256){"Restored identity mismatch"}}
     }
 }

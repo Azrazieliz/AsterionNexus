@@ -221,7 +221,7 @@
     {
       "id": "TXT-001",
       "phase": "P6",
-      "requirement": "Automatic phone-offline CJK translation of eligible books",
+      "requirement": "Automatic phone-offline Japanese and Korean translation of eligible books; Chinese translation deferred (OCR/index retained)",
       "evidence": [
         "model_runtime_offline",
         "real_output_quality",
