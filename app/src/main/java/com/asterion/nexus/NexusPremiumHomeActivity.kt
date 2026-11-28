@@ -335,6 +335,7 @@ private fun NexusHome(
                     Box{
                         TextButton(onClick={showMore=true}){Text("⋮",fontSize=22.sp)}
                         DropdownMenu(expanded=showMore,onDismissRequest={showMore=false}){
+                            if(destination=="Organising")DropdownMenuItem(text={Text("Automatic cloud organization")},onClick={showMore=false;NexusOrganizationActions.show(activity)})
                             if(destination=="Organising")DropdownMenuItem(text={Text("Cloud move history")},onClick={showMore=false;NexusCloudActions.history(activity)})
                             if(destination=="Library")DropdownMenuItem(text={Text("Offline pins")},onClick={showMore=false;NexusCloudActions.pins(activity)})
                             if(destination=="Organising")DropdownMenuItem(text={Text("Migrate donor data")},onClick={showMore=false;showMigration=true})
