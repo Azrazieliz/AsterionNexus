@@ -94,6 +94,9 @@ public final class NexusReaderActivity extends Activity {
             layoutButton=button("Pages",()->switchLayout());
             metadataHeading.addView(layoutButton,new LinearLayout.LayoutParams(-2,-2));
         }
+        if(mode==2&&NexusArchiveOperation.available(this,source)){
+            metadataHeading.addView(button("Extract",()->NexusArchiveOperation.show(this,source)),new LinearLayout.LayoutParams(-2,-2));
+        }
         metadataHeading.addView(button("Details",()->NexusFileDetails.show(this,source,type,heading.getText().toString())),new LinearLayout.LayoutParams(-2,-2));
         view.addView(metadataHeading,new LinearLayout.LayoutParams(-1,-2));
         position=text("Opening",12);position.setTextColor(ACCENT);
