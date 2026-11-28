@@ -85,7 +85,38 @@ object NexusFileDetails {
         val status=TextView(activity).apply{text="Reading file metadata…"}
         val slider=SeekBar(activity).apply{max=100;progress=50;isEnabled=false}
         body.addView(info);body.addView(status);body.addView(slider)
+        if(uri.authority==com.openlocal.office.core.FgTeraboxDocumentsProvider.AUTHORITY){
+            body.addView(android.widget.Button(activity).apply{
+                text="Pin offline"
+                setOnClickListener{NexusCloudActions.pin(activity,uri,title?: "File",type)}
+            })
+            body.addView(android.widget.Button(activity).apply{
+                text="Move or rename"
+                setOnClickListener{NexusCloudActions.move(activity,uri)}
+            })
+        }
         if(NexusArchiveOperation.available(activity,uri)){
+            body.addView(android.widget.Button(activity).apply{
+                text="Related editions and outputs"
+                setOnClickListener{
+                    worker.execute{
+                        val result=runCatching{NexusRegistry(activity).related(uri.lastPathSegment,80)}
+                        activity.runOnUiThread{
+                            if(!activity.isFinishing&&!activity.isDestroyed){
+                                result.onSuccess{rows->
+                                    val dialog=AlertDialog.Builder(activity).setTitle("Related files").setPositiveButton("Close",null)
+                                    if(rows.isEmpty())dialog.setMessage("No recorded related files")
+                                    else dialog.setItems(rows.map{it.displayName}.toTypedArray()){_,which->
+                                        val item=rows[which]
+                                        NexusFileOpen.open(activity,NexusLibraryProvider.uriFor(activity,item.sha256),item.mime,item.displayName)
+                                    }
+                                    dialog.show()
+                                }.onFailure{status.text="Related files unavailable"}
+                            }
+                        }
+                    }
+                }
+            })
             body.addView(android.widget.Button(activity).apply{
                 text="Verify or recover original"
                 setOnClickListener{
