@@ -96,18 +96,21 @@ object NexusVideoExport {
                 if(item!=null&&registry.verifyOriginal(item))return item
             }
         }
+        var preserveComplete=false
         val estimate=Math.multiplyExact(duration,profile.bitrate.toLong()+512000)/8000
         check(dir.usableSpace>Math.addExact(Math.multiplyExact(estimate,3),64L*1024*1024)){"Insufficient export storage"}
         val output=File(dir,identity.substringAfter(':')+".partial.mp4")
         val mime=if(profile.hevc)MimeTypes.VIDEO_H265 else MimeTypes.VIDEO_H264
         fun publish():NexusRegistry.Item{
             validate(output,duration,profile,mime,hasAudio)
+            preserveComplete=true
             sources.distinctBy{it.item.sha256}.forEach{stopped(cancel);check(NexusOriginalStore.matches(it.file,it.item.length,it.item.sha256)){"Original changed during export"}}
             save(receipt,spec.put("state","VERIFIED"))
             registry.job(identity,"VERIFIED",output.length(),null)
             val item=output.inputStream().use{registry.ingest(it,title.trim().removeSuffix(".mp4")+".mp4","video/mp4","nexus-video-edit","device",identity,output.length(),null)}
             clips.map{it.sha}.distinct().forEach{registry.linkDerivative(item.sha256,it,if(inputs.size>1)"assembled_from" else "derived_from","timeline-export")}
             save(receipt,spec.put("state","INDEXED").put("output_sha256",item.sha256).put("validation","track, duration and representative decode"))
+            preserveComplete=false
             registry.job(identity,"INDEXED",item.length,null)
             return item
         }
@@ -115,6 +118,7 @@ object NexusVideoExport {
             stopped(cancel)
             val recovered=runCatching{publish()}
             recovered.onSuccess{output.delete();File(dir,identity.substringAfter(':')+".staging").deleteRecursively();return it}
+            if(preserveComplete)throw IOException("Verified export awaits publication",recovered.exceptionOrNull())
             stopped(cancel)
         }
         if(output.exists())check(output.delete()){"Old partial export cannot be cleared"}
@@ -188,14 +192,14 @@ object NexusVideoExport {
             save(receipt,spec.put("state","BYTES_COMPLETE"))
             return publish()
         }catch(e:Exception){
-            save(receipt,spec.put("state",if(cancel.get())"CANCELLED" else "FAILED").put("error",e.message.orEmpty().take(500)))
+            save(receipt,spec.put("state",if(preserveComplete)"VERIFIED" else if(cancel.get())"CANCELLED" else "FAILED").put("error",e.message.orEmpty().take(500)))
             registry.job(identity,"FAILED",0,e.javaClass.simpleName);throw e
         }finally{
             abort.set(true)
             handler.post{runCatching{transformer.get()?.cancel()};worker.quitSafely()}
             // Never remove a file while codec cancellation may still write to it.
             worker.join(10000)
-            if(!worker.isAlive){output.delete();stageDir.deleteRecursively()}else{draining.add(identity);Thread{worker.join();synchronized(this@NexusVideoExport){output.delete();stageDir.deleteRecursively();draining.remove(identity)}}.start()}
+            if(!worker.isAlive){if(!preserveComplete)output.delete();stageDir.deleteRecursively()}else{val keep=preserveComplete;draining.add(identity);Thread{worker.join();synchronized(this@NexusVideoExport){if(!keep)output.delete();stageDir.deleteRecursively();draining.remove(identity)}}.start()}
         }
     }
     private fun validate(file:File,duration:Long,profile:Profile,mime:String,audio:Boolean){

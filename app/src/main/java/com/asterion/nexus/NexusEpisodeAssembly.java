@@ -233,7 +233,7 @@ public final class NexusEpisodeAssembly {
      * Unsupported tracks, uncertain fingerprints and questionable cuts retain the complete episode.
      */
     public static List<long[]> transcodePlan(Context context,List<String> ids,List<Long> durations)throws Exception{
-        require(ids.size()==durations.size()&&ids.size()>=2&&ids.size()<=100,"Invalid episode selection");
+        require(ids.size()==durations.size()&&ids.size()>=2&&ids.size()<=100&&new HashSet<>(ids).size()==ids.size(),"Invalid episode selection");
         NexusRegistry registry=new NexusRegistry(context);
         ArrayList<NexusRepeatedEdges.Episode> edges=new ArrayList<>();
         ArrayList<File> files=new ArrayList<>();
@@ -352,7 +352,7 @@ public final class NexusEpisodeAssembly {
                     long from=cut.start,until=cut.end==episodeEdges.get(i).duration?Long.MAX_VALUE:cut.end;
                     sources.getJSONObject(i).put("source_keep_from_us",from)
                         .put("source_keep_until_us",until==Long.MAX_VALUE?JSONObject.NULL:until)
-                        .put("cut_evidence",from>0||until!=Long.MAX_VALUE?"exact_audio_video_packet_match_all_episodes":"no_proven_repeated_edge");
+                        .put("cut_evidence",from>0||until!=Long.MAX_VALUE?"exact_audio_video_packet_match_with_retained_witness":"no_proven_repeated_edge");
                     offset=Math.addExact(offset,transfer(extractor,l,muxer,tracks,offset,evidence,from,until));
                     sources.getJSONObject(i).put("end_us",offset);
                 }finally{extractor.release();}
@@ -370,6 +370,7 @@ public final class NexusEpisodeAssembly {
             try(InputStream in=new FileInputStream(output)){
                 result=registry.ingest(in,name.replaceFirst("(?i)\\.mp4$","")+".mp4","video/mp4","nexus-assembly","device",identity,output.length(),null);
             }
+            for(String sha:ids)registry.linkDerivative(result.sha256,sha,"assembled_from","exact-packet-assembly");
             project.put("state","INDEXED").put("output_sha256",result.sha256).put("duration_us",offset);
             journal(manifest,project);registry.job(identity,"INDEXED",result.length,null);
             return result;
