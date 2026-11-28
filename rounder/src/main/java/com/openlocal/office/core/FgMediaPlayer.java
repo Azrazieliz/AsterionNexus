@@ -590,6 +590,9 @@ public final class FgMediaPlayer implements AutoCloseable {
     public void seekToPosition(long positionMs){
         if(!closed&&positionMs>0)player.seekTo(positionMs);
     }
+    public long positionMs(){return closed?0L:Math.max(0L,player.getCurrentPosition());}
+    public long durationMs(){return closed?0L:Math.max(0L,player.getDuration());}
+    public void pausePlayback(){if(!closed)player.pause();}
     private static final class VideoTransport extends View{
         private final int role;
         private final float dp;
