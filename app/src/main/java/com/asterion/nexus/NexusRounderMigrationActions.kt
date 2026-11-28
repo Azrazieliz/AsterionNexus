@@ -22,6 +22,10 @@ internal fun NexusRounderMigrationDialog(onClose:()->Unit){
     val migration=remember{NexusRounderMigration(ctx)}
     var staged by remember{mutableStateOf<NexusRounderMigration.Staged?>(null)}
     var rows by remember{mutableStateOf<List<NexusRounderMigration.Bookmark>>(emptyList())}
+    var receipts by remember{mutableStateOf<List<NexusRounderMigration.Receipt>>(emptyList())}
+    var receipt by remember{mutableStateOf<NexusRounderMigration.Receipt?>(null)}
+    var recent by remember{mutableStateOf<List<String>>(emptyList())}
+    var revoke by remember{mutableStateOf(false)}
     var selected by remember{mutableStateOf<NexusRounderMigration.Bookmark?>(null)}
     var query by remember{mutableStateOf("")}
     var candidates by remember{mutableStateOf<List<NexusRegistry.Item>>(emptyList())}
@@ -29,7 +33,7 @@ internal fun NexusRounderMigrationDialog(onClose:()->Unit){
     var busy by remember{mutableStateOf(false)}
     var status by remember{mutableStateOf("Select a Rounder reader export. Filename-based records are retained but must be linked to the correct original.")}
 
-    suspend fun refresh(){rows=withContext(Dispatchers.IO){migration.list()}}
+    suspend fun refresh(){val snapshot=withContext(Dispatchers.IO){migration.list() to migration.receipts()};rows=snapshot.first;receipts=snapshot.second}
     LaunchedEffect(Unit){runCatching{refresh()}.onFailure{status="Existing migration records unavailable"}}
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri:Uri?->
         if(uri!=null){
@@ -76,7 +80,11 @@ internal fun NexusRounderMigrationDialog(onClose:()->Unit){
                         }){Text(row.name+" · chapter "+(row.chapter+1)+if(row.boundSha==null)" · unbound" else " · bound")}
                     }
                 }
-                Text("Recent history and appearance settings remain in the private export; account permissions are not transferred.")
+                if(receipts.isNotEmpty())Text("Imported snapshots",style=MaterialTheme.typography.titleSmall)
+                LazyColumn(Modifier.heightIn(max=140.dp)){
+                    items(receipts,key={it.sha}){r->TextButton(enabled=!busy,onClick={scope.launch{try{recent=withContext(Dispatchers.IO){migration.recentNames(r.sha)};receipt=r}catch(e:Exception){status="Snapshot unavailable"}}}){Text(r.sha.take(12)+" · "+r.records+" records")}}
+                }
+                Text("Appearance settings are retained in the private export; account permissions are not transferred.")
             }else{
                 Text(selected!!.name+" · chapter "+(selected!!.chapter+1))
                 OutlinedTextField(query,{query=it},label={Text("Find the original EPUB")},singleLine=true,enabled=!busy)
@@ -92,6 +100,21 @@ internal fun NexusRounderMigrationDialog(onClose:()->Unit){
             }
         }
     },confirmButton={TextButton(enabled=!busy,onClick=onClose){Text("Close")}})
+    receipt?.let{r->
+        AlertDialog(onDismissRequest={if(!busy){receipt=null;revoke=false}},title={Text(if(revoke)"Revoke unbound import?" else "Migration snapshot")},
+            text={Column{Text(r.sha.take(16)+" · "+r.bookmarks+" bookmarks · "+r.recent+" recent items")
+                if(revoke)Text("This removes the applied receipt, not the original export or any book.")
+                else LazyColumn(Modifier.heightIn(max=220.dp)){items(recent){name->Text(name,Modifier.padding(vertical=3.dp))}}
+            }},
+            confirmButton={TextButton(enabled=!busy&&!r.bound,onClick={
+                if(!revoke)revoke=true else{busy=true;scope.launch{
+                    try{withContext(Dispatchers.IO){migration.rollback(r.sha)};refresh();receipt=null;revoke=false;status="Unbound snapshot revoked."}
+                    catch(e:Exception){status="Revocation refused: "+(e.message?:e.javaClass.simpleName).take(100)}
+                    finally{busy=false}
+                }}
+            }){Text(if(revoke)"Revoke" else "Revoke import")}},
+            dismissButton={TextButton(enabled=!busy,onClick={receipt=null;revoke=false}){Text("Close")}})
+    }
     val item=bind
     if(item!=null&&selected!=null){
         val row=selected!!
