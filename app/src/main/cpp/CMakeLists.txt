@@ -11,9 +11,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/sentencepiece/CMakeLists.txt"
   set(SPM_BUILD_TEST OFF CACHE BOOL "" FORCE)
   set(SPM_ENABLE_TCMALLOC OFF CACHE BOOL "" FORCE)
   set(SPM_USE_BUILTIN_PROTOBUF ON CACHE BOOL "" FORCE)
+  find_library(NEXUS_ANDROID_LOG log REQUIRED)
   add_subdirectory(third_party/sentencepiece sentencepiece-build EXCLUDE_FROM_ALL)
+  # The upstream CLI targets also link the static library; propagate log to all consumers.
+  target_link_libraries(sentencepiece-static PUBLIC ${NEXUS_ANDROID_LOG})
   add_library(nexus_sentencepiece SHARED nexus_sentencepiece.cpp)
   target_include_directories(nexus_sentencepiece PRIVATE third_party/sentencepiece/src)
-  find_library(NEXUS_ANDROID_LOG log REQUIRED)
   target_link_libraries(nexus_sentencepiece PRIVATE sentencepiece-static ${NEXUS_ANDROID_LOG})
 endif()
