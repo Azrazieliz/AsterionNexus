@@ -115,6 +115,63 @@ object NexusFileDetails {
             }
         }
         var target:Target?=null
+        if(type.startsWith("image/")){
+            val similar=android.widget.Button(activity).apply{
+                text="Find similar artwork";isEnabled=false
+            }
+            body.addView(similar)
+            similar.setOnClickListener{
+                val id=target?.coreId?:return@setOnClickListener
+                similar.isEnabled=false;similar.text="Searching visual index…"
+                worker.execute{
+                    val result=runCatching{StandaloneRuntime.nexusVisualSimilar(id,40)}
+                    activity.runOnUiThread{
+                        if(activity.isFinishing||activity.isDestroyed)return@runOnUiThread
+                        similar.text="Find similar artwork";similar.isEnabled=true
+                        result.onSuccess{response->
+                            val matches=(response["matches"] as? List<*>)?.mapNotNull{it as? Map<*,*>}.orEmpty()
+                            val visible=matches.filter{!it["uri"]?.toString().isNullOrBlank()}
+                            val compared=response["compared"] as? Number?:0
+                            val heading="Visual matches · "+compared+" indexed images compared"
+                            val dialog=AlertDialog.Builder(activity).setTitle(heading)
+                                .setPositiveButton("Close",null)
+                            if(response["indexed"]!=true){
+                                dialog.setMessage("No compatible whole-image descriptor. Analyse this artwork in Core first.")
+                            }else if(visible.isEmpty()){
+                                dialog.setMessage("No compatible visual matches are available in the analysed library.")
+                            }else{
+                                val labels=visible.map{row->
+                                    val name=row["filename"]?.toString()?:"Artwork"
+                                    val score=(row["visual_score"] as? Number)?.toDouble()?:0.0
+                                    name+" · cosine "+String.format(java.util.Locale.ROOT,"%.3f",score)
+                                }.toTypedArray()
+                                dialog.setItems(labels){_,which->
+                                    val row=visible[which]
+                                    runCatching{NexusFileOpen.open(activity,Uri.parse(row["uri"].toString()),
+                                        row["mime_type"]?.toString()?:"image/*",row["filename"]?.toString()?:"Artwork")}
+                                        .onFailure{AlertDialog.Builder(activity).setMessage("Artwork could not be opened.")
+                                            .setPositiveButton("Close",null).show()}
+                                }
+                            }
+                            dialog.show()
+                        }.onFailure{
+                            AlertDialog.Builder(activity).setMessage("Visual search unavailable: "+it.message.orEmpty().take(120))
+                                .setPositiveButton("Close",null).show()
+                        }
+                    }
+                }
+            }
+            // The same verified Core identity used for rating controls access
+            // to similarity search. Generic files do not invent a Core ID.
+            val originalStatus=status
+            originalStatus.addTextChangedListener(object:android.text.TextWatcher{
+                override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){}
+                override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){
+                    if(similar.text=="Find similar artwork")similar.isEnabled=target?.coreId!=null
+                }
+                override fun afterTextChanged(s:android.text.Editable?){}
+            })
+        }
         var selected:Int?=null
         var saving=false
         val builder=AlertDialog.Builder(activity).setTitle(title?:"File details")
