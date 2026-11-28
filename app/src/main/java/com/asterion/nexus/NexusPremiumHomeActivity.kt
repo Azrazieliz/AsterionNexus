@@ -360,7 +360,7 @@ private fun NexusHome(
                                 containerColor=PaneColor,labelColor=MutedColor))
                     }
                 }
-                if(section=="Library"){
+                if(section=="Library"||section=="CoreGallery"){
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         FilterChip(selected=cloudMedia,onClick={cloudMedia=true},label={Text("TeraBox")})
                         FilterChip(selected=!cloudMedia,onClick={cloudMedia=false},label={Text("On device")})
@@ -372,7 +372,11 @@ private fun NexusHome(
                         Text(status,color=MutedColor,fontSize=12.sp)
                 }
             }
-            if(section=="Library"&&cloudMedia&&category in listOf("Books","Videos","Assets")){
+            if(section=="CoreGallery"&&cloudMedia){
+                Box(Modifier.weight(1f).fillMaxWidth()){
+                    NexusCloudMediaPane("Gallery",query,previewEnabled,onWorkspaceOpen)
+                }
+            }else if(section=="Library"&&cloudMedia&&category in listOf("Books","Videos","Assets")){
                 Box(Modifier.weight(1f).fillMaxWidth()){
                     key(category){NexusCloudMediaPane(category,query,previewEnabled,onWorkspaceOpen)}
                 }
