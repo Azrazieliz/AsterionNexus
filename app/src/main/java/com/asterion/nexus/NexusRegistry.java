@@ -15,7 +15,7 @@ public final class NexusRegistry {
     private static final String DB_NAME="nexus_registry_v1.sqlite";
 
     private static final class Database extends SQLiteOpenHelper {
-        Database(Context app){super(app,DB_NAME,null,2);setWriteAheadLoggingEnabled(true);}
+        Database(Context app){super(app,DB_NAME,null,3);setWriteAheadLoggingEnabled(true);}
         @Override public void onConfigure(SQLiteDatabase db){
             super.onConfigure(db);db.setForeignKeyConstraintsEnabled(true);
         }
@@ -25,14 +25,21 @@ public final class NexusRegistry {
             db.execSQL("CREATE INDEX idx_nexus_library_names ON locations(display_name COLLATE NOCASE)");
             db.execSQL("CREATE INDEX idx_nexus_library_sources ON locations(source_kind,account_key)");
             db.execSQL("CREATE TABLE jobs(job_key TEXT PRIMARY KEY,stage TEXT NOT NULL,received INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,error_code TEXT)");
-            createFileRatings(db);
+            createFileRatings(db);createRemoteLocations(db);
         }
         private void createFileRatings(SQLiteDatabase db){
             db.execSQL("CREATE TABLE IF NOT EXISTS file_ratings(sha256 TEXT PRIMARY KEY CHECK(length(sha256)=64),score INTEGER NOT NULL CHECK(score BETWEEN 0 AND 100),updated_at INTEGER NOT NULL)");
         }
+        private void createRemoteLocations(SQLiteDatabase db){
+            db.execSQL("CREATE TABLE IF NOT EXISTS remote_locations(account TEXT NOT NULL,fs_id INTEGER NOT NULL CHECK(fs_id>0),path TEXT NOT NULL,bytes INTEGER NOT NULL CHECK(bytes>0),remote_md5 TEXT NOT NULL DEFAULT '',sha256 TEXT NOT NULL REFERENCES originals(sha256),pinned INTEGER NOT NULL DEFAULT 0 CHECK(pinned IN (0,1)),verified_at INTEGER NOT NULL,PRIMARY KEY(account,fs_id))");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_nexus_remote_sha ON remote_locations(sha256,account)");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_nexus_remote_path ON remote_locations(account,path)");
+            db.execSQL("CREATE TABLE IF NOT EXISTS content_relations(output_sha TEXT NOT NULL REFERENCES originals(sha256),source_sha TEXT NOT NULL REFERENCES originals(sha256),kind TEXT NOT NULL,operation TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(output_sha,source_sha,kind,operation))");
+        }
         @Override public void onUpgrade(SQLiteDatabase db,int old,int current){
-            if(old==1&&current==2){createFileRatings(db);return;}
-            throw new IllegalStateException("Unsupported Nexus registry migration");
+            if(old<1||current!=3||old>=current)throw new IllegalStateException("Unsupported Nexus registry migration");
+            if(old==1)createFileRatings(db);
+            createRemoteLocations(db);
         }
     }
     public static final class Item {
@@ -158,6 +165,97 @@ public final class NexusRegistry {
         try(Cursor c=helper.getReadableDatabase().rawQuery(
             "SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.source_kind IN ('downloader-direct','nexus-comic','nexus-novel','nexus-assembly') ORDER BY l.id LIMIT ? OFFSET ?",
             new String[]{Integer.toString(limit),Integer.toString(offset)})){
+            while(c.moveToNext())rows.add(item(c));
+        }finally{helper.close();}
+        return rows;
+    }
+
+    public static final class RemoteLocation {
+        public final String account,path,md5,sha256;
+        public final long fsId,length,verifiedAt;
+        public final boolean pinned;
+        RemoteLocation(Cursor c){
+            account=c.getString(0);fsId=c.getLong(1);path=c.getString(2);length=c.getLong(3);
+            md5=c.getString(4);sha256=c.getString(5);pinned=c.getInt(6)!=0;verifiedAt=c.getLong(7);
+        }
+    }
+    private static void remoteIdentity(String account,long fsId,String path,long bytes,String md5){
+        if(account==null||!account.matches("[0-9a-f-]{36}")||fsId<=0||path==null||!path.startsWith("/")||
+            path.length()>4096||bytes<=0||md5==null||(!md5.isEmpty()&&!md5.matches("[0-9a-f]{32}")))
+            throw new IllegalArgumentException("Invalid remote location identity");
+    }
+    public RemoteLocation remote(String account,long fsId){
+        Database helper=new Database(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT account,fs_id,path,bytes,remote_md5,sha256,pinned,verified_at FROM remote_locations WHERE account=? AND fs_id=?",
+            new String[]{account,Long.toString(fsId)})){
+            return c.moveToFirst()?new RemoteLocation(c):null;
+        }finally{helper.close();}
+    }
+    public void bindRemote(Item item,String account,long fsId,String path,long bytes,String md5,boolean pinned)throws IOException{
+        remoteIdentity(account,fsId,path,bytes,md5);
+        if(item==null||item.length!=bytes||!verifyOriginal(item))throw new IOException("Verified content required for remote binding");
+        Database helper=new Database(app);
+        SQLiteDatabase db=helper.getWritableDatabase();
+        db.beginTransaction();
+        try{
+            try(Cursor c=db.rawQuery("SELECT sha256,bytes,remote_md5,pinned FROM remote_locations WHERE account=? AND fs_id=?",
+                new String[]{account,Long.toString(fsId)})){
+                if(c.moveToFirst()){
+                    if(!item.sha256.equals(c.getString(0))||bytes!=c.getLong(1)||
+                        (!md5.isEmpty()&&!c.getString(2).isEmpty()&&!md5.equals(c.getString(2))))
+                        throw new IOException("Remote object identity changed; existing binding retained");
+                    pinned=pinned||c.getInt(3)!=0;
+                    if(md5.isEmpty())md5=c.getString(2);
+                }
+            }
+            ContentValues row=new ContentValues();
+            row.put("account",account);row.put("fs_id",fsId);row.put("path",path);row.put("bytes",bytes);
+            row.put("remote_md5",md5);row.put("sha256",item.sha256);row.put("pinned",pinned?1:0);
+            row.put("verified_at",System.currentTimeMillis());
+            if(db.insertWithOnConflict("remote_locations",null,row,SQLiteDatabase.CONFLICT_REPLACE)<0)
+                throw new IOException("Remote location not recorded");
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();helper.close();}
+    }
+    public void noteRemoteMove(String account,long fsId,String oldPath,String newPath,long bytes,String md5){
+        remoteIdentity(account,fsId,newPath,bytes,md5);
+        Database helper=new Database(app);
+        try{
+            helper.getWritableDatabase().execSQL("UPDATE remote_locations SET path=?,verified_at=? WHERE account=? AND fs_id=? AND bytes=? AND path=? AND (remote_md5='' OR ?='' OR remote_md5=?)",
+                new Object[]{newPath,System.currentTimeMillis(),account,fsId,bytes,oldPath,md5,md5});
+        }finally{helper.close();}
+    }
+    /** An unpin never deletes bytes. Removal requires the separate verified
+     * cleanup proposal, which is not inferred from a missing remote record. */
+    public void unpin(String account,long fsId){
+        Database helper=new Database(app);
+        try{helper.getWritableDatabase().execSQL("UPDATE remote_locations SET pinned=0 WHERE account=? AND fs_id=?",new Object[]{account,fsId});}
+        finally{helper.close();}
+    }
+    public List<RemoteLocation> pinned(int limit,int offset){
+        if(limit<1||limit>200||offset<0)throw new IllegalArgumentException("Invalid pin page");
+        Database helper=new Database(app);ArrayList<RemoteLocation> rows=new ArrayList<>();
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT account,fs_id,path,bytes,remote_md5,sha256,pinned,verified_at FROM remote_locations WHERE pinned=1 ORDER BY verified_at DESC,account,fs_id LIMIT ? OFFSET ?",new String[]{Integer.toString(limit),Integer.toString(offset)})){
+            while(c.moveToNext())rows.add(new RemoteLocation(c));
+        }finally{helper.close();}
+        return rows;
+    }
+    public void linkDerivative(String output,String source,String kind,String operation){
+        if(output==null||source==null||!output.matches("[0-9a-f]{64}")||!source.matches("[0-9a-f]{64}")||
+            !Set.of("derived_from","translated_from","extracted_from","assembled_from").contains(kind)||operation==null||operation.isBlank())
+            throw new IllegalArgumentException("Invalid content relation");
+        if(output.equals(source))return;
+        Database helper=new Database(app);
+        try{
+            helper.getWritableDatabase().execSQL("INSERT OR IGNORE INTO content_relations(output_sha,source_sha,kind,operation,created_at) VALUES(?,?,?,?,?)",
+                new Object[]{output,source,kind,NexusOriginalStore.sourceKey(operation),System.currentTimeMillis()});
+        }finally{helper.close();}
+    }
+    public List<Item> related(String sha,int limit){
+        requireRatingIdentity(sha);
+        if(limit<1||limit>100)throw new IllegalArgumentException("Invalid related page");
+        Database helper=new Database(app);ArrayList<Item> rows=new ArrayList<>();
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON o.sha256=l.sha256 WHERE l.id IN (SELECT MIN(l2.id) FROM locations l2 WHERE l2.sha256 IN (SELECT output_sha FROM content_relations WHERE source_sha=? UNION SELECT source_sha FROM content_relations WHERE output_sha=?) GROUP BY l2.sha256) ORDER BY l.id DESC LIMIT ?",new String[]{sha,sha,Integer.toString(limit)})){
             while(c.moveToNext())rows.add(item(c));
         }finally{helper.close();}
         return rows;
