@@ -35,25 +35,57 @@ public final class NexusBookIndex {
         }
     }
     private static final class DB extends SQLiteOpenHelper {
-        DB(Context c){super(c,"nexus_book_index_v1.sqlite",null,1);setWriteAheadLoggingEnabled(true);}
+        DB(Context c){super(c,"nexus_book_index_v1.sqlite",null,2);setWriteAheadLoggingEnabled(true);}
         @Override public void onCreate(SQLiteDatabase db){
             db.execSQL("CREATE TABLE books(sha TEXT PRIMARY KEY,title TEXT NOT NULL,mime TEXT NOT NULL,chapter_count INTEGER NOT NULL DEFAULT 0,next_chapter INTEGER NOT NULL DEFAULT 0,state TEXT NOT NULL DEFAULT 'queued',error TEXT,updated INTEGER NOT NULL)");
             db.execSQL("CREATE TABLE chapters(rowid INTEGER PRIMARY KEY AUTOINCREMENT,sha TEXT NOT NULL REFERENCES books(sha),chapter INTEGER NOT NULL,title TEXT NOT NULL,characters INTEGER NOT NULL,UNIQUE(sha,chapter))");
             db.execSQL("CREATE VIRTUAL TABLE book_text USING fts4(chapter_id,title,body,tokenize=unicode61)");
             db.execSQL("CREATE INDEX idx_books_pending ON books(state,updated)");
             db.execSQL("CREATE INDEX idx_chapter_book ON chapters(sha,chapter)");
+            addV2(db);
+        }
+        private void addV2(SQLiteDatabase db){
+            db.execSQL("ALTER TABLE chapters ADD COLUMN source_method TEXT NOT NULL DEFAULT 'legacy_text'");
+            db.execSQL("ALTER TABLE chapters ADD COLUMN model_id TEXT NOT NULL DEFAULT ''");
+            db.execSQL("ALTER TABLE chapters ADD COLUMN model_version TEXT NOT NULL DEFAULT ''");
+            db.execSQL("ALTER TABLE chapters ADD COLUMN coverage TEXT NOT NULL DEFAULT 'legacy_unverified'");
+            db.execSQL("ALTER TABLE chapters ADD COLUMN cjk_ready INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("ALTER TABLE chapters ADD COLUMN cjk_full INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("CREATE VIRTUAL TABLE book_cjk USING fts4(terms,tokenize=unicode61)");
+            db.execSQL("CREATE INDEX idx_chapters_cjk ON chapters(cjk_ready,rowid)");
         }
         @Override public void onUpgrade(SQLiteDatabase db,int before,int after){
+            if(before==1&&after==2){
+                addV2(db);
+                // Old partial/unsupported PDF rows must be revisited for OCR.
+                // Keep all searchable text and original identities.
+                db.execSQL("UPDATE books SET state='queued',next_chapter=0 WHERE mime='application/pdf' AND state IN ('partial','unsupported')");
+                return;
+            }
             throw new IllegalStateException("No destructive book-index migration");
         }
     }
     public NexusBookIndex(Context context){app=context.getApplicationContext();}
     public static boolean supported(String mime){
         return "application/pdf".equalsIgnoreCase(mime) || "text/plain".equalsIgnoreCase(mime) || "application/epub+zip".equalsIgnoreCase(mime) ||
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(mime);
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(mime)||comic(mime);
+    }
+    private static boolean comic(String mime){
+        return "application/vnd.comicbook+zip".equalsIgnoreCase(mime)||"application/x-cbz".equalsIgnoreCase(mime);
+    }
+    private boolean seedExisting(){
+        android.content.SharedPreferences prefs=app.getSharedPreferences("nexus_book_seed_v2",0);
+        NexusRegistry.BookSeedPage page=new NexusRegistry(app).bookCandidatesAfter(prefs.getLong("cursor",0),100);
+        for(NexusRegistry.Item item:page.items)enqueueRecord(item);
+        if(!prefs.edit().putLong("cursor",page.cursor).commit())throw new IllegalStateException("Book seed cursor not saved");
+        return page.more;
     }
     /** Job creation does not read media or block the initiating acquisition. */
     public void enqueue(NexusRegistry.Item item){
+        if(item==null||!supported(item.mime))return;
+        enqueueRecord(item);schedule();
+    }
+    private void enqueueRecord(NexusRegistry.Item item){
         if(item==null||!supported(item.mime))return;
         DB helper=new DB(app);
         try{
@@ -62,15 +94,16 @@ public final class NexusBookIndex {
             row.put("mime",item.mime);row.put("updated",System.currentTimeMillis());
             helper.getWritableDatabase().insertWithOnConflict("books",null,row,SQLiteDatabase.CONFLICT_IGNORE);
         }finally{helper.close();}
-        schedule();
     }
     public void schedule(){
         JobScheduler scheduler=(JobScheduler)app.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-        if(scheduler==null)return;
+        if(scheduler==null||scheduler.getPendingJob(JOB_ID)!=null)return;
         JobInfo job=new JobInfo.Builder(JOB_ID,new ComponentName(app,NexusBookIndexJob.class))
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_NONE)
             .setPersisted(true)
-            .setOverrideDeadline(5*60*1000L)
+            .setRequiresBatteryNotLow(true)
+            .setRequiresStorageNotLow(true)
+            .setMinimumLatency(1000L)
             .build();
         scheduler.schedule(job);
     }
@@ -88,8 +121,11 @@ public final class NexusBookIndex {
         }finally{helper.close();}
     }
     public boolean indexNext(AtomicBoolean stop){
+        if(interrupted(stop))return true;
+        boolean seedMore=seedExisting();
+        boolean cjkMore=backfillCjk();
         Pending pending=nextPending();
-        if(pending==null)return false;
+        if(pending==null)return seedMore||cjkMore;
         NexusRegistry.Item source=new NexusRegistry(app).find(pending.sha);
         if(source==null){mark(pending.sha,"failed","Original registry item is unavailable",-1,-1);return hasQueued();}
         if(!supported(source.mime)){
@@ -98,18 +134,22 @@ public final class NexusBookIndex {
         }
         mark(pending.sha,"running","",pending.next,-1);
         try{
+            if(!new NexusRegistry(app).verifyOriginal(source))throw new IOException("Recorded source bytes failed verification");
             if(source.mime.equals("application/epub+zip"))indexEpub(pending,stop);
             else if("text/plain".equalsIgnoreCase(source.mime))indexPlainText(pending,stop);
             else if("application/pdf".equalsIgnoreCase(source.mime))indexPdf(pending,stop);
+            else if(comic(source.mime))indexComic(pending,stop);
             else indexDocx(pending,stop);
         }catch(Exception error){
             if(stop.get()||Thread.currentThread().isInterrupted()){
                 mark(pending.sha,"queued","Interrupted safely; will resume",-1,-1);
+            }else if(error instanceof NexusBookOcr.EngineUnavailable){
+                mark(pending.sha,"blocked_ocr","Compatible native offline OCR model unavailable",-1,-1);
             }else{
                 mark(pending.sha,"failed",error.getClass().getSimpleName(),-1,-1);
             }
         }
-        return hasQueued();
+        return seedMore||cjkMore||hasQueued();
     }
     private static boolean interrupted(AtomicBoolean stop){
         return stop.get()||Thread.currentThread().isInterrupted();
@@ -128,7 +168,7 @@ public final class NexusBookIndex {
                 if(plain.length()>MAX_TEXT_CHARS)throw new IOException("Chapter exceeds private index limit");
                 record(p.sha,i,title,plain,count);
             }
-            mark(p.sha,"complete","",count,count);
+            finishCoverage(p.sha,count);
         }
     }
     private void indexPlainText(Pending p,AtomicBoolean stop)throws Exception {
@@ -159,35 +199,87 @@ public final class NexusBookIndex {
         }
     }
     private void indexPdf(Pending p,AtomicBoolean stop)throws Exception {
-        if(android.os.Build.VERSION.SDK_INT<35){
-            mark(p.sha,"unsupported","PDF text extraction requires Android 15 or the installed offline OCR engine",-1,-1);
-            return;
-        }
-        try(android.os.ParcelFileDescriptor fd=app.getContentResolver().openFileDescriptor(NexusLibraryProvider.uriFor(app,p.sha),"r")){
-            if(fd==null)throw new IOException("PDF original unavailable");
-            try(android.graphics.pdf.PdfRenderer pdf=new android.graphics.pdf.PdfRenderer(fd)){
-                int count=pdf.getPageCount();
-                if(count<=0||count>MAX_CHAPTERS)throw new IOException("PDF page count invalid");
-                for(int i=p.next;i<count;i++){
-                    if(interrupted(stop)){mark(p.sha,"queued","",i,count);return;}
-                    StringBuilder body=new StringBuilder();
-                    try(android.graphics.pdf.PdfRenderer.Page page=pdf.openPage(i)){
+        Uri uri=NexusLibraryProvider.uriFor(app,p.sha);
+        android.os.ParcelFileDescriptor fd=app.getContentResolver().openFileDescriptor(uri,"r");
+        if(fd==null)throw new IOException("PDF original unavailable");
+        android.graphics.pdf.PdfRenderer renderer;
+        try{renderer=new android.graphics.pdf.PdfRenderer(fd);}
+        catch(Exception e){fd.close();throw e;}
+        try(android.graphics.pdf.PdfRenderer pdf=renderer){
+            int count=pdf.getPageCount();
+            if(count<=0||count>MAX_CHAPTERS)throw new IOException("PDF page count invalid");
+            int ocrPages=0;
+            for(int i=p.next;i<count;i++){
+                if(interrupted(stop)){mark(p.sha,"queued","",i,count);return;}
+                StringBuilder body=new StringBuilder();
+                try(android.graphics.pdf.PdfRenderer.Page page=pdf.openPage(i)){
+                    if(android.os.Build.VERSION.SDK_INT>=35){
                         for(android.graphics.pdf.content.PdfPageTextContent part:page.getTextContents()){
                             body.append(part.getText()).append('\n');
                             if(body.length()>MAX_TEXT_CHARS)throw new IOException("PDF page text budget exceeded");
                         }
                     }
-                    record(p.sha,i,"Page "+(i+1),body.toString().trim(),count);
+                    String text=body.toString().trim();
+                    if(!text.isEmpty())record(p.sha,i,"Page "+(i+1),text,count);
+                    else{
+                        byte[] image=renderPdfPage(page);
+                        try(InputStream input=new ByteArrayInputStream(image)){
+                            recordOcr(p.sha,i,"Page "+(i+1),count,NexusBookOcr.recognize(app,input));
+                        }
+                        ocrPages++;
+                    }
                 }
-                DB helper=new DB(app);
-                int missing;
-                try(Cursor c=helper.getReadableDatabase().rawQuery(
-                    "SELECT count(*) FROM chapters WHERE sha=? AND characters=0",new String[]{p.sha})){
-                    missing=c.moveToFirst()?c.getInt(0):count;
-                }finally{helper.close();}
-                mark(p.sha,missing==0?"complete":"partial",missing==0?"":missing+" pages have no extractable text; offline OCR not completed",count,count);
+                // Yield after heavy OCR so reader/playback and other jobs can run.
+                if(ocrPages>=2&&i+1<count){mark(p.sha,"queued","",i+1,count);return;}
             }
+            finishCoverage(p.sha,count);
         }
+    }
+    private static byte[] renderPdfPage(android.graphics.pdf.PdfRenderer.Page page)throws IOException{
+        double scale=Math.min(2000.0/Math.max(1,page.getWidth()),2400.0/Math.max(1,page.getHeight()));
+        int width=Math.max(1,(int)Math.round(page.getWidth()*scale));
+        int height=Math.max(1,(int)Math.round(page.getHeight()*scale));
+        android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(width,height,android.graphics.Bitmap.Config.ARGB_8888);
+        try{
+            image.eraseColor(android.graphics.Color.WHITE);
+            page.render(image,null,null,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+            ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+            if(!image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,bytes))throw new IOException("PDF OCR render failed");
+            return bytes.toByteArray();
+        }finally{image.recycle();}
+    }
+    private void indexComic(Pending p,AtomicBoolean stop)throws Exception{
+        try(BookArchive archive=new BookArchive(app,NexusLibraryProvider.uriFor(app,p.sha),false)){
+            int count=archive.imageCount();
+            if(count<=0||count>MAX_CHAPTERS)throw new IOException("Comic has no supported pages");
+            int processed=0;
+            for(int i=p.next;i<count;i++){
+                if(interrupted(stop)){mark(p.sha,"queued","",i,count);return;}
+                String path=Uri.parse(archive.archiveEntry(i)).getEncodedPath();
+                android.webkit.WebResourceResponse response=archive.response(path);
+                if(response==null||response.getData()==null)throw new IOException("Comic page unavailable");
+                try(InputStream page=response.getData()){
+                    recordOcr(p.sha,i,"Page "+(i+1),count,NexusBookOcr.recognize(app,page));
+                }
+                if(++processed>=2&&i+1<count){mark(p.sha,"queued","",i+1,count);return;}
+            }
+            finishCoverage(p.sha,count);
+        }
+    }
+    private void recordOcr(String sha,int page,String title,int count,NexusBookOcr.Result result){
+        String coverage=result.getText().isBlank()?"ocr_no_text":
+            result.getLinesRecognized()<result.getBoxesDetected()?"ocr_partial_regions":"ocr_unvalidated";
+        if(result.getText().length()>MAX_TEXT_CHARS)throw new IllegalArgumentException("OCR text budget exceeded");
+        record(sha,page,title,result.getText(),count,"native_ocr",result.getModelId(),result.getModelVersion(),coverage);
+    }
+    private void finishCoverage(String sha,int count){
+        DB helper=new DB(app);
+        int uncertain;
+        try(Cursor c=helper.getReadableDatabase().rawQuery(
+            "SELECT count(*) FROM chapters WHERE sha=? AND (coverage!='native_text' OR characters=0)",new String[]{sha})){
+            uncertain=c.moveToFirst()?c.getInt(0):count;
+        }finally{helper.close();}
+        mark(sha,uncertain==0?"complete":"partial",uncertain==0?"":uncertain+" pages/sections have unvalidated OCR or incomplete text coverage",count,count);
     }
     private static byte[] readDocx(File f,int limit)throws IOException {
         if(f.length()<=0||f.length()>limit)
@@ -220,9 +312,12 @@ public final class NexusBookIndex {
             }
             record(p.sha,i,"Blocks "+(i*36+1)+"–"+Math.min(blocks,(i+1)*36),plain.toString(),chunks);
         }
-        mark(p.sha,"complete","",chunks,chunks);
+        finishCoverage(p.sha,chunks);
     }
     private void record(String sha,int chapter,String title,String body,int total){
+        record(sha,chapter,title,body,total,"native_text","","",body.isBlank()?"empty":"native_text");
+    }
+    private void record(String sha,int chapter,String title,String body,int total,String method,String model,String version,String coverage){
         DB helper=new DB(app);
         SQLiteDatabase db=helper.getWritableDatabase();
         db.beginTransaction();
@@ -239,10 +334,50 @@ public final class NexusBookIndex {
             }
             db.execSQL("INSERT OR REPLACE INTO book_text(docid,chapter_id,title,body) VALUES(?,?,?,?)",
                 new Object[]{id,id,title,body});
+            db.execSQL("UPDATE chapters SET title=?,characters=?,source_method=?,model_id=?,model_version=?,coverage=? WHERE rowid=?",
+                new Object[]{title,body.length(),method,model,version,coverage,id});
+            writeCjk(db,id,title+"\n"+body);
             db.execSQL("UPDATE books SET next_chapter=?,chapter_count=?,state='running',error=NULL,updated=? WHERE sha=?",
                 new Object[]{chapter+1,total,System.currentTimeMillis(),sha});
             db.setTransactionSuccessful();
         }finally{db.endTransaction();helper.close();}
+    }
+    private static void writeCjk(SQLiteDatabase db,long id,String text){
+        NexusCjkTerms.Terms terms=NexusCjkTerms.index(text);
+        db.execSQL("INSERT OR REPLACE INTO book_cjk(docid,terms) VALUES(?,?)",new Object[]{id,terms.text});
+        db.execSQL("UPDATE chapters SET cjk_ready=1,cjk_full=? WHERE rowid=?",new Object[]{terms.complete?1:0,id});
+    }
+    private boolean backfillCjk(){
+        DB helper=new DB(app);
+        SQLiteDatabase db=helper.getWritableDatabase();
+        int n=0;
+        db.beginTransaction();
+        try(Cursor c=db.rawQuery("SELECT c.rowid,c.title,book_text.body FROM chapters c JOIN book_text ON book_text.docid=c.rowid WHERE c.cjk_ready=0 ORDER BY c.rowid LIMIT 8",null)){
+            while(c.moveToNext()){writeCjk(db,c.getLong(0),c.getString(1)+"\n"+c.getString(2));n++;}
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();helper.close();}
+        return n==8;
+    }
+    public void retryBlocked(){
+        DB helper=new DB(app);
+        try{helper.getWritableDatabase().execSQL("UPDATE books SET state='queued',error=NULL WHERE state='blocked_ocr'");}
+        finally{helper.close();}
+        schedule();
+    }
+    public void retry(String sha){
+        if(sha==null||!sha.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("Invalid book identity");
+        DB helper=new DB(app);
+        try{helper.getWritableDatabase().execSQL("UPDATE books SET state='queued',error=NULL,next_chapter=CASE WHEN state='partial' THEN 0 ELSE next_chapter END WHERE sha=? AND state IN ('blocked_ocr','failed','partial','unsupported')",new Object[]{sha});}
+        finally{helper.close();}
+        schedule();
+    }
+    public String status(String sha){
+        DB helper=new DB(app);
+        try(Cursor c=helper.getReadableDatabase().rawQuery("SELECT state,next_chapter,chapter_count,error FROM books WHERE sha=?",new String[]{sha})){
+            if(!c.moveToFirst())return "Not queued";
+            String error=c.getString(3);
+            return c.getString(0)+" · "+c.getInt(1)+" / "+c.getInt(2)+(error==null||error.isEmpty()?"":" · "+error);
+        }finally{helper.close();}
     }
     private void mark(String sha,String state,String error,int chapter,int total){
         DB helper=new DB(app);
@@ -270,9 +405,13 @@ public final class NexusBookIndex {
         String escaped="\""+sanitized.replace("\"","\"\"")+"\"";
         ArrayList<Hit> found=new ArrayList<>();
         DB helper=new DB(app);
-        try(Cursor c=helper.getReadableDatabase().rawQuery(
-            "SELECT c.sha,b.title,c.chapter,substr(book_text.body,1,240) FROM book_text JOIN chapters c ON book_text.docid=c.rowid JOIN books b ON c.sha=b.sha WHERE book_text MATCH ? ORDER BY b.updated DESC,c.chapter LIMIT ?",
-            new String[]{escaped,Integer.toString(limit)})){
+        boolean cjk=NexusCjkTerms.contains(sanitized);
+        String sql=cjk?
+            "SELECT c.sha,b.title,c.chapter,substr(book_text.body,max(1,instr(book_text.body,?)-60),240) FROM book_text JOIN chapters c ON book_text.docid=c.rowid JOIN books b ON c.sha=b.sha WHERE (c.rowid IN (SELECT docid FROM book_cjk WHERE book_cjk MATCH ?) OR c.cjk_ready=0 OR c.cjk_full=0) AND (instr(book_text.body,?)>0 OR instr(c.title,?)>0) ORDER BY b.updated DESC,c.chapter LIMIT ?":
+            "SELECT c.sha,b.title,c.chapter,snippet(book_text,'','','…',2,36) FROM book_text JOIN chapters c ON book_text.docid=c.rowid JOIN books b ON c.sha=b.sha WHERE book_text MATCH ? ORDER BY b.updated DESC,c.chapter LIMIT ?";
+        String[] args=cjk?new String[]{sanitized,NexusCjkTerms.query(sanitized),sanitized,sanitized,Integer.toString(limit)}:
+            new String[]{escaped,Integer.toString(limit)};
+        try(Cursor c=helper.getReadableDatabase().rawQuery(sql,args)){
             while(c.moveToNext())found.add(new Hit(c.getString(0),c.getString(1),c.getString(3),c.getInt(2)));
         }finally{helper.close();}
         return found;
