@@ -4,7 +4,8 @@ on:
   push:
     branches: [work/nexus-harmonization-20261126, work/nexus-completion-20261128b]
     paths:
-      - app/src/androidTest/java/com/azrael/pixivdumpsync/DeviceTransferSimulation.kt
+      - app/src/androidTest/**
+      - scripts/prepare_nexus_media_fixtures.py
       - .github/workflows/nexus-unified-device-acceptance.yml
   workflow_dispatch:
 
@@ -50,6 +51,10 @@ jobs:
           "$sdk" "platforms;android-36"
       - name: Verify and restore exact immutable Downloader extractor wheel
         run: bash scripts/restore_downloader_wheel.sh
+      - name: Prepare real playable media fixtures
+        run: |
+          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
+          python3 scripts/prepare_nexus_media_fixtures.py
       - name: Run existing provider source and instrumentation build gate
         run: |
           gradle --no-daemon --max-workers=2 \
@@ -74,7 +79,7 @@ jobs:
             adb install -r app/build/outputs/apk/androidTest/phonepilot/app-phonepilot-androidTest.apk
             adb logcat -c
             set +e
-            timeout --signal=TERM --kill-after=10s 320s adb shell am instrument -w -r com.asterion.nexus.testphone1111.test/com.azrael.pixivdumpsync.DeviceTransferSimulation > nexus-android-instrumentation.txt 2>&1; printf '%s\n' "$?" > nexus-android-exit.txt
+            timeout --signal=TERM --kill-after=10s 600s adb shell am instrument -w -r com.asterion.nexus.testphone1111.test/com.azrael.pixivdumpsync.DeviceTransferSimulation > nexus-android-instrumentation.txt 2>&1; printf '%s\n' "$?" > nexus-android-exit.txt
             adb logcat -b crash -d -v threadtime > nexus-android-crashes.txt
             adb logcat -d -v threadtime > nexus-android-logcat.txt
             set -e
@@ -86,6 +91,8 @@ jobs:
             grep -F 'AST_SIM: PARALLEL_NATIVE_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: PYTHON_RUNTIME_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: EMBEDDED_OK' nexus-android-instrumentation.txt
+            grep -F 'AST_SIM: MEDIA_EXPORT_OK' nexus-android-instrumentation.txt
+            grep -F 'AST_SIM: GLTF_RENDER_OK' nexus-android-instrumentation.txt
             grep -F 'AST_SIM: PASS' nexus-android-instrumentation.txt
             if grep -Fq 'FATAL EXCEPTION' nexus-android-crashes.txt; then cat nexus-android-crashes.txt; exit 1; fi
       - name: Preserve emulator execution and failure evidence

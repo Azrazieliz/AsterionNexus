@@ -4,6 +4,10 @@ on:
     branches: [work/nexus-completion-20261128b]
     paths:
       - '.github/workflows/nexus-complete-candidate.yml'
+      - 'app/src/main/**'
+      - 'app/build.gradle.kts'
+      - 'fusion/src/main/**'
+      - 'rounder/src/main/**'
   workflow_dispatch:
 permissions:
   contents: read
