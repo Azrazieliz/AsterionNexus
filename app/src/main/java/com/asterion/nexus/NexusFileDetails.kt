@@ -97,6 +97,10 @@ object NexusFileDetails {
         }
         if(NexusArchiveOperation.available(activity,uri)){
             body.addView(android.widget.Button(activity).apply{
+                text="Send to specialist"
+                setOnClickListener{NexusPartnerActions.show(activity,uri)}
+            })
+            body.addView(android.widget.Button(activity).apply{
                 text="Related editions and outputs"
                 setOnClickListener{
                     worker.execute{
