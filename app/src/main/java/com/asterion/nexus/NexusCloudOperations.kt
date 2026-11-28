@@ -87,14 +87,29 @@ object NexusCloudOperations {
         }
         FgTeraboxSearchIndex(context,client,remote.account,null).use{it.noteMoved(remote.account,from,to)}
     }
+    /** An automatic cycle never repeats a prior operation, including an
+     * unresolved request or owner rollback. Read every journal, not just the UI page. */
+    @Synchronized fun priorMoves(context:Context,account:String):Set<Long>{
+        val ids=HashSet<Long>()
+        for(file in root(context).listFiles()?:throw IOException("Move history unavailable")){
+            if(!file.name.matches(Regex("[0-9a-f-]{36}\\.json")))continue
+            val entry=load(context,file.nameWithoutExtension)
+            if(entry.original.account==account)ids.add(entry.original.fsId)
+        }
+        return ids
+    }
     /** The source identity shown in the confirmation is re-read before mutation. */
-    @Synchronized fun move(context:Context,expected:Remote,directory:String,name:String):Move{
+    @Synchronized fun move(context:Context,expected:Remote,directory:String,name:String,automatic:Boolean=false):Move{
         val destination=target(directory,name)
         require(destination!=expected.path){"Source and destination are identical"}
         // Root is a valid same-account destination; the server must fail on conflicts.
         val client=FgTeraboxClient.forScope(context,expected.account)
         val current=inspect(client,expected.account,expected.path)
         check(expected.same(current)){"Selected source changed"}
+        if(automatic){
+            check(expected.md5.isNotEmpty()&&current.md5==expected.md5){"Automatic routing requires matching remote checksum"}
+            check(current.fsId !in priorMoves(context,current.account)){"Prior move requires explicit owner review"}
+        }
         var entry=persist(context,Move(UUID.randomUUID().toString(),current,destination,"PREPARED",System.currentTimeMillis(),""))
         val job="nexus-cloud-move:"+entry.id
         val registry=NexusRegistry(context)
