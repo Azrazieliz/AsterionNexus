@@ -146,7 +146,7 @@ class GalleryDb(context: Context) : SQLiteOpenHelper(context.applicationContext,
             receipt_json TEXT NOT NULL)""")
         db.execSQL("""CREATE TABLE IF NOT EXISTS legacy_catalog_rows(
             digest TEXT NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL,
-            payload_json TEXT NOT NULL,
+            payload_json TEXT NOT NULL, applied_json TEXT,
             PRIMARY KEY(digest,table_name,row_key))""")
     }
 
