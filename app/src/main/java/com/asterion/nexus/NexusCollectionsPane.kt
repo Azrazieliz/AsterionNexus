@@ -162,6 +162,41 @@ internal fun NexusCollectionsPane(onOpen:(Uri,String,String,Int)->Unit,onCoreRou
             Text("This imported collection has an unsupported rule format. Existing records are preserved.",modifier=Modifier.padding(12.dp))
         }else{
             LaunchedEffect(chosen.id){load(true)}
+            val collectionRule=if(chosen.kind=="manual")"manual" to chosen.id else registryKind(chosen.rule)
+            if(collectionRule!=null)TextButton(enabled=!busy,onClick={
+                busy=true
+                scope.launch{
+                    try{
+                        val videos=withContext(Dispatchers.IO){
+                            val registry=NexusRegistry(ctx)
+                            val result=mutableListOf<NexusRegistry.Item>();var after=0L
+                            repeat(100){
+                                val page=registry.collectionPage(collectionRule.first,collectionRule.second,after,100)
+                                result.addAll(page.filter{it.mime.startsWith("video/")})
+                                if(result.size>100)error("Choose a smaller collection (maximum 100 videos)")
+                                if(page.size<100)return@withContext result
+                                after=page.last().locationId
+                            }
+                            error("Collection exceeds scan limit; choose a smaller collection")
+                        }
+                        if(videos.isEmpty())status="No registered videos in this collection"
+                        else{
+                            val checked=BooleanArray(videos.size)
+                            val dialog=NativeAlertDialog.Builder(ctx).setTitle("Select videos in collection order")
+                                .setMultiChoiceItems(videos.map{it.displayName}.toTypedArray(),checked){_,i,on->checked[i]=on}
+                                .setNegativeButton("Cancel",null)
+                                .setPositiveButton("Prepare assembly"){_,_->
+                                    val ids=videos.filterIndexed{i,_->checked[i]}.map{it.sha256}
+                                    if(ids.isNotEmpty())NexusVideoEditActivity.open(ctx,ids,chosen.name,automatic=true)
+                                    else status="Select at least one video"
+                                }.create()
+                            dialog.show()
+                        }
+                    }catch(e:Exception){status=e.message?:"Collection scan failed"}
+                    finally{busy=false}
+                }
+            }){Text("Assemble selected videos · review order in editor")}
+
             if(entries.isEmpty()&&!busy&&status.isEmpty())Text("No matching indexed items",modifier=Modifier.padding(16.dp))
             if(entries.isNotEmpty()){
                 val pager=rememberPagerState(pageCount={entries.size})

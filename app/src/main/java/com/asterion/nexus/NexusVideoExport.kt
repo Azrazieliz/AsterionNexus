@@ -86,8 +86,8 @@ object NexusVideoExport {
         val dir=File(context.filesDir,"nexus-video-projects")
         check(dir.isDirectory||dir.mkdirs())
         val receipt=File(dir,identity.substringAfter(':')+".json")
-        if(receipt.isFile&&receipt.length()<1024*1024){
-            val prior=runCatching{JSONObject(receipt.readText())}.getOrNull()
+        val prior=if(receipt.isFile&&receipt.length()<1024*1024)runCatching{JSONObject(receipt.readText())}.getOrNull() else null
+        if(prior!=null){
             if(prior?.optString("state")=="INDEXED"){
                 val item=registry.find(prior.optString("output_sha256"))
                 if(item!=null&&registry.verifyOriginal(item))return item
@@ -96,6 +96,24 @@ object NexusVideoExport {
         val estimate=Math.multiplyExact(duration,profile.bitrate.toLong()+512000)/8000
         check(dir.usableSpace>Math.addExact(Math.multiplyExact(estimate,3),64L*1024*1024)){"Insufficient export storage"}
         val output=File(dir,identity.substringAfter(':')+".partial.mp4")
+        val mime=if(profile.hevc)MimeTypes.VIDEO_H265 else MimeTypes.VIDEO_H264
+        fun publish():NexusRegistry.Item{
+            validate(output,duration,profile,mime,hasAudio)
+            sources.forEach{stopped(cancel);check(NexusOriginalStore.matches(it.file,it.item.length,it.item.sha256)){"Original changed during export"}}
+            save(receipt,spec.put("state","VERIFIED"))
+            registry.job(identity,"VERIFIED",output.length(),null)
+            val item=output.inputStream().use{registry.ingest(it,title.trim().removeSuffix(".mp4")+".mp4","video/mp4","nexus-video-edit","device",identity,output.length(),null)}
+            clips.map{it.sha}.distinct().forEach{registry.linkDerivative(item.sha256,it,"video","timeline-export")}
+            save(receipt,spec.put("state","INDEXED").put("output_sha256",item.sha256).put("validation","track, duration and representative decode"))
+            registry.job(identity,"INDEXED",item.length,null)
+            return item
+        }
+        if(output.isFile&&prior?.optString("state") in setOf("BYTES_COMPLETE","VERIFIED")){
+            stopped(cancel)
+            val recovered=runCatching{publish()}
+            recovered.onSuccess{output.delete();File(dir,identity.substringAfter(':')+".staging").deleteRecursively();return it}
+            stopped(cancel)
+        }
         if(output.exists())check(output.delete()){"Old partial export cannot be cleared"}
         val stageDir=File(dir,identity.substringAfter(':')+".staging")
         val worker=HandlerThread("Nexus video codec").apply{start()}
@@ -104,7 +122,6 @@ object NexusVideoExport {
         val error=AtomicReference<Throwable?>()
         val transformer=AtomicReference<Transformer?>()
         val abort=AtomicBoolean(false)
-        val mime=if(profile.hevc)MimeTypes.VIDEO_H265 else MimeTypes.VIDEO_H264
         try{
             registry.job(identity,"QUEUED",0,null)
             save(receipt,spec.put("state","PROCESSING"))
@@ -165,14 +182,8 @@ object NexusVideoExport {
             stopped(cancel);error.get()?.let{throw IOException("Codec export failed: "+it.message,it)}
             check(output.isFile&&output.length()>0){"Empty export"}
             registry.job(identity,"BYTES_COMPLETE",output.length(),null)
-            validate(output,duration,profile,mime,hasAudio)
-            sources.forEach{stopped(cancel);check(NexusOriginalStore.matches(it.file,it.item.length,it.item.sha256)){"Original changed during export"}}
-            registry.job(identity,"VERIFIED",output.length(),null)
-            val item=output.inputStream().use{registry.ingest(it,title.trim().removeSuffix(".mp4")+".mp4","video/mp4","nexus-video-edit","device",identity,output.length(),null)}
-            clips.map{it.sha}.distinct().forEach{registry.linkDerivative(item.sha256,it,"video","timeline-export")}
-            save(receipt,spec.put("state","INDEXED").put("output_sha256",item.sha256).put("validation","track, duration and representative decode"))
-            registry.job(identity,"INDEXED",item.length,null)
-            return item
+            save(receipt,spec.put("state","BYTES_COMPLETE"))
+            return publish()
         }catch(e:Exception){
             save(receipt,spec.put("state",if(cancel.get())"CANCELLED" else "FAILED").put("error",e.message.orEmpty().take(500)))
             registry.job(identity,"FAILED",0,e.javaClass.simpleName);throw e
