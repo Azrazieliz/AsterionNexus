@@ -89,6 +89,19 @@ public final class NexusOriginalStore {
             return action.run();
         }
     }
+    /** Caller must have independently verified and durably recorded a
+     * surviving remote copy. Never remove modified or non-regular bytes. */
+    static boolean evictVerified(File root,long length,String sha)throws IOException{
+        if(root==null||length<=0||sha==null||!sha.matches("[0-9a-f]{64}"))
+            throw new IllegalArgumentException("Invalid eviction identity");
+        return locked(root,sha,()->{
+            File target=new File(new File(root,"originals"),sha);
+            if(!Files.exists(target.toPath(),LinkOption.NOFOLLOW_LINKS))return false;
+            if(!matches(target,length,sha))throw new IOException("Local original changed; cleanup refused");
+            Files.delete(target.toPath());
+            return true;
+        });
+    }
     public static final class Recovery {
         public final File restored,retainedDamage,receipt;
         public final boolean alreadyVerified;
