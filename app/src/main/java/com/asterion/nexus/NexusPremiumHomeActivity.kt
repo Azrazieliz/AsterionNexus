@@ -723,7 +723,7 @@ private fun NexusAcquireDialog(onCancel:()->Unit,onConfirm:(String)->Unit){
     )
 }
 
-private object NexusContentThumbnail {
+internal object NexusContentThumbnail {
     private val cache=object:LruCache<String,Bitmap>(20*1024*1024){
         override fun sizeOf(key:String,value:Bitmap)=value.byteCount
     }
