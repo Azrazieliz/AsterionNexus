@@ -27,6 +27,7 @@ internal object NexusHighlightPlanner {
         var remaining=budgetMs
         val picked=mutableListOf<Candidate>()
         for(c in candidates.sortedWith(compareByDescending<Candidate>{it.window.score}.thenBy{it.sourceIndex}.thenBy{it.window.start})){
+            if(picked.size>=100)break
             val w=c.window
             if(!w.score.isFinite()||w.start<0||w.end<=w.start||remaining<=0)continue
             val end=min(w.end,w.start+remaining)
@@ -49,7 +50,7 @@ internal object NexusHighlightPlanner {
         val source=range.source
         require(range.start>=0&&range.end>range.start&&range.end<=source.duration){"Invalid montage range"}
         val registry=NexusRegistry(context)
-        check(registry.verifyOriginal(source.item)){"Original verification failed"}
+        check(NexusOriginalStore.matches(source.file,source.item.length,source.item.sha256)){"Original verification failed"}
         val duration=range.end-range.start
         val step=maxOf(250L,(duration+samples-1)/samples)
         val width=64;val height=36
@@ -57,7 +58,7 @@ internal object NexusHighlightPlanner {
         val windows=mutableListOf<Window>()
         var previous:IntArray?=null
         try{
-            r.setDataSource(registry.original(source.item).absolutePath)
+            r.setDataSource(source.file.absolutePath)
             var t=range.start
             while(t<range.end){
                 if(Thread.currentThread().isInterrupted)throw InterruptedException()
@@ -84,7 +85,7 @@ internal object NexusHighlightPlanner {
                 t+=step
             }
         }finally{r.release()}
-        check(registry.verifyOriginal(source.item)){"Original changed during analysis"}
+        check(NexusOriginalStore.matches(source.file,source.item.length,source.item.sha256)){"Original changed during analysis"}
         return windows
     }
 }

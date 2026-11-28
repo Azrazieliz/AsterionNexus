@@ -31,6 +31,7 @@ class NexusVideoEditActivity:Activity(){
     private lateinit var omitOtherTracks:CheckBox
     private val rows=mutableListOf<Row>()
     private data class Row(val source:NexusVideoExport.Source,var start:String="0",var end:String=source.duration.toString(),var audioTrack:Int=source.audioTracks.singleOrNull()?.index?:if(source.audioTracks.isEmpty())-1 else -2)
+    private var lease=false
     private var running=false
     private var ready=false
     private var draftKey=""
@@ -74,6 +75,7 @@ class NexusVideoEditActivity:Activity(){
         super.onCreate(state)
         val ids=intent.getStringArrayListExtra("sources").orEmpty()
         if(ids.isEmpty()||ids.size>100){finish();return}
+        NexusVideoInputs.begin(applicationContext);lease=true
         draftKey=NexusOriginalStore.sourceKey(ids.joinToString(":")+":"+intent.getBooleanExtra("automatic",false))
         val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(16,16,16,16);setBackgroundColor(0xff101216.toInt())}
         fun heading(s:String)=TextView(this).apply{text=s;setTextColor(-1);textSize=16f}
@@ -83,7 +85,7 @@ class NexusVideoEditActivity:Activity(){
         layout.addView(titleField)
         layout.addView(Button(this).apply{text="Reset timeline draft";setOnClickListener{if(ready&&!running){android.app.AlertDialog.Builder(this@NexusVideoEditActivity).setMessage("Reset edits to the initial timeline?").setPositiveButton("Reset"){_,_->rows.clear();rows.addAll(initialRows.map{it.copy()});reviewLog=org.json.JSONArray();renderRows();saveDraft()}.setNegativeButton("Cancel",null).show()}}})
         timeline=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
-        layout.addView(ScrollView(this).apply{addView(timeline)},LinearLayout.LayoutParams(-1,0,1f))
+        layout.addView(timeline)
         layout.addView(heading("Resolution · preserve aspect with padding"))
         resolution=choices(listOf("1280 × 720","1920 × 1080","1080 × 1920","3840 × 2160","854 × 480"));layout.addView(resolution)
         layout.addView(heading("Video bitrate"))
@@ -100,7 +102,7 @@ class NexusVideoEditActivity:Activity(){
         if(intent.getBooleanExtra("automatic",false))layout.addView(repeatsButton)
         cancelButton=Button(this).apply{text="Cancel export";isEnabled=false;setOnClickListener{cancel.set(true);isEnabled=false}}
         layout.addView(cancelButton)
-        setContentView(layout)
+        setContentView(ScrollView(this).apply{isFillViewport=true;addView(layout)})
         worker.execute{
             val result=runCatching{
                 val sources=ids.map{NexusVideoExport.source(applicationContext,it)}
@@ -195,7 +197,7 @@ class NexusVideoEditActivity:Activity(){
         video.setOnPreparedListener{prepared=true;seek.isEnabled=true;video.seekTo(start.toInt());display()}
         video.setOnErrorListener{_,_,_->prepared=false;seek.isEnabled=false;position.text="Preview decoder unavailable; numerical trim remains available";true}
         dialog.show()
-        video.setVideoURI(android.net.Uri.fromFile(NexusRegistry(this).original(source.item)))
+        video.setVideoURI(android.net.Uri.fromFile(source.file))
         handler.post(ticker)
     }
     override fun onPause(){saveDraft();super.onPause()}
@@ -325,5 +327,5 @@ class NexusVideoEditActivity:Activity(){
             }
         }
     }
-    override fun onDestroy(){cancel.set(true);worker.shutdown();super.onDestroy()}
+    override fun onDestroy(){cancel.set(true);worker.shutdownNow();if(lease){val app=applicationContext;Thread{try{worker.awaitTermination(Long.MAX_VALUE,java.util.concurrent.TimeUnit.MILLISECONDS)}finally{NexusVideoInputs.end(app)}}.start()};super.onDestroy()}
 }

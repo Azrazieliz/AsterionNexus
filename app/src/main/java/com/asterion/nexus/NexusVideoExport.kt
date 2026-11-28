@@ -27,13 +27,12 @@ object NexusVideoExport {
     data class Clip(val sha:String,val startMs:Long,val endMs:Long,val audioTrack:Int=-2)
     data class Profile(val width:Int,val height:Int,val bitrate:Int,val hevc:Boolean,val mute:Boolean,val omitOtherTracks:Boolean=false)
     data class AudioTrack(val index:Int,val language:String,val mime:String)
-    data class Source(val item:NexusRegistry.Item,val duration:Long,val videoTrack:Int,val audioTracks:List<AudioTrack>,val otherTracks:Int){val audio:Boolean get()=audioTracks.isNotEmpty()}
+    data class Source(val item:NexusRegistry.Item,val file:File,val duration:Long,val videoTrack:Int,val audioTracks:List<AudioTrack>,val otherTracks:Int){val audio:Boolean get()=audioTracks.isNotEmpty()}
     fun source(context:Context,sha:String):Source {
         val registry=NexusRegistry(context)
         val item=registry.find(sha)?:error("Original unavailable")
         require(item.mime.startsWith("video/")){"Video required"}
-        val file=registry.original(item)
-        check(registry.verifyOriginal(item)){"Source hash mismatch"}
+        val file=NexusVideoInputs.file(context,item)
         val extractor=MediaExtractor()
         val audio=mutableListOf<AudioTrack>();var video=-1;var duration=0L;var other=0
         try{
@@ -54,7 +53,7 @@ object NexusVideoExport {
             finally{retriever.release()}
         }
         require(video>=0&&duration>0){"One decodable video track required"}
-        return Source(item,duration,video,audio,other)
+        return Source(item,file,duration,video,audio,other)
     }
     private fun save(file:File,data:JSONObject){
         val atomic=AtomicFile(file);val stream=atomic.startWrite()
@@ -123,7 +122,7 @@ object NexusVideoExport {
                     stopped(cancel)
                     val source=sources[i];val key=source.item.sha256 to selected[i]
                     val target=File(stageDir,source.item.sha256+"-"+selected[i]+".mp4")
-                    NexusTrackMapping.stage(registry.original(source.item),target,source.videoTrack,selected[i],cancel)
+                    NexusTrackMapping.stage(source.file,target,source.videoTrack,selected[i],cancel)
                     staged[key]=target
                 }
             }
@@ -132,7 +131,7 @@ object NexusVideoExport {
                     if(cancel.get()||abort.get())throw IOException("Export cancelled")
                     val edited=clips.mapIndexed{i,clip->
                         val source=sources[i]
-                        val input=staged[source.item.sha256 to selected[i]]?:registry.original(source.item)
+                        val input=staged[source.item.sha256 to selected[i]]?:source.file
                         val item=MediaItem.Builder().setUri(android.net.Uri.fromFile(input))
                             .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
                                 .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build()).build()
@@ -167,7 +166,7 @@ object NexusVideoExport {
             check(output.isFile&&output.length()>0){"Empty export"}
             registry.job(identity,"BYTES_COMPLETE",output.length(),null)
             validate(output,duration,profile,mime,hasAudio)
-            sources.forEach{stopped(cancel);check(registry.verifyOriginal(it.item)){"Original changed during export"}}
+            sources.forEach{stopped(cancel);check(NexusOriginalStore.matches(it.file,it.item.length,it.item.sha256)){"Original changed during export"}}
             registry.job(identity,"VERIFIED",output.length(),null)
             val item=output.inputStream().use{registry.ingest(it,title.trim().removeSuffix(".mp4")+".mp4","video/mp4","nexus-video-edit","device",identity,output.length(),null)}
             clips.map{it.sha}.distinct().forEach{registry.linkDerivative(item.sha256,it,"video","timeline-export")}

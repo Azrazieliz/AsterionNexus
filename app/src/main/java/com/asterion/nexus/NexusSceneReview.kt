@@ -79,12 +79,12 @@ internal object NexusSceneReview {
         val early=mutableListOf<List<Frame>>()
         val late=mutableListOf<List<Frame>>()
         for(source in sources){
-            check(registry.verifyOriginal(source.item)){"Original verification failed"}
+            check(NexusOriginalStore.matches(source.file,source.item.length,source.item.sha256)){"Original verification failed"}
             val duration=source.duration
             val window=min(180000L,duration/4)
             val retriever=MediaMetadataRetriever()
             try{
-                retriever.setDataSource(registry.original(source.item).absolutePath)
+                retriever.setDataSource(source.file.absolutePath)
                 fun read(start:Long,end:Long):List<Frame>{
                     val frames=mutableListOf<Frame>()
                     var time=start
@@ -93,11 +93,12 @@ internal object NexusSceneReview {
                         val bitmap=retriever.getScaledFrameAtTime(time*1000,MediaMetadataRetriever.OPTION_CLOSEST,WIDTH,HEIGHT)
                         if(bitmap!=null){
                             try{
-                                if(bitmap.width==WIDTH&&bitmap.height==HEIGHT){
+                                val normalized=android.graphics.Bitmap.createScaledBitmap(bitmap,WIDTH,HEIGHT,true)
+                                try{
                                     val pixels=IntArray(WIDTH*HEIGHT)
-                                    bitmap.getPixels(pixels,0,WIDTH,0,0,WIDTH,HEIGHT)
+                                    normalized.getPixels(pixels,0,WIDTH,0,0,WIDTH,HEIGHT)
                                     frames.add(Frame(time,pixels))
-                                }
+                                }finally{if(normalized!==bitmap)normalized.recycle()}
                             }finally{bitmap.recycle()}
                         }
                         time+=STEP
@@ -107,7 +108,7 @@ internal object NexusSceneReview {
                 early.add(read(0,window))
                 late.add(read(duration-window,duration))
             }finally{retriever.release()}
-            check(registry.verifyOriginal(source.item)){"Original changed during scene review"}
+            check(NexusOriginalStore.matches(source.file,source.item.length,source.item.sha256)){"Original changed during scene review"}
         }
         return listOfNotNull(common(early,true),common(late,false))
     }

@@ -239,8 +239,8 @@ public final class NexusEpisodeAssembly {
         ArrayList<File> files=new ArrayList<>();
         for(int i=0;i<ids.size();i++){
             NexusRegistry.Item item=registry.find(ids.get(i));
-            require(item!=null&&registry.verifyOriginal(item),"Episode integrity check failed");
-            File file=registry.original(item);files.add(file);
+            require(item!=null,"Episode unavailable");
+            File file=NexusVideoInputs.file(context,item);files.add(file);
             NexusRepeatedEdges.Episode ep=new NexusRepeatedEdges.Episode(durations.get(i)*1000,Collections.emptyList());
             try{
                 MediaExtractor ex=open(file);Layout l;

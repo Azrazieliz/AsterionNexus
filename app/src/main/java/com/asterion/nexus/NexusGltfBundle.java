@@ -23,7 +23,7 @@ final class NexusGltfBundle {
             for(ZipEntry entry;(entry=zip.getNextEntry())!=null;){
                 if(++count>512)throw new IOException("Model archive has too many entries");
                 String raw=entry.getName();
-                if(entry.isDirectory()){safePath(raw.endsWith("/")?raw.substring(0,raw.length()-1):raw);continue;}
+                if(entry.isDirectory()){safePath(raw.endsWith("/")?raw.substring(0,raw.length()-1):raw);if(zip.read()!=-1)throw new IOException("Nonempty directory entry");continue;}
                 String name=safePath(raw);
                 if(files.containsKey(name))throw new IOException("Duplicate model archive entry");
                 ByteArrayOutputStream out=new ByteArrayOutputStream();

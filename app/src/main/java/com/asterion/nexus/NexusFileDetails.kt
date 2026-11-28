@@ -99,6 +99,10 @@ object NexusFileDetails {
                 text="Verify cloud identity"
                 setOnClickListener{NexusCloudActions.verifyIdentity(activity,uri,title?:"File",type){dialog.dismiss();showInternal(activity,uri,type,title,open)}}
             })
+            if(type.startsWith("video/"))body.addView(android.widget.Button(activity).apply{
+                text="Edit cloud video / transcode"
+                setOnClickListener{NexusVideoCloudEdit.open(activity,uri,title?:"Video",type)}
+            })
             body.addView(android.widget.Button(activity).apply{
                 text="Pin offline"
                 setOnClickListener{NexusCloudActions.pin(activity,uri,title?: "File",type)}
