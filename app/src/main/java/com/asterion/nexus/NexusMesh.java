@@ -16,9 +16,9 @@ public final class NexusMesh {
     private NexusMesh(float[] p,float[] n,boolean external){positions=p;normals=n;triangles=p.length/9;externalMaterials=external;}
     public static boolean supported(String mime,String name){
         String n=name==null?"":name.toLowerCase(Locale.ROOT);
-        return n.endsWith(".obj")||n.endsWith(".stl")||"model/obj".equals(mime)||"model/stl".equals(mime);
+        return n.endsWith(".glb")||"model/gltf-binary".equals(mime)||n.endsWith(".obj")||n.endsWith(".stl")||"model/obj".equals(mime)||"model/stl".equals(mime);
     }
-    private static final class Builder{
+    static final class Builder{
         float[] data=new float[9*1024];int length;boolean materials;
         void triangle(float ax,float ay,float az,float bx,float by,float bz,float cx,float cy,float cz)throws IOException{
             if(length/9>=MAX_TRIANGLES)throw new IOException("Mesh triangle limit");
@@ -61,6 +61,7 @@ public final class NexusMesh {
             }
         }
         String lower=name==null?"":name.toLowerCase(Locale.ROOT);
+        if(lower.endsWith(".glb")||"model/gltf-binary".equals(mime))return NexusGlb.open(out.toByteArray());
         if(lower.endsWith(".stl")||"model/stl".equals(mime))return stl(out.toByteArray());
         if(lower.endsWith(".obj")||"model/obj".equals(mime))return obj(out.toByteArray());
         throw new IOException("Unsupported mesh format");
