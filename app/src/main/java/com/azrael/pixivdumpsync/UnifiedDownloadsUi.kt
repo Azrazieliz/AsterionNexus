@@ -1145,17 +1145,19 @@ object UnifiedDownloadsUi {
     )
     @JvmStatic
     fun snapshotForNexus(activity:Activity):List<NexusQueueEntry> {
-        val aligned=com.asterion.nexus.NexusCloudPublication.canPublish(activity)
+        val accounts=NduSettings.uploadAccounts(activity).associateBy{it.scope}
+        val labels=com.openlocal.office.core.FgTeraboxClient.accounts(activity).associate{it.scope to it.label}
         val staged=NduCloudQueue(activity).use{it.nexusPublications()}.map{row->
             val complete=row.state=="VERIFIED"&&row.size>0&&!row.path.isNullOrBlank()
-            val state=if(complete)"DONE" else if(row.error!=null)"FAILED" else "QUEUED"
-            NexusQueueEntry("nexus-publication:"+row.uri,"TeraBox",row.name,
-                if(complete)"Remote receipt verified" else row.error?:"Verified local bytes; remote publication pending",
+            val account=accounts[row.scope]
+            val state=if(complete)"DONE" else if(account==null)"HELD" else if(row.error!=null)"FAILED" else "QUEUED"
+            NexusQueueEntry("nexus-publication:"+row.scope+":"+row.uri,"TeraBox · "+(account?.let{labels[it.browserScope]}?:"Account unavailable"),row.name,
+                if(complete)"Remote receipt verified" else if(account==null)"Original account authorization unavailable" else row.error?:"Verified local bytes; remote publication pending",
                 state,if(complete)100 else null,if(complete)row.size else 0L,row.size,
-                if(complete)null else "Retry publication",if(complete)null else ({
-                    NduCloudQueue(activity).use{it.retryNexus(row.uri)}
+                if(complete||account==null)null else "Retry publication",if(complete||account==null)null else ({
+                    NduCloudQueue(activity).use{it.retryNexusScoped(row.uri,row.scope)}
                     NduCloudScheduler.requestImmediate(activity);Unit
-                }),null,if(complete&&aligned)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriForAccount(com.asterion.nexus.NexusCloudPublication.publicationScope(activity),row.path,row.size).toString() else null,
+                }),null,if(complete&&account!=null)com.openlocal.office.core.FgTeraboxDocumentsProvider.uriForAccount(account.browserScope,row.path,row.size).toString() else null,
                 com.openlocal.office.core.FgTeraboxClient.mime(row.name))
         }
         val stagedUris=NduCloudQueue(activity).use{it.nexusPublications().map{row->row.uri}.toSet()}
