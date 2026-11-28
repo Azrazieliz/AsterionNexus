@@ -84,7 +84,7 @@ class SafStorageProvider(
             )
             // Rounder's bulk SAF protocol returns metadata 100 files per
             // query. It does not open, decode or copy a single image.
-            val rounder = parsedRoot.authority == "com.openlocal.office.terabox.documents"
+            val rounder = parsedRoot.authority in setOf("com.openlocal.office.terabox.documents","com.asterion.nexus.terabox.documents")
             val knownIds = if(rounder) null else HashSet<String>()
             var offset = 0
             var finished = false
@@ -591,6 +591,9 @@ class SafStorageProvider(
         hasPersistedPermission(uri, requireWrite = true)
 
     private fun hasPersistedPermission(uri: Uri, requireWrite: Boolean): Boolean {
+        // Same-process read-only Nexus provider enforces the account scope itself.
+        if(uri.scheme=="content" && uri.authority=="com.asterion.nexus.terabox.documents" &&
+            appContext.packageName.startsWith("com.asterion.nexus"))return !requireWrite
         val target = uri.normalizeScheme().toString()
         return resolver.persistedUriPermissions.any { permission ->
             if (!permission.isReadPermission) {
@@ -607,7 +610,7 @@ class SafStorageProvider(
     }
 
     private fun containsDocument(treeUri: Uri, documentUri: Uri): Boolean {
-        if (!DocumentsContract.isTreeUri(treeUri)) {
+        if (treeUri.authority!=documentUri.authority || !DocumentsContract.isTreeUri(treeUri)) {
             return false
         }
         return try {

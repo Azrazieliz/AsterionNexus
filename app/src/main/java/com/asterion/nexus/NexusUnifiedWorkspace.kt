@@ -797,13 +797,15 @@ private fun NexusUnifiedCloud(
                     DocumentsContract.Document.COLUMN_DISPLAY_NAME,
                     DocumentsContract.Document.COLUMN_MIME_TYPE,
                     DocumentsContract.Document.COLUMN_SIZE)
+                val nativeCloud=tree.authority==FgTeraboxDocumentsProvider.AUTHORITY
+                val limit=if(nativeCloud)100 else 80
                 val options=Bundle().apply{
                     putInt(ContentResolver.QUERY_ARG_OFFSET,offset)
-                    putInt(ContentResolver.QUERY_ARG_LIMIT,80)
+                    putInt(ContentResolver.QUERY_ARG_LIMIT,limit)
                     // The pinned cloud DocumentsProvider consumes these native page hints.
                     // Keep standard SAF hints as well for third-party providers.
                     putInt(FgTeraboxDocumentsProvider.PAGE_OFFSET,offset)
-                    putInt(FgTeraboxDocumentsProvider.PAGE_LIMIT,80)
+                    putInt(FgTeraboxDocumentsProvider.PAGE_LIMIT,limit)
                 }
                 val cursor=ctx.contentResolver.query(child,cols,options,null)
                     ?:throw java.io.IOException("No provider response")
@@ -812,7 +814,7 @@ private fun NexusUnifiedCloud(
                     val cn=it.getColumnIndexOrThrow(cols[1])
                     val cm=it.getColumnIndexOrThrow(cols[2])
                     val cs=it.getColumnIndex(cols[3])
-                    while(it.moveToNext()&&result.size<80){
+                    while(it.moveToNext()&&result.size<limit){
                         val childId=it.getString(ci)
                         val title=it.getString(cn)?:"File"
                         val mime=it.getString(cm)?:"application/octet-stream"
@@ -942,10 +944,10 @@ private fun NexusUnifiedCloud(
                         }
                     })
                 }
-                if(sourceRows.size>=80)item(span={GridItemSpan(maxLineSpan)}){
+                if(sourceRows.size>=if(selectedTree?.authority==FgTeraboxDocumentsProvider.AUTHORITY)100 else 80)item(span={GridItemSpan(maxLineSpan)}){
                     UnifiedButton("More folder items"){
                         val tree=selectedTree;val doc=currentDocument
-                        if(tree!=null&&doc!=null)browseTree(tree,doc,sourceOffset+80)
+                        if(tree!=null&&doc!=null)browseTree(tree,doc,sourceOffset+if(tree.authority==FgTeraboxDocumentsProvider.AUTHORITY)100 else 80)
                     }
                 }
             }else{

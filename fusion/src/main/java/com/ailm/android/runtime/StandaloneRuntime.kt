@@ -6272,8 +6272,8 @@ object StandaloneRuntime {
         // Dimensions are enriched lazily when the user opens/processes a
         // specific image; only metadata from the provider is read here.
         val remoteMetadataOnly = runCatching {
-            android.net.Uri.parse(node.uri).authority ==
-                "com.openlocal.office.terabox.documents"
+            android.net.Uri.parse(node.uri).authority in setOf("com.openlocal.office.terabox.documents",
+                "com.asterion.nexus.terabox.documents")
         }.getOrDefault(false)
         if (!remoteMetadataOnly &&
             !repository.isUnchangedImage(node.uri,node.sizeBytes,node.lastModifiedMs)) {
@@ -6560,7 +6560,7 @@ object StandaloneRuntime {
         if (TeraBoxUris.isTeraBox(uri)) return true
         val parsed = Uri.parse(uri)
         return parsed.scheme == "content" &&
-            parsed.authority == "com.openlocal.office.terabox.documents"
+            parsed.authority in setOf("com.openlocal.office.terabox.documents","com.asterion.nexus.terabox.documents")
     }
 
     /** The native backends use file paths; original SAF grants are not file paths.
