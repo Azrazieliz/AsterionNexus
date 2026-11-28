@@ -171,20 +171,6 @@ object CatalogDiscovery {
                 "Torrent metadata; select actual game files before transfer")
         }
     }
-    private fun searchTorrents(q:String):List<CatalogHit> {
-        // Category-qualified game results only: Nyaa software/games (6_2),
-        // Sukebei art/games (1_3). All-category feeds returned video releases.
-        val providers=listOf("Nyaa · games" to "https://nyaa.si/?page=rss&c=6_2&q=",
-            "Sukebei · games" to "https://sukebei.nyaa.si/?page=rss&c=1_3&q=")
-        val hits=ArrayList<CatalogHit>()
-        val errors=ArrayList<String>()
-        for((name,base) in providers){
-            runCatching{torrentRss(get(base+enc(q)),base,name)}
-                .onSuccess{hits+=it}.onFailure{errors+=name+": "+(it.message?:"Unavailable")}
-        }
-        if(hits.isEmpty() && errors.isNotEmpty())error(errors.joinToString(" · "))
-        return hits
-    }
     internal fun safeFilename(input:String,extension:String):String {
         val base=input.replace(Regex("[^\\p{L}\\p{N}_. -]"),"_")
             .trim().take(95).ifBlank{"download"}
@@ -197,13 +183,46 @@ object CatalogDiscovery {
         val count=words.count{t.contains(it)}
         return if(count==0)0 else count*20+(if(t.contains(query.lowercase(Locale.ROOT)))100 else 0)
     }
+    private data class Snapshot(val outcome:CatalogOutcome,val created:Long)
+    private val pageLock=Any()
+    private val pageSnapshots=LinkedHashMap<Pair<String,Boolean>,Snapshot>(8,.75f,true)
+    private const val PAGE_SIZE=30
+    internal fun pageSlice(outcome:CatalogOutcome,page:Int):CatalogOutcome{
+        require(page in 0..1000)
+        return outcome.copy(hits=outcome.hits.drop(page*PAGE_SIZE).take(PAGE_SIZE))
+    }
+
+    /** Stable pagination over the actual bounded provider snapshot. Providers
+     * that only expose a single search response are never queried repeatedly
+     * under a fake next-page parameter. An expired snapshot must be refreshed. */
+    fun searchPage(query:String,games:Boolean,page:Int):CatalogOutcome{
+        require(page in 0..1000)
+        val key=query.trim() to games
+        val now=System.nanoTime()
+        val outcome=if(page==0){
+            search(key.first,games).also{result->
+                synchronized(pageLock){
+                    pageSnapshots[key]=Snapshot(result,System.nanoTime())
+                    while(pageSnapshots.size>8)pageSnapshots.remove(pageSnapshots.keys.first())
+                }
+            }
+        }else synchronized(pageLock){
+            pageSnapshots[key]?.takeIf{now-it.created<TimeUnit.MINUTES.toNanos(10)}?.outcome
+        }?:return CatalogOutcome(emptyList(),listOf("Search snapshot expired. Refresh the first page."),0,0)
+        return pageSlice(outcome,page)
+    }
+
     fun search(query:String,games:Boolean):CatalogOutcome {
         val title=query.trim()
         require(title.length in 2..150){"Enter a title (2–150 characters)"}
+        if(games){
+            // The canonical torrent engine already searches Nyaa and Sukebei
+            // independently. Do not query them twice or discard partial errors.
+            val report=MultiTorrentSearch.searchDetailed(title)
+            return CatalogOutcome(report.hits,report.failures,report.searched,report.successful)
+        }
         val providers: List<Pair<String, () -> List<CatalogHit>>> =
-            if(games)listOf("Nyaa and Sukebei" to {searchTorrents(title)},
-                "Bitsearch / Knaben / Pirate Bay" to {MultiTorrentSearch.search(title).first})
-            else listOf("Internet Archive" to {searchArchive(title,false)},
+            listOf("Internet Archive" to {searchArchive(title,false)},
                 "Project Gutenberg" to {searchGutenberg(title)},
                 "Standard Ebooks" to {searchStandardEbooks(title)},
                 "Wikisource" to {searchWikisource(title)})
