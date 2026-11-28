@@ -111,10 +111,11 @@ internal class NexusMarianEngine private constructor(
         fun open(context:Context,language:String):NexusMarianEngine{
             val revision=revisions[language]?:error("Unsupported source language")
             val base="translation-models/"+language
+            val precision=if(language=="ja")"int8" else "fp32"
             val manifest=context.assets.open(base+"/manifest.json").bufferedReader(Charsets.UTF_8).use{JSONObject(it.readText())}
-            check(manifest.getString("revision")==revision&&manifest.getString("language")==language&&manifest.getBoolean("reference_smoke_passed")&&manifest.optString("decode_policy")=="beam4-v1"){"Unvalidated model bundle"}
+            check(manifest.getString("revision")==revision&&manifest.getString("language")==language&&manifest.getBoolean("reference_smoke_passed")&&manifest.optString("decode_policy")=="beam4-v1"&&manifest.optString("precision")==precision){"Unvalidated model bundle"}
             val hashes=manifest.getJSONObject("sha256")
-            val directory=File(context.noBackupFilesDir,"translation-models/"+revision).apply{check(isDirectory||mkdirs()||isDirectory)}
+            val directory=File(context.noBackupFilesDir,"translation-models/"+revision+"-"+precision).apply{check(isDirectory||mkdirs()||isDirectory)}
             for(name in files){
                 val expected=hashes.getString(name)
                 require(expected.matches(Regex("[a-f0-9]{64}")))
@@ -146,7 +147,7 @@ internal class NexusMarianEngine private constructor(
                 }
                 check(encoder!!.inputNames==setOf("input_ids","attention_mask"))
                 check(decoder!!.inputNames==setOf("input_ids","encoder_attention_mask","encoder_hidden_states"))
-                return NexusMarianEngine(source,target,encoder!!,decoder!!,vocabulary,reverse,eos,pad,unknown,"marian-"+language+"-"+revision+"-beam4-v1")
+                return NexusMarianEngine(source,target,encoder!!,decoder!!,vocabulary,reverse,eos,pad,unknown,"marian-"+language+"-"+revision+"-beam4-v1-"+precision)
             }catch(t:Throwable){
                 runCatching{encoder?.close()};runCatching{decoder?.close()}
                 if(source!=0L)NexusSentencePiece.close(source)
