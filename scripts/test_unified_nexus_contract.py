@@ -99,6 +99,10 @@ def check():
     assert "score BETWEEN 0 AND 100" in registry and "if(score==-1)" in registry
     taxonomy_revision_regression()
     cloud_account_regression()
+    assembly=(APP/"java/com/asterion/nexus/NexusEpisodeAssembly.java").read_text(encoding="utf-8")
+    assert 'NexusEpisodeAssemblyPane(onLibraryRefresh)' in workspace
+    assert 'MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4' in assembly and 'evidence.verify(actual)' in assembly
+    assert 'NexusOriginalStore.matches(original,item.length,item.sha256)' in assembly
     print("PASS: one Nexus launcher; approved navigation; native transfer routes; real cover flow; taxonomy revision SQL fixture")
 
 def taxonomy_revision_regression():

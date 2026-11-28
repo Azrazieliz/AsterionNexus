@@ -156,6 +156,7 @@ fun NexusWorkspace(
     onCoreRoute:(String)->Unit
 ){
     when(section){
+        "EpisodeAssembly"->NexusEpisodeAssemblyPane(onLibraryRefresh)
         "Modules"->NexusAcquisitionCatalog(false,onLibraryRefresh)
         "Suggestions"->NexusAcquisitionCatalog(true,onLibraryRefresh)
         "Search"->NexusUnifiedSearch(onOpen,onLibraryRefresh)

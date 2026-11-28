@@ -324,6 +324,7 @@ private fun NexusHome(
                     Text(destination,color=IvoryColor,fontSize=20.sp,
                         fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
                     if(destination=="Library")TextButton(onClick=onImport){Text("Import")}
+                    if(destination=="Library"&&context=="Videos")TextButton(onClick={onRoute("EpisodeAssembly")}){Text("Assemble")}
                     if(destination=="Downloading"&&context=="Search")
                         TextButton(onClick=onAcquire){Text("Direct URL")}
                     Box{
