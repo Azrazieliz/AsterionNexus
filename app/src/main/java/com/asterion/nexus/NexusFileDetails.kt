@@ -114,6 +114,19 @@ object NexusFileDetails {
                 }
             }
         }
+        if(NexusArchiveOperation.available(activity,uri)&&
+            (type.startsWith("image/")||type.startsWith("video/")||type.startsWith("audio/"))){
+            body.addView(android.widget.Button(activity).apply{
+                text="Media inspection"
+                setOnClickListener{NexusMediaActions.inspect(activity,uri)}
+            })
+            if(type.startsWith("image/")||type.startsWith("video/")){
+                body.addView(android.widget.Button(activity).apply{
+                    text=if(type.startsWith("video/"))"Extract video frame" else "Resize or convert"
+                    setOnClickListener{NexusMediaActions.derivative(activity,uri,type)}
+                })
+            }
+        }
         var target:Target?=null
         if(type.startsWith("image/")){
             val similar=android.widget.Button(activity).apply{
@@ -175,7 +188,7 @@ object NexusFileDetails {
         var selected:Int?=null
         var saving=false
         val builder=AlertDialog.Builder(activity).setTitle(title?:"File details")
-            .setView(body).setPositiveButton("Save rating",null)
+            .setView(android.widget.ScrollView(activity).apply{addView(body)}).setPositiveButton("Save rating",null)
             .setNegativeButton("Close",null)
             .setNeutralButton(if(open==null)"Clear rating" else "Open file",null)
         val dialog=builder.create()
