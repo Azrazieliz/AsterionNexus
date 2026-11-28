@@ -161,6 +161,7 @@ fun NexusWorkspace(
         "Suggestions"->NexusAcquisitionCatalog(true,onLibraryRefresh)
         "Search"->NexusUnifiedSearch(onOpen,onLibraryRefresh)
         "Transfers"->NexusUnifiedTransfers(onOpen)
+        "Asterion Bridges"->NexusPartnerPane()
         "Cloud"->NexusUnifiedCloud(onOpen,onLibraryRefresh)
         "CoreGallery","Collections","Organize","Activity","Taxonomy","Review","Intelligence"->
             com.ailm.android.ui.screens.NexusCorePane(section,onCoreRoute)
