@@ -960,7 +960,9 @@ private fun NexusUnifiedCloud(
     var cookie by remember{mutableStateOf("")}
     var connected by remember{mutableStateOf(cloud.configured())}
     var accounts by remember{mutableStateOf(FgTeraboxClient.accounts(ctx))}
-    var accountScope by remember{mutableStateOf("")}
+    // With one connected account, browse its actual isolated scope directly.
+    // Multiple-account filtering remains available if ever configured.
+    var accountScope by remember{mutableStateOf(accounts.singleOrNull()?.scope.orEmpty())}
     var accountLabel by remember{mutableStateOf("")}
     var publicationScope by remember{mutableStateOf(NexusCloudPublication.publicationScope(ctx))}
     var addingAccount by remember{mutableStateOf(false)}
