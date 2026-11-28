@@ -649,36 +649,56 @@ class LocalDatabase @JvmOverloads constructor(
     private fun createImageSearchIndexArtifacts(db: SQLiteDatabase, ifNotExists: Boolean, rebuild: Boolean) {
         val ifNotExistsSql = if (ifNotExists) "IF NOT EXISTS " else ""
 
-        val ftsMode = try {
-            db.execSQL(
-                """
-                CREATE VIRTUAL TABLE ${ifNotExistsSql}image_fts USING fts5(
-                    filename,
-                    uri,
-                    tags_text,
-                    metadata_text,
-                    content='images',
-                    content_rowid='image_id'
-                )
-                """.trimIndent(),
-            )
-            "fts5"
-        } catch (e: SQLiteException) {
-            if (!isUnsupportedFts5(e)) {
-                throw e
+        // Some Android SQLite builds create a virtual-table schema entry
+        // before reporting "no such module: fts5". Trying FTS5 and falling
+        // back to FTS4 against the same table name then fails with
+        // "table image_fts already exists". Determine support BEFORE any DDL.
+        // On upgrades always preserve whichever FTS implementation owns the
+        // existing table: changing its virtual module would lose the index.
+        val existingSql = db.rawQuery(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='image_fts' LIMIT 1",
+            null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0).orEmpty() else ""
+        }
+        val ftsMode = when {
+            existingSql.contains("USING fts5(", ignoreCase = true) -> "fts5"
+            existingSql.contains("USING fts4(", ignoreCase = true) -> "fts4"
+            existingSql.isNotBlank() ->
+                throw SQLiteException("Unknown existing image_fts virtual table; preserving original data")
+            else -> {
+                val supportsFts5 = db.rawQuery(
+                    "SELECT sqlite_compileoption_used('ENABLE_FTS5')", null
+                ).use { cursor -> cursor.moveToFirst() && cursor.getInt(0) == 1 }
+                if (supportsFts5) {
+                    db.execSQL(
+                        """
+                        CREATE VIRTUAL TABLE ${ifNotExistsSql}image_fts USING fts5(
+                            filename,
+                            uri,
+                            tags_text,
+                            metadata_text,
+                            content='images',
+                            content_rowid='image_id'
+                        )
+                        """.trimIndent(),
+                    )
+                    "fts5"
+                } else {
+                    db.execSQL(
+                        """
+                        CREATE VIRTUAL TABLE ${ifNotExistsSql}image_fts USING fts4(
+                            filename,
+                            uri,
+                            tags_text,
+                            metadata_text,
+                            content='images'
+                        )
+                        """.trimIndent(),
+                    )
+                    "fts4"
+                }
             }
-            db.execSQL(
-                """
-                CREATE VIRTUAL TABLE ${ifNotExistsSql}image_fts USING fts4(
-                    filename,
-                    uri,
-                    tags_text,
-                    metadata_text,
-                    content='images'
-                )
-                """.trimIndent(),
-            )
-            "fts4"
         }
 
         if (ftsMode == "fts5") {
