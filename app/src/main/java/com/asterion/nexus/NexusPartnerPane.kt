@@ -1,7 +1,7 @@
 package com.asterion.nexus
 
 import android.app.Activity
-import android.app.AlertDialog
+import android.app.AlertDialog as NativeAlertDialog
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -113,20 +113,20 @@ object NexusPartnerActions{
             }
             activity.runOnUiThread{
                 if(activity.isFinishing||activity.isDestroyed)return@runOnUiThread
-                result.onFailure{AlertDialog.Builder(activity).setMessage(it.message?:"Discovery failed").setPositiveButton("OK",null).show()}
+                result.onFailure{NativeAlertDialog.Builder(activity).setMessage(it.message?:"Discovery failed").setPositiveButton("OK",null).show()}
                 result.onSuccess{(item,choices)->
                     if(choices.isEmpty()){
-                        AlertDialog.Builder(activity).setMessage("No approved specialist advertises a compatible asset action. Review Organising / Asterion Bridges.").setPositiveButton("OK",null).show()
-                    }else AlertDialog.Builder(activity).setTitle("Choose specialist action")
+                        NativeAlertDialog.Builder(activity).setMessage("No approved specialist advertises a compatible asset action. Review Organising / Asterion Bridges.").setPositiveButton("OK",null).show()
+                    }else NativeAlertDialog.Builder(activity).setTitle("Choose specialist action")
                         .setItems(choices.map{it.first.label+" · "+it.second.name}.toTypedArray()){_,index->
                             val (p,a)=choices[index]
-                            AlertDialog.Builder(activity).setTitle("Confirm asset access")
+                            NativeAlertDialog.Builder(activity).setTitle("Confirm asset access")
                                 .setMessage(item.displayName+"\n"+p.label+" · "+a.name+"\nRead-only access for up to 10 minutes. A separate verified output is retained only when supplied.")
                                 .setNegativeButton("Cancel",null).setPositiveButton("Send"){_,_->
                                     worker.execute{
                                         val outcome=runCatching{NexusPartnerBridge.send(activity.applicationContext,p,a,item)}
                                         activity.runOnUiThread{
-                                            if(!activity.isFinishing&&!activity.isDestroyed)AlertDialog.Builder(activity)
+                                            if(!activity.isFinishing&&!activity.isDestroyed)NativeAlertDialog.Builder(activity)
                                                 .setMessage(outcome.fold({it.status+": "+it.message},{it.message?:"Transfer failed"}))
                                                 .setPositiveButton("OK",null).show()
                                         }
