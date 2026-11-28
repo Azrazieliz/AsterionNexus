@@ -15,7 +15,9 @@ internal object FusionVisualSimilarity {
         val scale = normalized.maxOf { abs(it) }
         if (scale <= 0f) return null
         return ByteArray(normalized.size) {
-            (normalized[it] / scale * 127f).roundToInt().coerceIn(-127,127).toByte()
+            val value = normalized[it] / scale * 127f
+            val magnitude = abs(value).roundToInt().coerceIn(0,127)
+            (if(value < 0f) -magnitude else magnitude).toByte()
         }
     }
 
