@@ -17,7 +17,7 @@ internal object GalleryRetryBackoff {
         (BASE_MS shl (attempt.coerceIn(1,12)-1)).coerceAtMost(MAX_MS)
 }
 
-class GalleryDb(context: Context) : SQLiteOpenHelper(context.applicationContext, "galleryflow.db", null, 6) {
+class GalleryDb(context: Context) : SQLiteOpenHelper(context.applicationContext, "galleryflow.db", null, 7) {
     private val signalContext=context.applicationContext
     override fun onOpen(db:SQLiteDatabase) {
         super.onOpen(db)
@@ -92,6 +92,7 @@ class GalleryDb(context: Context) : SQLiteOpenHelper(context.applicationContext,
         db.execSQL("CREATE INDEX idx_media_hash ON media(sha256)")
         db.execSQL("CREATE INDEX idx_media_gallery ON media(source, gallery_id)")
         createRetryTable(db)
+        createMigrationTables(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -136,7 +137,19 @@ class GalleryDb(context: Context) : SQLiteOpenHelper(context.applicationContext,
                 WHERE source='4khd' AND entity_id<>'site:all'
             """.trimIndent())
         }
+        if (oldVersion < 7) createMigrationTables(db)
     }
+
+    private fun createMigrationTables(db: SQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS legacy_catalog_migrations(
+            digest TEXT PRIMARY KEY, applied_at INTEGER NOT NULL,
+            receipt_json TEXT NOT NULL)""")
+        db.execSQL("""CREATE TABLE IF NOT EXISTS legacy_catalog_rows(
+            digest TEXT NOT NULL, table_name TEXT NOT NULL, row_key TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            PRIMARY KEY(digest,table_name,row_key))""")
+    }
+
 
     private fun createRetryTable(db: SQLiteDatabase) {
         db.execSQL("""
