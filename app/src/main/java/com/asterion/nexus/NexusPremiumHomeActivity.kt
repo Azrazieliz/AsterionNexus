@@ -288,6 +288,7 @@ private fun NexusHome(
     var organisingContext by rememberSaveable { mutableStateOf("Activity") }
     var downloadingContext by rememberSaveable { mutableStateOf("Search") }
     var showMore by remember { mutableStateOf(false) }
+    var cloudMedia by rememberSaveable { mutableStateOf(true) }
     val destination=when(section){
         "Organize","Intelligence","Activity","Taxonomy","Review"->"Organising"
         "Modules","Search","Suggestions","Transfers"->"Downloading"
@@ -356,6 +357,10 @@ private fun NexusHome(
                     }
                 }
                 if(section=="Library"){
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                        FilterChip(selected=cloudMedia,onClick={cloudMedia=true},label={Text("TeraBox")})
+                        FilterChip(selected=!cloudMedia,onClick={cloudMedia=false},label={Text("On device")})
+                    }
                     OutlinedTextField(value=query,onValueChange=onQuery,singleLine=true,
                         placeholder={Text("Search "+context.lowercase(),fontSize=14.sp)},
                         modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp))
@@ -363,7 +368,11 @@ private fun NexusHome(
                         Text(status,color=MutedColor,fontSize=12.sp)
                 }
             }
-            if(section=="Library"){
+            if(section=="Library"&&cloudMedia&&category in listOf("Books","Videos","Assets")){
+                Box(Modifier.weight(1f).fillMaxWidth()){
+                    key(category){NexusCloudMediaPane(category,query,previewEnabled,onWorkspaceOpen)}
+                }
+            }else if(section=="Library"){
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()){
                 val columns=when{
                     maxWidth>=1180.dp->5
@@ -473,7 +482,7 @@ private fun navGlyph(name:String)=when(name){
 private fun categoryMatch(mime:String,category:String):Boolean{
     val m=mime.lowercase()
     val book=m.contains("pdf")||m.contains("epub")||m.contains("comic")||
-        m.contains("wordprocessingml")
+        m.contains("wordprocessingml")||m=="text/plain"
     return when(category){
         "Images"->m.startsWith("image/")
         "Videos"->m.startsWith("video/")

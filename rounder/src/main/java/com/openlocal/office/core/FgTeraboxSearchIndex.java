@@ -271,13 +271,17 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                 boolean more=false;
                 boolean affected="affected".equals(category);
                 if(!scope.isEmpty()&&gen>0&&text!=null&&
-                   (!text.trim().isEmpty()||affected)){
+                   (!text.trim().isEmpty()||affected||"books".equals(category)||"video".equals(category)||"assets".equals(category))){
                     ArrayList<String> params=new ArrayList<>();
                     String sql="SELECT o.path,o.name,o.kind,o.folder,o.size,o.modified,o.parent,o.listing_page,o.preview_missing,COALESCE(mark.marked,0) FROM objects o LEFT JOIN preview_marks mark ON mark.scope=o.scope AND mark.path=o.path WHERE o.scope=? AND o.generation=? AND o.needle LIKE ? ESCAPE '\\'";
                     params.add(scope);params.add(Integer.toString(gen));
                     params.add("%"+escapeLike(text.trim().toLowerCase(Locale.ROOT))+"%");
                     if(affected){
                         sql+=" AND o.kind='image' AND (o.preview_missing=1 OR COALESCE(mark.marked,0)=1)";
+                    }else if("books".equals(category)){
+                        sql+=" AND o.folder=0 AND (o.kind IN ('book','pdf','comic') OR lower(o.name) LIKE '%.docx' OR lower(o.name) LIKE '%.txt')";
+                    }else if("assets".equals(category)){
+                        sql+=" AND o.folder=0 AND o.kind NOT IN ('image','video','book','pdf','comic') AND lower(o.name) NOT LIKE '%.docx' AND lower(o.name) NOT LIKE '%.txt'";
                     }else if(category!=null&&!category.isEmpty()&&!category.equals("all")){
                         sql+=" AND o.kind=?";params.add(category);
                     }
@@ -295,7 +299,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                                 .put("folder",cursor.getInt(3)!=0)
                                 .put("size",cursor.getLong(4))
                                 .put("modified",cursor.getLong(5))
-                                .put("searchPath",cursor.getString(6))
+                                .put("searchPath",cursor.getString(6)).put("listingPage",cursor.getInt(7))
                                 .put("terabox",true).put("indexedSearch",true)
                                 .put("uri","fgterabox://file/"+Uri.encode(path));
                             if("image".equals(cursor.getString(2))){

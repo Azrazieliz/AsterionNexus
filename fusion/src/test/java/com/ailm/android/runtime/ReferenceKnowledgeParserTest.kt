@@ -6,6 +6,23 @@ import org.junit.Test
 
 class ReferenceKnowledgeParserTest {
     @Test
+    fun `owner release parses every embedded document with no invented characters`() {
+        val root = sequenceOf(
+            java.io.File("src/main/assets/nexus_reference_knowledge/owner_taxonomy_20261128"),
+            java.io.File("fusion/src/main/assets/nexus_reference_knowledge/owner_taxonomy_20261128")
+        ).first { it.isDirectory }
+        val manifest = org.json.JSONObject(java.io.File(root,"manifest.json").readText())
+        val documents = root.listFiles()!!.filter { it.extension=="json" && it.name!="manifest.json" }
+            .associate { it.name to it.readText() }
+        val parsed = ReferenceKnowledgeParser.parseDocuments(documents)
+        assertEquals(16,documents.size)
+        assertEquals(1278,parsed.tags.size)
+        assertEquals(1621,parsed.series.size)
+        assertTrue(parsed.characters.isEmpty())
+        assertTrue(parsed.tags.none { it.parentId==it.id })
+    }
+
+    @Test
     fun `parses series and heterogeneous tag schemas without characters`() {
         val bundle = ReferenceKnowledgeParser.parseDocuments(
             mapOf(
