@@ -34,6 +34,8 @@ class NexusVideoEditActivity:Activity(){
     private var ready=false
     private var draftKey=""
     private var initialRows=emptyList<Row>()
+    private var reviewLog=org.json.JSONArray()
+    private lateinit var repeatsButton:Button
     private fun saveDraft(){
         if(!ready||draftKey.isEmpty())return
         sync()
@@ -41,7 +43,7 @@ class NexusVideoEditActivity:Activity(){
         rows.forEach{clips.put(org.json.JSONObject().put("sha",it.source.item.sha256).put("start",it.start).put("end",it.end))}
         val draft=org.json.JSONObject().put("clips",clips).put("title",titleField.text.toString())
             .put("resolution",resolution.selectedItemPosition).put("bitrate",bitrate.selectedItemPosition)
-            .put("codec",codec.selectedItemPosition).put("mute",mute.isChecked)
+            .put("codec",codec.selectedItemPosition).put("mute",mute.isChecked).put("repeat_review",reviewLog)
         getSharedPreferences("nexus-video-drafts",MODE_PRIVATE).edit().putString(draftKey,draft.toString()).apply()
     }
     private fun restoreDraft(items:List<Row>):List<Row>{
@@ -61,6 +63,7 @@ class NexusVideoEditActivity:Activity(){
             bitrate.setSelection(d.optInt("bitrate").coerceIn(0,3))
             codec.setSelection(d.optInt("codec").coerceIn(0,1))
             mute.isChecked=d.optBoolean("mute")
+            reviewLog=d.optJSONArray("repeat_review")?:org.json.JSONArray()
             restored
         }.getOrElse{items}
     }
@@ -76,7 +79,7 @@ class NexusVideoEditActivity:Activity(){
         layout.addView(heading("Video timeline"))
         titleField=EditText(this).apply{hint="Output title";setSingleLine(true);setText(intent.getStringExtra("title").orEmpty().ifBlank{"Edited video"});setTextColor(-1)}
         layout.addView(titleField)
-        layout.addView(Button(this).apply{text="Reset timeline draft";setOnClickListener{if(ready&&!running){android.app.AlertDialog.Builder(this@NexusVideoEditActivity).setMessage("Reset edits to the initial timeline?").setPositiveButton("Reset"){_,_->rows.clear();rows.addAll(initialRows.map{it.copy()});renderRows();saveDraft()}.setNegativeButton("Cancel",null).show()}}})
+        layout.addView(Button(this).apply{text="Reset timeline draft";setOnClickListener{if(ready&&!running){android.app.AlertDialog.Builder(this@NexusVideoEditActivity).setMessage("Reset edits to the initial timeline?").setPositiveButton("Reset"){_,_->rows.clear();rows.addAll(initialRows.map{it.copy()});reviewLog=org.json.JSONArray();renderRows();saveDraft()}.setNegativeButton("Cancel",null).show()}}})
         timeline=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
         layout.addView(ScrollView(this).apply{addView(timeline)},LinearLayout.LayoutParams(-1,0,1f))
         layout.addView(heading("Resolution · preserve aspect with padding"))
@@ -90,6 +93,8 @@ class NexusVideoEditActivity:Activity(){
         layout.addView(exportButton)
         highlightButton=Button(this).apply{text="Suggest motion montage";isEnabled=false;setOnClickListener{suggestHighlights()}}
         layout.addView(highlightButton)
+        repeatsButton=Button(this).apply{text="Review similar episode-edge scenes";isEnabled=false;setOnClickListener{reviewRepeats()}}
+        if(intent.getBooleanExtra("automatic",false))layout.addView(repeatsButton)
         cancelButton=Button(this).apply{text="Cancel export";isEnabled=false;setOnClickListener{cancel.set(true);isEnabled=false}}
         layout.addView(cancelButton)
         setContentView(layout)
@@ -103,7 +108,7 @@ class NexusVideoEditActivity:Activity(){
             }
             runOnUiThread{
                 if(isDestroyed||isFinishing)return@runOnUiThread
-                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=true}
+                result.onSuccess{items->initialRows=items.map{it.copy()};rows.addAll(restoreDraft(items));renderRows();status.text=if(intent.getBooleanExtra("automatic",false))"Review conservative repeated-edge suggestions; uncertain footage retained" else "Trim and reorder clips";exportButton.isEnabled=true;ready=true;highlightButton.isEnabled=true;repeatsButton.isEnabled=items.size in 3..20}
                     .onFailure{status.text="Cannot edit: "+it.message}
             }
         }
@@ -130,7 +135,7 @@ class NexusVideoEditActivity:Activity(){
             timeline.addView(entry)
         }
     }
-    private fun preview(row:Row){
+    private fun preview(row:Row,reviewOnly:Boolean=false){
         val source=row.source
         val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
         val video=VideoView(this)
@@ -158,8 +163,10 @@ class NexusVideoEditActivity:Activity(){
         }
         fun button(label:String,action:()->Unit){controls.addView(Button(this).apply{text=label;setOnClickListener{if(prepared)action()}},LinearLayout.LayoutParams(0,-2,1f))}
         button("Play / pause"){if(video.isPlaying)video.pause()else{if(video.currentPosition.toLong() !in start until end)video.seekTo(start.toInt());video.start()}}
-        button("Mark in"){start=video.currentPosition.toLong().coerceIn(0,end-1);display()}
-        button("Mark out"){end=video.currentPosition.toLong().coerceIn(start+1,source.duration);display()}
+        if(!reviewOnly){
+            button("Mark in"){start=video.currentPosition.toLong().coerceIn(0,end-1);display()}
+            button("Mark out"){end=video.currentPosition.toLong().coerceIn(start+1,source.duration);display()}
+        }
         panel.addView(controls)
         seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
             override fun onStartTrackingTouch(bar:SeekBar){dragging=true;video.pause()}
@@ -167,7 +174,7 @@ class NexusVideoEditActivity:Activity(){
             override fun onProgressChanged(bar:SeekBar,value:Int,fromUser:Boolean){if(fromUser&&prepared)video.seekTo((source.duration*value/1000).toInt())}
         })
         val dialog=android.app.AlertDialog.Builder(this).setTitle(source.item.displayName).setView(panel)
-            .setPositiveButton("Apply marks"){_,_->row.start=start.toString();row.end=end.toString();renderRows();saveDraft()}
+            .setPositiveButton(if(reviewOnly)"Close" else "Apply marks"){_,_->if(!reviewOnly){row.start=start.toString();row.end=end.toString();renderRows();saveDraft()}}
             .setNegativeButton("Cancel",null).create()
         dialog.setOnDismissListener{handler.removeCallbacks(ticker);video.stopPlayback()}
         video.setOnPreparedListener{prepared=true;seek.isEnabled=true;video.seekTo(start.toInt());display()}
@@ -177,6 +184,65 @@ class NexusVideoEditActivity:Activity(){
         handler.post(ticker)
     }
     override fun onPause(){saveDraft();super.onPause()}
+    private fun reviewRepeats(){
+        if(running||!ready||initialRows.size !in 3..20)return
+        sync()
+        val sources=initialRows.map{it.source}
+        running=true;renderRows();exportButton.isEnabled=false;highlightButton.isEnabled=false;repeatsButton.isEnabled=false
+        status.text="Comparing decoded edge scenes across ${sources.size} episodes…"
+        worker.execute{
+            val result=runCatching{NexusSceneReview.scan(applicationContext,sources)}
+            runOnUiThread{
+                if(isDestroyed||isFinishing)return@runOnUiThread
+                running=false;renderRows();exportButton.isEnabled=true;highlightButton.isEnabled=true;repeatsButton.isEnabled=true
+                result.onFailure{status.text="Scene review unavailable: "+it.message}.onSuccess{groups->
+                    status.text=if(groups.isEmpty())"No reliable repeated visual scene candidates found; footage retained" else "Review suggested scenes before choosing cuts"
+                    if(groups.isNotEmpty())showRepeatReview(sources,groups)
+                }
+            }
+        }
+    }
+    private fun showRepeatReview(sources:List<NexusVideoExport.Source>,groups:List<NexusSceneReview.Group>){
+        val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(18,12,18,12)}
+        val selected=mutableListOf<Pair<NexusSceneReview.Group,NexusSceneReview.Span>>()
+        groups.forEach{group->
+            panel.addView(TextView(this).apply{text=(if(group.early)"Repeated early scene" else "Repeated late scene")+" · visual matching only, not a confirmed opening/ending"})
+            group.spans.forEach{span->
+                val source=sources[span.index]
+                val retained=(group.early&&span.index==0)||(!group.early&&span.index==sources.lastIndex)
+                val entry=LinearLayout(this)
+                val check=CheckBox(this).apply{
+                    text=source.item.displayName+" · "+span.start/1000+"–"+span.end/1000+" s"+if(retained)" (retained)" else ""
+                    isEnabled=!retained
+                    setOnCheckedChangeListener{_,checked->if(checked)selected.add(group to span)else selected.remove(group to span)}
+                }
+                entry.addView(check,LinearLayout.LayoutParams(0,-2,1f))
+                entry.addView(Button(this).apply{text="Preview";setOnClickListener{preview(Row(source,span.start.toString(),span.end.toString()),true)}})
+                panel.addView(entry)
+            }
+        }
+        android.app.AlertDialog.Builder(this).setTitle("Review repeated scenes")
+            .setView(ScrollView(this).apply{addView(panel)})
+            .setPositiveButton("Apply checked cuts"){_,_->
+                if(selected.isEmpty())return@setPositiveButton
+                val removals=selected.groupBy{sources[it.second.index].item.sha256}
+                val next=runCatching{rows.flatMap{row->
+                    val start=row.start.toLong();val end=row.end.toLong()
+                    require(start>=0&&end>start&&end<=row.source.duration)
+                    val cuts=removals[row.source.item.sha256].orEmpty().map{it.second.start to it.second.end}
+                    NexusSceneReview.subtract(start,end,cuts).map{Row(row.source,it.first.toString(),it.second.toString())}
+                }}.getOrElse{status.text="Correct clip boundaries before applying cuts";return@setPositiveButton}
+                if(next.isEmpty()||next.size>100){status.text="Review would produce an invalid timeline; no change";return@setPositiveButton}
+                selected.forEach{(group,span)->
+                    if(reviewLog.length()<200)reviewLog.put(org.json.JSONObject().put("method","visual-edge-review-v1")
+                        .put("decision","OWNER_CUT").put("edge",if(group.early)"early" else "late")
+                        .put("source_sha",sources[span.index].item.sha256).put("start_ms",span.start).put("end_ms",span.end)
+                        .put("matched_samples",group.samples).put("sample_interval_ms",NexusSceneReview.STEP))
+                }
+                rows.clear();rows.addAll(next);renderRows();saveDraft()
+                status.text="Checked cuts applied; review joins before exporting"
+            }.setNegativeButton("Keep footage",null).show()
+    }
     private fun suggestHighlights(){
         if(running||!ready||rows.isEmpty())return
         sync()
@@ -226,7 +292,7 @@ class NexusVideoEditActivity:Activity(){
         status.text="Preparing export…"
         worker.execute{
             val result=runCatching{
-                val item=NexusVideoExport.export(applicationContext,name,clips,profile,cancel){percent->runOnUiThread{if(!isDestroyed)status.text="Exporting · $percent%"}}
+                val item=NexusVideoExport.export(applicationContext,name,clips,profile,cancel,reviewLog.toString()){percent->runOnUiThread{if(!isDestroyed)status.text="Exporting · $percent%"}}
                 NexusCloudPublication.enqueueIfConnected(applicationContext,item)
                 item
             }

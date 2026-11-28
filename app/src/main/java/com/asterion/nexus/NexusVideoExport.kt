@@ -56,7 +56,7 @@ object NexusVideoExport {
         catch(e:Exception){atomic.failWrite(stream);throw e}
     }
     private fun stopped(cancel:AtomicBoolean){if(cancel.get()||Thread.currentThread().isInterrupted)throw IOException("Export cancelled")}
-    @Synchronized fun export(context:Context,title:String,clips:List<Clip>,profile:Profile,cancel:AtomicBoolean,onProgress:(Int)->Unit):NexusRegistry.Item {
+    @Synchronized fun export(context:Context,title:String,clips:List<Clip>,profile:Profile,cancel:AtomicBoolean,reviewEvidence:String="[]",onProgress:(Int)->Unit):NexusRegistry.Item {
         require(title.isNotBlank()&&title.length<=150&&title.none{it=='/'||it=='\\'||it.isISOControl()}){"Invalid output name"}
         require(clips.size in 1..100&&profile.width in 320..3840&&profile.height in 240..2160&&profile.width%2==0&&profile.height%2==0&&profile.bitrate in 500000..50000000)
         val registry=NexusRegistry(context)
@@ -72,6 +72,9 @@ object NexusVideoExport {
         val spec=JSONObject().put("version",1).put("title",title).put("clips",edl)
             .put("width",profile.width).put("height",profile.height).put("bitrate",profile.bitrate)
             .put("hevc",profile.hevc).put("mute",profile.mute).put("duration_ms",duration)
+        require(reviewEvidence.length<=128*1024){"Review log too large"}
+        val review=JSONArray(reviewEvidence)
+        if(review.length()>0)spec.put("review_evidence",review)
         val identity="video-edl-v1:"+NexusOriginalStore.sourceKey(spec.toString())
         val dir=File(context.filesDir,"nexus-video-projects")
         check(dir.isDirectory||dir.mkdirs())
