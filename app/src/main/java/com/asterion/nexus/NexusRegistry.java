@@ -101,6 +101,7 @@ public final class NexusRegistry {
             else if(filename.endsWith(".csv"))type="text/csv";
             else if(filename.endsWith(".obj"))type="model/obj";
             else if(filename.endsWith(".stl"))type="model/stl";
+            else if(filename.endsWith(".glb"))type="model/gltf-binary";
             else if(filename.endsWith(".cbr"))type="application/vnd.comicbook-rar";
         }
         type=canonicalComicMime(displayName,type);
