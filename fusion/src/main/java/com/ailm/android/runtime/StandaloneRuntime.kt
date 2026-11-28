@@ -38,9 +38,10 @@ object StandaloneRuntime {
     /** Optional host implementation for scoped cloud artwork. The same
      * Core workflow and path policy remain authoritative. Null means the
      * host does not own this URI. A non-null refusal never falls back to SAF. */
-    @Volatile private var nexusCloudArtworkMover: ((Int,String,Long,String,List<String>,String,String)->Map<String,Any>?)? = null
+    data class NexusCloudArtworkRequest(val imageId:Int,val sourceUri:String,val sourceFolder:String,val sourceRelative:String,val bytes:Long,val sha:String,val folders:List<String>,val prefix:String,val extension:String)
+    @Volatile private var nexusCloudArtworkMover: ((NexusCloudArtworkRequest)->Map<String,Any>?)? = null
 
-    fun installNexusCloudArtworkMover(mover:(Int,String,Long,String,List<String>,String,String)->Map<String,Any>?) {
+    fun installNexusCloudArtworkMover(mover:(NexusCloudArtworkRequest)->Map<String,Any>?) {
         nexusCloudArtworkMover=mover
     }
 
@@ -53,7 +54,7 @@ object StandaloneRuntime {
             arrayOf(record.imageId.toString(),size.toString())
         ).use{if(it.moveToFirst())it.getString(0).orEmpty() else ""}
         if(size<=0||!sha.matches(Regex("[a-f0-9]{64}")))return mapOf("ok" to false,"status" to "cloud_identity_missing","message" to "Verified source fingerprint required.")
-        return mover(record.imageId,record.uri,size,sha,folders.map(::safeAutomationPathSegment),prefix,extension)
+        return mover(NexusCloudArtworkRequest(record.imageId,record.uri,record.folderUri,record.relativePath,size,sha,folders.map(::safeAutomationPathSegment),prefix,extension))
             ?:mapOf("ok" to false,"status" to "cloud_unavailable","message" to "Scoped cloud routing unavailable.")
     }
 
