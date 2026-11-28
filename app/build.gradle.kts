@@ -165,6 +165,7 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.3.1")
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
     implementation(project(":fusion"))
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")
     implementation(project(":rounder"))
     implementation("org.jsoup:jsoup:1.18.1")
     implementation("org.libtorrent4j:libtorrent4j:2.1.0-39")
