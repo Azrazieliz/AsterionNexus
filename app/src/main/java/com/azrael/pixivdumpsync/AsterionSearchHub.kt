@@ -82,10 +82,11 @@ object AsterionSearchHub {
             Found(hit.optString("name"),link,"PeerTube",hit.optString("thumbnailUrl"))
         }
     }
-    private fun search(a:Activity,term:String,mode:Int,indexPage:Int=0):Reply {
+    private fun search(a:Activity,term:String,mode:Int,indexPage:Int=0,pagedCatalog:Boolean=false):Reply {
         val ctx=a.applicationContext
         if(mode>=3){
-            val catalog=CatalogDiscovery.search(term,mode==3)
+            val catalog=if(pagedCatalog)CatalogDiscovery.searchPage(term,mode==3,indexPage)
+                else CatalogDiscovery.search(term,mode==3)
             val results=if(mode==3)catalog.hits.filter{
                 (it.kind==CatalogKind.TORRENT || it.kind==CatalogKind.GAME_ARCHIVE ||
                     it.kind==CatalogKind.APK) && !GameTorrentPolicy.clearlyNonGameTitle(it.title)
@@ -196,7 +197,7 @@ object AsterionSearchHub {
         val requested=term.trim()
         require(requested.length in 2..180) { "Search query must contain 2–180 characters" }
         require(mode in 0..4 && page in 0..1000) { "Unsupported source search mode/page" }
-        val answer=search(a,requested,mode,page)
+        val answer=search(a,requested,mode,page,pagedCatalog=true)
         val rows=JSONArray()
         for(hit in answer.results.take(120)){
             rows.put(JSONObject().put("title",hit.title)
