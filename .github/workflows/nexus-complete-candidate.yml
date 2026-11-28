@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/nexus-complete-candidate.yml'
       - 'app/src/main/**'
+      - 'app/src/test/**'
+      - 'app/src/androidTest/**'
       - 'app/build.gradle.kts'
       - 'fusion/src/main/**'
       - 'rounder/src/main/**'
