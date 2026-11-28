@@ -16,6 +16,10 @@ final class NexusGltfEmbedded {
         try{return Base64.getDecoder().decode(uri.substring(prefix.length()));}
         catch(IllegalArgumentException ex){throw new IOException("Malformed embedded resource",ex);}
     }
+    private static byte[] external(Resource resource,String uri)throws IOException{
+        if(resource==null)throw new IOException("External resource missing; open a .gltf.zip package");
+        return resource.read(uri);
+    }
     private static void pad(ByteArrayOutputStream out)throws IOException{
         while((out.size()&3)!=0){if(out.size()>=LIMIT)throw new IOException("Model budget exceeded");out.write(0);}
     }
@@ -23,7 +27,9 @@ final class NexusGltfEmbedded {
         if(bytes.length>LIMIT-out.size())throw new IOException("Model budget exceeded");
         out.write(bytes);pad(out);
     }
-    static byte[] asGlb(byte[] input)throws IOException{
+    interface Resource { byte[] read(String uri)throws IOException; }
+    static byte[] asGlb(byte[] input)throws IOException{return asGlb(input,null);}
+    static byte[] asGlb(byte[] input,Resource resource)throws IOException{
         if(input.length<4||input.length>LIMIT)throw new IOException("Model size invalid");
         if(ByteBuffer.wrap(input).order(ByteOrder.LITTLE_ENDIAN).getInt()==0x46546c67)return input;
         try{
@@ -38,7 +44,7 @@ final class NexusGltfEmbedded {
                 JSONObject b=buffers.getJSONObject(i);
                 String uri=b.getString("uri");
                 String prefix=uri.startsWith("data:application/gltf-buffer;base64,")?"data:application/gltf-buffer;base64,":"data:application/octet-stream;base64,";
-                byte[] bytes=data(uri,prefix);
+                byte[] bytes=uri.startsWith("data:")?data(uri,prefix):external(resource,uri);
                 if(bytes.length<=0||bytes.length!=b.getInt("byteLength"))throw new IOException("Embedded buffer length mismatch");
                 offsets[i]=bin.size();lengths[i]=bytes.length;append(bin,bytes);
             }
@@ -59,8 +65,16 @@ final class NexusGltfEmbedded {
                     if(image.has("bufferView"))throw new IOException("Ambiguous image resource");
                     String uri=image.getString("uri");
                     String mime=uri.startsWith("data:image/png;base64,")?"image/png":uri.startsWith("data:image/jpeg;base64,")?"image/jpeg":null;
-                    if(mime==null)throw new IOException("External or unsupported image resource");
-                    byte[] bytes=data(uri,"data:"+mime+";base64,");
+                    byte[] bytes;
+                    if(uri.startsWith("data:")){
+                        if(mime==null)throw new IOException("Unsupported embedded image resource");
+                        bytes=data(uri,"data:"+mime+";base64,");
+                    }else{
+                        bytes=external(resource,uri);
+                        String name=uri.toLowerCase(java.util.Locale.ROOT);
+                        mime=image.optString("mimeType",name.endsWith(".png")?"image/png":name.endsWith(".jpg")||name.endsWith(".jpeg")?"image/jpeg":"");
+                        if(!"image/png".equals(mime)&&!"image/jpeg".equals(mime))throw new IOException("Unsupported image resource");
+                    }
                     if(bytes.length==0)throw new IOException("Empty texture");
                     int offset=bin.size();append(bin,bytes);
                     int view=views.length();

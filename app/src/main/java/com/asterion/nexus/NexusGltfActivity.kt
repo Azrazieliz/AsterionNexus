@@ -19,7 +19,7 @@ import java.util.concurrent.Executors
 class NexusGltfActivity : Activity() {
     companion object {
         @JvmStatic fun supports(mime:String?,name:String?):Boolean =
-            mime=="model/gltf-binary" || mime=="model/gltf+json" || name.orEmpty().lowercase(Locale.ROOT).let{it.endsWith(".glb")||it.endsWith(".gltf")}
+            mime=="model/gltf-binary" || mime=="model/gltf+json" || name.orEmpty().lowercase(Locale.ROOT).let{it.endsWith(".glb")||it.endsWith(".gltf")||it.endsWith(".gltf.zip")||it.endsWith(".glb.zip")}
     }
     private val worker=Executors.newSingleThreadExecutor()
     private lateinit var root:LinearLayout
@@ -87,7 +87,7 @@ class NexusGltfActivity : Activity() {
                     }
                     out.toByteArray()
                 }?:error("Model unavailable")
-                val glb=NexusGltfEmbedded.asGlb(bytes)
+                val glb=NexusGltfBundle.normalize(bytes)
                 NexusGltfAdmission.verify(glb)
                 ByteBuffer.allocateDirect(glb.size).apply{put(glb);flip()}
             }
