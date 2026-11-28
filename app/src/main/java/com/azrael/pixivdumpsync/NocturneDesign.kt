@@ -16,15 +16,15 @@ import android.widget.TextView
 object NocturneDesign {
     // One neutral charcoal-to-graphite system across every module; media stays vivid.
     // Status-only red is reserved for errors, never for navigation or decoration.
-    val background = Color.rgb(8, 9, 11)
-    val surface = Color.rgb(17, 18, 20)
-    val raised = Color.rgb(28, 29, 32)
+    val background = Color.rgb(14, 16, 19)
+    val surface = Color.rgb(27, 30, 35)
+    val raised = Color.rgb(38, 42, 49)
     val soft = Color.rgb(34, 35, 39)
-    val border = Color.rgb(55, 57, 62)
-    val primary = Color.rgb(221, 223, 226)
+    val border = Color.rgb(69, 74, 83)
+    val primary = Color.rgb(212, 217, 225)
     val violet = primary
-    val white = Color.rgb(247, 248, 250)
-    val secondary = Color.rgb(178, 182, 189)
+    val white = Color.rgb(244, 245, 247)
+    val secondary = Color.rgb(168, 176, 187)
     val subdued = Color.rgb(137, 142, 151)
     val danger = Color.rgb(248, 133, 145)
     val pixivBlue = primary
@@ -131,9 +131,9 @@ object NocturneDesign {
 
     fun brandMark(context: Context, dp: Int = 44): android.widget.ImageView =
         android.widget.ImageView(context).apply {
-            setImageResource(R.drawable.ic_asterion_downloader)
+            setImageResource(R.drawable.ic_asterion_nexus)
             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
             layoutParams = LinearLayout.LayoutParams(px(context, dp), px(context, dp))
-            contentDescription = "Asterion Downloader logo"
+            contentDescription = "Asterion Nexus logo"
         }
 }

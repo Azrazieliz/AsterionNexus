@@ -60,18 +60,29 @@ internal object NexusMediaSimulation{
                 if(!animated)Thread.sleep(250)
             }
             check(animated&&surface!=null){"Animated model did not reach rendered status"}
-            val bitmap=Bitmap.createBitmap(128,128,Bitmap.Config.ARGB_8888)
-            val latch=CountDownLatch(1)
-            var copied=-1
-            instrumentation.runOnMainSync{
-                PixelCopy.request(surface!!,bitmap,{result->copied=result;latch.countDown()},Handler(Looper.getMainLooper()))
+            var verified=false
+            var lastCopy=-1
+            var lastBins=0
+            repeat(12){
+                if(!verified){
+                    Thread.sleep(1000)
+                    val bitmap=Bitmap.createBitmap(128,128,Bitmap.Config.ARGB_8888)
+                    val latch=CountDownLatch(1)
+                    instrumentation.runOnMainSync{
+                        if(surface!!.holder.surface.isValid&&surface!!.width>0&&surface!!.height>0){
+                            PixelCopy.request(surface!!,bitmap,{result->lastCopy=result;latch.countDown()},Handler(Looper.getMainLooper()))
+                        }else latch.countDown()
+                    }
+                    try{
+                        if(latch.await(5,TimeUnit.SECONDS)&&lastCopy==PixelCopy.SUCCESS){
+                            val pixels=IntArray(128*128);bitmap.getPixels(pixels,0,128,0,0,128,128)
+                            lastBins=pixels.map{it and 0x00f0f0f0}.distinct().size
+                            verified=lastBins>=3
+                        }
+                    }finally{if(latch.count==0L)bitmap.recycle()}
+                }
             }
-            try{
-                check(latch.await(10,TimeUnit.SECONDS)&&copied==PixelCopy.SUCCESS){"Rendered model pixels unavailable"}
-                val pixels=IntArray(128*128);bitmap.getPixels(pixels,0,128,0,0,128,128)
-                val colorBins=pixels.map{(it and 0x00f0f0f0)}.distinct().size
-                check(colorBins>=3){"Model surface did not contain visible rendered variation"}
-            }finally{bitmap.recycle()}
+            check(verified){"Rendered model pixels unavailable or uniform: PixelCopy="+lastCopy+" bins="+lastBins}
             status("GLTF_RENDER_OK textured model, animation clip and rendered surface pixels")
         }finally{instrumentation.runOnMainSync{activity.finish()}}
     }

@@ -197,7 +197,12 @@ private fun NexusUnifiedSearch(
     var providerFilter by remember{mutableStateOf("")}
     var moreOnline by remember{mutableStateOf(false)}
     var acquiring by remember{mutableStateOf(false)}
+    var localPage by remember{mutableIntStateOf(0)}
+    var localMore by remember{mutableStateOf(false)}
+    var localQuery by remember{mutableStateOf("")}
+    var localBusy by remember{mutableStateOf(false)}
     val generation=remember{AtomicInteger()}
+    fun merge(rows:List<NexusUnifiedEntry>){hits=(hits+rows).distinctBy{if(it.web!=null)"web:"+it.web else it.account+":"+(it.path?:it.uri?.toString()?:it.title)+":"+it.chapter}}
     val cloudAccounts=remember(ctx){FgTeraboxClient.accounts(ctx)}
     val cloudIndexes=remember(ctx){cloudAccounts.mapNotNull{account->
         val cloud=runCatching{FgTeraboxClient.forScope(ctx,account.scope)}.getOrNull()?:return@mapNotNull null
@@ -218,7 +223,7 @@ private fun NexusUnifiedSearch(
                             mime=FgTeraboxClient.mime(name),path=path,
                             size=j.optLong("size",-1),folder=j.optBoolean("folder"),account=account.scope))
                     }
-                    hits=(hits+rows).distinctBy{it.account+":"+(it.path?:it.uri?.toString()?:it.web?:it.title)+":"+it.chapter}
+                    merge(rows)
                     status="Found "+hits.size+" matches"+if(response.optBoolean("building"))" · cloud index building" else ""
                 }
             }}
@@ -242,7 +247,7 @@ private fun NexusUnifiedSearch(
                             "Folders",Uri.parse(uri),j.optString("mime","application/octet-stream"),
                             folder=j.optBoolean("folder")))
                     }
-                    hits=hits+rows
+                    merge(rows)
                 }
             }}
             override fun onProgress(raw:String){}
@@ -284,56 +289,70 @@ private fun NexusUnifiedSearch(
             finally{if(token==generation.get())loading=false}
         }
     }
+    suspend fun localResults(query:String,page:Int,token:Int){
+        val (rows,more)=withContext(Dispatchers.IO){
+            val all=mutableListOf<NexusUnifiedEntry>()
+            val registry=NexusRegistry(ctx)
+            val registered=registry.searchPage(query,page*100,100)
+            registered.forEach{all.add(NexusUnifiedEntry(it.displayName,"Verified original · "+it.mime,"Library",NexusLibraryProvider.uriFor(ctx,it.sha256),it.mime))}
+            if(page==0)NexusBookIndex(ctx).search(query,70).forEach{
+                val original=registry.find(it.sha256)
+                if(original!=null)all.add(NexusUnifiedEntry(original.displayName,"Chapter "+(it.chapter+1)+" · "+it.excerpt,"Book",NexusLibraryProvider.uriFor(ctx,it.sha256),original.mime,it.chapter))
+            }
+            var galleryMore=false
+            runCatching{
+                StandaloneRuntime.initialize(ctx)
+                val response=StandaloneRuntime.advancedSearch(mapOf("full_text" to query,"page" to page+1,"page_size" to 100,"sort_by" to "filename","sort_direction" to "asc"))
+                val items=(response["items"] as? List<*>).orEmpty().filterIsInstance<Map<*,*>>()
+                galleryMore=items.size==100
+                items.forEach{item->
+                    val uri=(item["uri"]?:item["image_uri"])?.toString().orEmpty()
+                    if(uri.startsWith("content://"))all.add(NexusUnifiedEntry((item["filename"]?:item["name"])?.toString()?:"Indexed artwork","Indexed metadata","Gallery",Uri.parse(uri),"image/*"))
+                }
+            }
+            val indexed=SourceIndex.nexusPage(ctx,query,offset=page*100,limit=100,unqueuedOnly=true)
+            all.addAll(indexed.map{it.nexusEntry()})
+            all to (registered.size==100||galleryMore||indexed.size==100)
+        }
+        if(token==generation.get()){merge(rows);localPage=page;localMore=more}
+    }
+    fun nextLocal(){
+        if(localBusy||!localMore||term.trim()!=localQuery)return
+        val token=generation.get();localBusy=true
+        scope.launch{
+            try{localResults(localQuery,localPage+1,token)}
+            catch(e:Exception){if(token==generation.get())status="Local page unavailable: "+e.message.orEmpty().take(100)}
+            finally{if(token==generation.get())localBusy=false}
+        }
+    }
     fun execute(){
         val query=term.trim()
         if(query.length !in 2..180){status="Enter 2–180 characters";return}
         val token=generation.incrementAndGet()
-        loading=true;hits=emptyList();providerErrors=emptyList();providerCount=0;searchPage=0;moreOnline=false;providerFilter="";completedQuery="";completedMode=-1;status="Searching Nexus sources"
+        loading=true;localBusy=true;hits=emptyList();providerErrors=emptyList();providerCount=0;searchPage=0;moreOnline=false;providerFilter="";completedQuery="";completedMode=-1;localPage=0;localMore=false;localQuery=query;status="Searching Nexus sources"
         val requestedMode=onlineMode
         val requestedOnline=online
         scope.launch{
-            try{
-                val originals=withContext(Dispatchers.IO){
-                    val all=mutableListOf<NexusUnifiedEntry>()
-                    val registry=NexusRegistry(ctx)
-                    registry.search(query,100).forEach{
-                        all.add(NexusUnifiedEntry(it.displayName,
-                            "Verified original · "+it.mime,"Library",
-                            NexusLibraryProvider.uriFor(ctx,it.sha256),it.mime))
-                    }
-                    NexusBookIndex(ctx).search(query,70).forEach{
-                        val original=registry.find(it.sha256)
-                        if(original!=null)all.add(NexusUnifiedEntry(
-                            original.displayName,"Chapter "+(it.chapter+1)+" · "+it.excerpt,
-                            "Book",NexusLibraryProvider.uriFor(ctx,it.sha256),
-                            original.mime,it.chapter))
-                    }
-                    runCatching{
-                        StandaloneRuntime.initialize(ctx)
-                        StandaloneRuntime.searchByFilename(query,1,80).forEach{item->
-                            val uri=(item["uri"]?:item["image_uri"])?.toString().orEmpty()
-                            if(uri.startsWith("content://"))
-                                all.add(NexusUnifiedEntry(
-                                    (item["filename"]?:item["name"])?.toString()?:"Indexed artwork",
-                                    "Indexed image","Gallery",Uri.parse(uri),"image/*"))
-                        }
-                    }
-                    all.addAll(SourceIndex.nexusPage(ctx,query,limit=250,unqueuedOnly=true).map{it.nexusEntry()})
-                    all
+            val failures=mutableListOf<String>()
+            kotlinx.coroutines.supervisorScope{
+                val local=launch{
+                    try{localResults(query,0,token)}
+                    catch(e:Exception){failures.add("Local: "+e.message.orEmpty().take(100))}
+                    finally{if(token==generation.get())localBusy=false}
                 }
-                if(token!=generation.get())return@launch
-                hits=originals
-                for(tree in NexusSourceRegistry(ctx).roots()){
-                    safIndex.ensure(tree,false)
-                    safIndex.search(tree,query,"all",0,token)
+                val remote=launch{
+                    try{withContext(Dispatchers.IO){
+                        for(tree in NexusSourceRegistry(ctx).roots()){safIndex.ensure(tree,false);safIndex.search(tree,query,"all",0,token)}
+                        cloudIndexes.forEach{index->index.ensure(false);index.search(query,"all",0,token)}
+                    }}catch(e:Exception){failures.add("Cloud/folders: "+e.message.orEmpty().take(100))}
                 }
-                cloudIndexes.forEach{index->index.ensure(false);index.search(query,"all",0,token)}
-                if(requestedOnline)providerPage(query,requestedMode,0,token)
-                if(token==generation.get())status="Found "+hits.size+" matches"
-            }catch(t:Exception){
-                if(token==generation.get())status="Partial search failure: "+
-                    t.javaClass.simpleName+": "+t.message.orEmpty().take(100)
-            }finally{if(token==generation.get())loading=false}
+                val web=launch{
+                    if(requestedOnline)try{providerPage(query,requestedMode,0,token)}
+                    catch(e:Exception){failures.add("Providers: "+e.message.orEmpty().take(100))}
+                }
+                local.join();remote.join();web.join()
+            }
+            if(token==generation.get()){loading=false;status="Found "+hits.size+" matches"+if(failures.isEmpty())"" else " · "+failures.joinToString(" · ")}
         }
     }
     Column(Modifier.fillMaxSize().padding(horizontal=20.dp,vertical=12.dp)){
@@ -388,6 +407,7 @@ private fun NexusUnifiedSearch(
                 }else if(item.folder)status="Open authorized folders from Library / TeraBox"
                 else if(item.uri!=null)onOpen(item.uri,item.mime,item.title,item.chapter)
             }}
+            if(localMore&&term.trim()==localQuery)item{UnifiedButton("More indexed results",!localBusy){nextLocal()}}
             if(online&&moreOnline&&term.trim()==completedQuery&&onlineMode==completedMode)item{
                 UnifiedButton(if(loading)"Loading…" else "Load next provider page",!loading){nextPage()}
             }

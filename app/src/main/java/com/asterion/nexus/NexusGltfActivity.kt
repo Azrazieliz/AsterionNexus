@@ -25,6 +25,7 @@ class NexusGltfActivity : Activity() {
     private lateinit var root:LinearLayout
     private lateinit var status:TextView
     private var viewer:ModelViewer?=null
+    private var renderSurface:SurfaceView?=null
     private var sky:Skybox?=null
     private var ambient:IndirectLight?=null
     private var active=false
@@ -38,6 +39,10 @@ class NexusGltfActivity : Activity() {
         override fun doFrame(now:Long) {
             if(!active)return
             val v=viewer?:return
+            val surface=renderSurface
+            if(surface==null||!surface.holder.surface.isValid||surface.width<=0||surface.height<=0){
+                Choreographer.getInstance().postFrameCallback(this);return
+            }
             try {
                 val animator=v.animator
                 if(animator!=null && animator.animationCount>animation) {
@@ -101,6 +106,7 @@ class NexusGltfActivity : Activity() {
     private fun showModel(buffer:ByteBuffer) {
         Utils.init()
         val surface=SurfaceView(this)
+        renderSurface=surface
         val v=ModelViewer(surface)
         viewer=v
         root.addView(surface,LinearLayout.LayoutParams(-1,0,1f))
@@ -154,6 +160,6 @@ class NexusGltfActivity : Activity() {
             v.scene.indirectLight=null;ambient?.let{v.engine.destroyIndirectLight(it)}
         }}
         // ModelViewer owns the engine and destroys it on SurfaceView detach.
-        viewer=null;super.onDestroy()
+        viewer=null;renderSurface=null;super.onDestroy()
     }
 }
