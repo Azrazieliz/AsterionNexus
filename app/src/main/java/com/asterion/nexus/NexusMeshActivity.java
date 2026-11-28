@@ -47,7 +47,7 @@ public final class NexusMeshActivity extends Activity {
         });
     }
     private void showMesh(NexusMesh mesh){
-        status.setText(mesh.triangles+" triangles · Geometry only"+(mesh.externalMaterials?" · Material files retained, not loaded":""));
+        status.setText(mesh.triangles+" triangles · Geometry only"+(mesh.externalMaterials?" · Materials and textures not rendered":""));
         renderer=new MeshRenderer(mesh,problem->runOnUiThread(()->{if(!isDestroyed())status.setText("Rendering unavailable: "+problem);}));
         surface=new GLSurfaceView(this);
         surface.setEGLContextClientVersion(2);
