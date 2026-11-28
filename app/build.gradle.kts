@@ -160,6 +160,9 @@ kotlin {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("com.google.android.filament:filament-utils-android:1.56.0")
+    implementation("androidx.media3:media3-transformer:1.5.1")
+    implementation("androidx.media3:media3-effect:1.5.1")
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation("androidx.compose.ui:ui:1.7.6")
     implementation("androidx.compose.foundation:foundation:1.7.6")
