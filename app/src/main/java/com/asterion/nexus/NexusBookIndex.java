@@ -49,7 +49,7 @@ public final class NexusBookIndex {
     }
     public NexusBookIndex(Context context){app=context.getApplicationContext();}
     public static boolean supported(String mime){
-        return "application/epub+zip".equalsIgnoreCase(mime) ||
+        return "text/plain".equalsIgnoreCase(mime) || "application/epub+zip".equalsIgnoreCase(mime) ||
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(mime);
     }
     /** Job creation does not read media or block the initiating acquisition. */
@@ -99,6 +99,7 @@ public final class NexusBookIndex {
         mark(pending.sha,"running","",pending.next,-1);
         try{
             if(source.mime.equals("application/epub+zip"))indexEpub(pending,stop);
+            else if("text/plain".equalsIgnoreCase(source.mime))indexPlainText(pending,stop);
             else indexDocx(pending,stop);
         }catch(Exception error){
             if(stop.get()||Thread.currentThread().isInterrupted()){
@@ -114,7 +115,7 @@ public final class NexusBookIndex {
     }
     private void indexEpub(Pending p,AtomicBoolean stop)throws Exception {
         Uri uri=NexusLibraryProvider.uriFor(app,p.sha);
-        try(BookArchive archive=new BookArchive(app,uri,false)){
+        try(BookArchive archive=new BookArchive(app,uri,true)){
             int count=archive.chapterCount();
             if(count<=0||count>MAX_CHAPTERS)throw new IOException("EPUB chapter count invalid");
             for(int i=p.next;i<count;i++){
@@ -127,6 +128,25 @@ public final class NexusBookIndex {
                 record(p.sha,i,title,plain,count);
             }
             mark(p.sha,"complete","",count,count);
+        }
+    }
+    private void indexPlainText(Pending p,AtomicBoolean stop)throws Exception {
+        NexusRegistry.Item item=new NexusRegistry(app).find(p.sha);
+        if(item==null)throw new IOException("Text original unavailable");
+        try(Reader reader=new InputStreamReader(new FileInputStream(new NexusRegistry(app).original(item)),
+                java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT))){
+            char[] chars=new char[32768];
+            int i=0,n;
+            while((n=reader.read(chars))!=-1){
+                if(interrupted(stop)){mark(p.sha,"queued","",-1,-1);return;}
+                if(i>=MAX_CHAPTERS)throw new IOException("Text exceeds chapter budget");
+                if(i>=p.next)record(p.sha,i,"Text section "+(i+1),new String(chars,0,n),0);
+                i++;
+            }
+            if(i==0)throw new IOException("Empty text");
+            mark(p.sha,"complete","",i,i);
         }
     }
     private static byte[] readDocx(File f,int limit)throws IOException {

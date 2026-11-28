@@ -2,6 +2,9 @@ package com.asterion.nexus
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.graphics.drawable.AnimatedImageDrawable
+import androidx.compose.ui.viewinterop.AndroidView
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -37,6 +40,9 @@ import kotlinx.coroutines.withContext
  * native Back and responsive control targets. Original files are never altered.
  */
 class NexusImageViewerActivity : ComponentActivity() {
+    private var animation:AnimatedImageDrawable?=null
+    override fun onStart(){super.onStart();animation?.start()}
+    override fun onStop(){animation?.stop();super.onStop()}
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
         window.statusBarColor=0xff0e1013.toInt()
@@ -47,6 +53,24 @@ class NexusImageViewerActivity : ComponentActivity() {
         setContent{
             var reload by remember { mutableIntStateOf(0) }
             var failed by remember(source,reload){ mutableStateOf(false) }
+            val animated=intent.type.equals("image/gif",true)||title.endsWith(".gif",true)
+            val moving by produceState<AnimatedImageDrawable?>(null,source,reload){
+                if(animated)value=withContext(Dispatchers.IO){
+                    runCatching{
+                        ImageDecoder.decodeDrawable(ImageDecoder.createSource(contentResolver,source)){decoder,info,_->
+                            val w=info.size.width;val h=info.size.height
+                            val ratio=minOf(1f,1920f/maxOf(w,h))
+                            decoder.setTargetSize(maxOf(1,(w*ratio).toInt()),maxOf(1,(h*ratio).toInt()))
+                        } as? AnimatedImageDrawable
+                    }.getOrNull()
+                }
+            }
+            DisposableEffect(moving){
+                animation=moving
+                moving?.repeatCount=AnimatedImageDrawable.REPEAT_INFINITE
+                if(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))moving?.start()
+                onDispose{moving?.stop();if(animation===moving)animation=null}
+            }
             val bitmap by produceState<Bitmap?>(null,source,reload){
                 value=withContext(Dispatchers.IO){
                     runCatching { boundedImage(source) }.getOrNull()
@@ -89,6 +113,13 @@ class NexusImageViewerActivity : ComponentActivity() {
                             (pan.y+panChange.y).coerceIn(-limitY,limitY))
                     }
                     when {
+                        moving!=null->AndroidView(
+                            factory={ctx->android.widget.ImageView(ctx).apply{scaleType=android.widget.ImageView.ScaleType.FIT_CENTER}},
+                            update={it.setImageDrawable(moving)},
+                            modifier=Modifier.fillMaxSize().graphicsLayer(scaleX=scale,scaleY=scale,translationX=pan.x,translationY=pan.y)
+                                .transformable(transform).pointerInput(source){detectTapGestures(onDoubleTap={
+                                    scale=if(scale>1.1f)1f else 2f;pan=Offset.Zero
+                                })})
                         bitmap!=null->Image(
                             bitmap=bitmap!!.asImageBitmap(),
                             contentDescription=title,

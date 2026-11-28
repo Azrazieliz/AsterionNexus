@@ -461,7 +461,7 @@ internal class ReferenceKnowledgeImporter(
                     require(++entries <= 128) { "Too many archive entries" }
                     val name = entry.name
                     require(name.length <= 240 && !name.startsWith("/") &&
-                        !name.contains('\\\\') && name.split('/').none { it == ".." || it == "." }) {
+                        name.indexOf(92.toChar()) < 0 && name.split('/').none { it == ".." || it == "." }) {
                         "Invalid archive entry"
                     }
                     if (!entry.isDirectory) {

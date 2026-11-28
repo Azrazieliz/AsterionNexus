@@ -21,7 +21,7 @@ public final class NexusFileOpen {
         }else if(resolved.startsWith("video/")||resolved.startsWith("audio/")){
             intent=new Intent(activity,NexusRounderPlaybackActivity.class);
         }else if(resolved.equals("application/pdf")||resolved.equals("application/epub+zip")||
-            resolved.equals("application/zip")||
+            resolved.equals("application/zip")||resolved.equals("text/plain")||
             resolved.equals("application/vnd.comicbook+zip")||
             resolved.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")){
             intent=new Intent(activity,NexusReaderActivity.class);

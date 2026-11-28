@@ -708,7 +708,7 @@ private object NexusContentThumbnail {
         override fun sizeOf(key:String,value:Bitmap)=value.byteCount
     }
     @Synchronized fun load(context:android.content.Context,item:NexusRegistry.Item):Bitmap?{
-        if(!item.mime.startsWith("image/")&&!item.mime.startsWith("video/")&&
+        if(!item.mime.startsWith("image/")&&!item.mime.startsWith("video/")&&!item.mime.startsWith("audio/")&&
             !item.mime.contains("pdf")&&!item.mime.contains("comic")&&!item.mime.contains("epub"))return null
         cache.get(item.sha256)?.let{return it}
         return runCatching{
@@ -722,7 +722,23 @@ private object NexusContentThumbnail {
             }else if(item.mime.startsWith("video/")){
                 MediaMetadataRetriever().use{retriever->
                     retriever.setDataSource(file.path)
-                    retriever.getFrameAtTime(900000L,MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    retriever.getScaledFrameAtTime(900000L,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,640,840)
+                }
+            }else if(item.mime.startsWith("audio/")){
+                MediaMetadataRetriever().use{retriever->
+                    retriever.setDataSource(file.path)
+                    retriever.embeddedPicture?.takeIf{it.size<=16*1024*1024}?.let{data->
+                        val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true}
+                        BitmapFactory.decodeByteArray(data,0,data.size,bounds)
+                        var sample=1
+                        while(bounds.outWidth/sample>640||bounds.outHeight/sample>840)sample*=2
+                        BitmapFactory.decodeByteArray(data,0,data.size,BitmapFactory.Options().apply{inSampleSize=sample})
+                    }
+                }
+            }else if(item.mime.contains("epub")){
+                com.openlocal.office.core.ReaderCovers.open(context,
+                    NexusLibraryProvider.uriFor(context,item.sha256),item.displayName,item.length,0L).use{
+                    BitmapFactory.decodeStream(it)
                 }
             }else if(item.mime.contains("pdf")){
                 val fd=android.os.ParcelFileDescriptor.open(file,android.os.ParcelFileDescriptor.MODE_READ_ONLY)
