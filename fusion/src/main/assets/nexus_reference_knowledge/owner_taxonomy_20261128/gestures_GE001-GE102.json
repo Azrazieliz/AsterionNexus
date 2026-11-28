@@ -1,0 +1,668 @@
+[
+  {
+    "tag_id": "GE001",
+    "canonical_name": "Peace Sign",
+    "aliases": [
+      "V Sign"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE002",
+    "canonical_name": "Thumbs Up",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE003",
+    "canonical_name": "Thumbs Down",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE004",
+    "canonical_name": "OK Sign",
+    "aliases": [
+      "OK Gesture"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE005",
+    "canonical_name": "Pointing",
+    "aliases": [
+      "Pointing Finger"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE006",
+    "canonical_name": "Finger Gun",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE007",
+    "canonical_name": "Open Palm",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE008",
+    "canonical_name": "Waving",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE009",
+    "canonical_name": "Salute",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE010",
+    "canonical_name": "Hand on Hip",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE011",
+    "canonical_name": "Hand Behind Head",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE012",
+    "canonical_name": "Hands Behind Back",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE013",
+    "canonical_name": "Hands in Pockets",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE014",
+    "canonical_name": "Arms Crossed",
+    "aliases": [
+      "Crossed Arms"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE015",
+    "canonical_name": "Hand on Cheek",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE016",
+    "canonical_name": "Finger to Lips",
+    "aliases": [
+      "Shushing Pose"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE017",
+    "canonical_name": "Hand on Chin",
+    "aliases": [
+      "Chin rest"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE018",
+    "canonical_name": "Hand Over Mouth",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE019",
+    "canonical_name": "Covering Face",
+    "aliases": [
+      "Face Cover"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE020",
+    "canonical_name": "Facepalm",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE021",
+    "canonical_name": "Shrug",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE022",
+    "canonical_name": "Praying Hands",
+    "aliases": [
+      "Prayer Pose"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE023",
+    "canonical_name": "Clasped Hands",
+    "aliases": [
+      "Hands Clasped"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE024",
+    "canonical_name": "Hands on Hips",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE025",
+    "canonical_name": "Hands on Knees",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE026",
+    "canonical_name": "Arms Raised",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE027",
+    "canonical_name": "Hands Raised",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE028",
+    "canonical_name": "Stretching",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE029",
+    "canonical_name": "Flexing",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE030",
+    "canonical_name": "Fist",
+    "aliases": [
+      "Closed Fist"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE031",
+    "canonical_name": "Double Peace Sign",
+    "aliases": [
+      "Double V Sign"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE032",
+    "canonical_name": "Heart Hands",
+    "aliases": [
+      "Hand Heart"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE033",
+    "canonical_name": "Holding Object",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE034",
+    "canonical_name": "Self Hug",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE035",
+    "canonical_name": "Reaching Out",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE036",
+    "canonical_name": "Beckoning",
+    "aliases": [
+      "Come Here Gesture"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE037",
+    "canonical_name": "Stop Gesture",
+    "aliases": [
+      "Talk to the Hand"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE038",
+    "canonical_name": "Finger Heart",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE039",
+    "canonical_name": "Pinky Promise",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE040",
+    "canonical_name": "Handshake",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE041",
+    "canonical_name": "Hand on Chest",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE042",
+    "canonical_name": "Hand Behind Back",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE043",
+    "canonical_name": "Hands Behind Neck",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE044",
+    "canonical_name": "Arms Behind Head",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE045",
+    "canonical_name": "Rock Sign",
+    "aliases": [
+      "Devil Horns"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE046",
+    "canonical_name": "Crossed Fingers",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE047",
+    "canonical_name": "Finger on Chin",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE048",
+    "canonical_name": "Hand in Hair",
+    "aliases": [
+      "Touching Hair"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE049",
+    "canonical_name": "Hair Twirling",
+    "aliases": [
+      "Twirling Hair"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE050",
+    "canonical_name": "Ear Touch",
+    "aliases": [
+      "Touching Ear"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE051",
+    "canonical_name": "Adjusting Glasses",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE052",
+    "canonical_name": "Adjusting Hat",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE053",
+    "canonical_name": "Adjusting Tie",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE054",
+    "canonical_name": "Adjusting Clothing",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE055",
+    "canonical_name": "Holding Hands",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE056",
+    "canonical_name": "Interlocked Fingers",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE057",
+    "canonical_name": "Arms Open",
+    "aliases": [
+      "Open Arms"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE058",
+    "canonical_name": "Hands Spread",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE059",
+    "canonical_name": "Finger Wag",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE060",
+    "canonical_name": "Index Finger Raised",
+    "aliases": [
+      "One Finger Up"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE061",
+    "canonical_name": "Both Index Fingers Together",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE062",
+    "canonical_name": "Finger Counting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE063",
+    "canonical_name": "Nail Biting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE064",
+    "canonical_name": "Thumb to Self",
+    "aliases": [
+      "Pointing at Self"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE065",
+    "canonical_name": "Hands on Head",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE066",
+    "canonical_name": "Holding Own Arm",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE067",
+    "canonical_name": "Head Rest on Hand",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE068",
+    "canonical_name": "Cheek Rest on Hand",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE069",
+    "canonical_name": "Covering Ears",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE070",
+    "canonical_name": "Covering Eyes",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE071",
+    "canonical_name": "Rubbing Eyes",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE072",
+    "canonical_name": "Hands Together",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE073",
+    "canonical_name": "Hand on Shoulder",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE074",
+    "canonical_name": "Scratching Head",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE075",
+    "canonical_name": "Clapping",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE076",
+    "canonical_name": "Snapping Fingers",
+    "aliases": [
+      "Finger Snap"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE077",
+    "canonical_name": "Finger Frame",
+    "aliases": [
+      "Director Frame"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE078",
+    "canonical_name": "Air Quotes",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE079",
+    "canonical_name": "Hand on Breasts",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE080",
+    "canonical_name": "Hand Between Thighs",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE081",
+    "canonical_name": "Hands on Thighs",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE082",
+    "canonical_name": "Hand on Stomach",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE083",
+    "canonical_name": "Hand on Waist",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE084",
+    "canonical_name": "Hand on Buttock",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE085",
+    "canonical_name": "Covering Lower Body",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE086",
+    "canonical_name": "Hands Restrained",
+    "aliases": [
+      "Bound Hands"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE087",
+    "canonical_name": "Arms Restrained",
+    "aliases": [
+      "Bound Arms"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE088",
+    "canonical_name": "Pulling Clothing",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE089",
+    "canonical_name": "Caressing Face",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE090",
+    "canonical_name": "Caressing Hair",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE091",
+    "canonical_name": "Caressing Body",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE092",
+    "canonical_name": "Interlocked Hands",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE093",
+    "canonical_name": "Hand on Neck",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE094",
+    "canonical_name": "Finger on Cheek",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE095",
+    "canonical_name": "Hair Pulling",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE096",
+    "canonical_name": "Hands on Face",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE097",
+    "canonical_name": "Covering Chest",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE098",
+    "canonical_name": "Hand on Head",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE099",
+    "canonical_name": "Pointing at Viewer",
+    "aliases": [
+      "Pointing Forward"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE100",
+    "canonical_name": "Index Finger Touching",
+    "aliases": [
+      "Touching Index Fingers"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE101",
+    "canonical_name": "Hand Extended",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "GE102",
+    "canonical_name": "Hand Behind Neck",
+    "aliases": [],
+    "verified": "Yes"
+  }
+]

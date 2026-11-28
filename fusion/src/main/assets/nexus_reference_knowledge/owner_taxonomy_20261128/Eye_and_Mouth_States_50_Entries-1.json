@@ -1,0 +1,358 @@
+{
+  "eye_states": [
+    {
+      "tag_id": "EY001",
+      "canonical_name": "Open",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY002",
+      "canonical_name": "Half-Lidded",
+      "aliases": [
+        "Half Open"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY003",
+      "canonical_name": "Closed",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY004",
+      "canonical_name": "Wink",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY005",
+      "canonical_name": "One Eye Closed",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY006",
+      "canonical_name": "Wide Open",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY007",
+      "canonical_name": "Looking Up",
+      "aliases": [
+        "Upward Gaze"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY008",
+      "canonical_name": "Looking Down",
+      "aliases": [
+        "Downward Gaze"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY009",
+      "canonical_name": "Looking Left",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY010",
+      "canonical_name": "Looking Right",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY011",
+      "canonical_name": "Side Eye",
+      "aliases": [
+        "Side Glance"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY012",
+      "canonical_name": "Averted Gaze",
+      "aliases": [
+        "Looking Away"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY013",
+      "canonical_name": "Empty Eyes",
+      "aliases": [
+        "Blank Eyes"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY014",
+      "canonical_name": "Tearful",
+      "aliases": [
+        "Watery Eyes"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY015",
+      "canonical_name": "Rolled Back Eyes",
+      "aliases": [
+        "Eyes Rolled Up"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY016",
+      "canonical_name": "Heart Eyes",
+      "aliases": [
+        "Heart Pupils"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY017",
+      "canonical_name": "Star Eyes",
+      "aliases": [
+        "Star Pupils"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY018",
+      "canonical_name": "Spiral Eyes",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY019",
+      "canonical_name": "Crossed Eyes",
+      "aliases": [
+        "Cross-Eyed"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY020",
+      "canonical_name": "Glowing Eyes",
+      "aliases": [
+        "Luminous Eyes"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY021",
+      "canonical_name": "Shadowed Eyes",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY022",
+      "canonical_name": "Sparkling Eyes",
+      "aliases": [
+        "Shining Eyes"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY023",
+      "canonical_name": "Focused Gaze",
+      "aliases": [
+        "Intense Gaze"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY024",
+      "canonical_name": "Dazed Eyes",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY025",
+      "canonical_name": "Sleepy Eyes",
+      "aliases": [
+        "Drowsy Eyes"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY026",
+      "canonical_name": "Dead Eyes",
+      "aliases": [
+        "Lifeless Eyes"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EY027",
+      "canonical_name": "Dilated Pupils",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EY028",
+      "canonical_name": "Constricted Pupils",
+      "aliases": [],
+      "verified": true
+    }
+  ],
+  "mouth_states": [
+    {
+      "tag_id": "MO001",
+      "canonical_name": "Closed",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO002",
+      "canonical_name": "Slight Smile",
+      "aliases": [
+        "Soft Smile"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO003",
+      "canonical_name": "Smile",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO004",
+      "canonical_name": "Grin",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO005",
+      "canonical_name": "Smirk",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO006",
+      "canonical_name": "Open",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO007",
+      "canonical_name": "Slightly Open",
+      "aliases": [
+        "Parted Lips"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO008",
+      "canonical_name": "Frown",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO009",
+      "canonical_name": "Pouting",
+      "aliases": [
+        "Pout"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO010",
+      "canonical_name": "Tongue Out",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO011",
+      "canonical_name": "Teeth Clenched",
+      "aliases": [
+        "Clenched Teeth"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO012",
+      "canonical_name": "Fangs Visible",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO013",
+      "canonical_name": "Gasp",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO014",
+      "canonical_name": "Screaming",
+      "aliases": [
+        "Shouting"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO015",
+      "canonical_name": "Kissing",
+      "aliases": [
+        "Pursed Lips"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO016",
+      "canonical_name": "Biting Lip",
+      "aliases": [
+        "Lip Bite"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO017",
+      "canonical_name": "Licking Lips",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO018",
+      "canonical_name": "Drooling",
+      "aliases": [
+        "Salivating"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO019",
+      "canonical_name": "O-Shaped Mouth",
+      "aliases": [
+        "O Mouth"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO020",
+      "canonical_name": "Surprised",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "MO021",
+      "canonical_name": "Evil Grin",
+      "aliases": [
+        "Maniacal Grin"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "MO022",
+      "canonical_name": "Chewing",
+      "aliases": [],
+      "verified": true
+    }
+  ]
+}

@@ -1,0 +1,382 @@
+[
+  {
+    "tag_id": "EN001",
+    "canonical_name": "Bedroom",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN002",
+    "canonical_name": "Living Room",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN003",
+    "canonical_name": "Bathroom",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN004",
+    "canonical_name": "Classroom",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN005",
+    "canonical_name": "School Hallway",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN006",
+    "canonical_name": "School Rooftop",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN007",
+    "canonical_name": "Office",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN008",
+    "canonical_name": "Library",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN009",
+    "canonical_name": "Café",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN010",
+    "canonical_name": "Restaurant",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN011",
+    "canonical_name": "Bar",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN012",
+    "canonical_name": "Kitchen",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN013",
+    "canonical_name": "Garden",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN014",
+    "canonical_name": "Park",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN015",
+    "canonical_name": "Forest",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN016",
+    "canonical_name": "Meadow",
+    "aliases": [
+      "Field"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN017",
+    "canonical_name": "Mountain",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN018",
+    "canonical_name": "Beach",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN019",
+    "canonical_name": "Ocean",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN020",
+    "canonical_name": "Swimming Pool",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN021",
+    "canonical_name": "River",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN022",
+    "canonical_name": "Lake",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN023",
+    "canonical_name": "Cave",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN024",
+    "canonical_name": "Castle",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN025",
+    "canonical_name": "Shrine",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN026",
+    "canonical_name": "Temple",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN027",
+    "canonical_name": "City Street",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN028",
+    "canonical_name": "Alley",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN029",
+    "canonical_name": "Train",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN030",
+    "canonical_name": "Train Station",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN031",
+    "canonical_name": "Car",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN032",
+    "canonical_name": "Airplane",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN033",
+    "canonical_name": "Sky",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN034",
+    "canonical_name": "Space",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN035",
+    "canonical_name": "Underwater",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN036",
+    "canonical_name": "Stage",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN037",
+    "canonical_name": "Dungeon",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN038",
+    "canonical_name": "Ruins",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN039",
+    "canonical_name": "Fantasy Town",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN040",
+    "canonical_name": "Onsen",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN041",
+    "canonical_name": "Hospital",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN042",
+    "canonical_name": "Festival",
+    "aliases": [
+      "Matsuri"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN043",
+    "canonical_name": "Arena",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN044",
+    "canonical_name": "Throne Room",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN045",
+    "canonical_name": "Laboratory",
+    "aliases": [
+      "Lab"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN046",
+    "canonical_name": "Prison",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN047",
+    "canonical_name": "Desert",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "EN048",
+    "canonical_name": "Island",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE001",
+    "canonical_name": "Clear",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE002",
+    "canonical_name": "Cloudy",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE003",
+    "canonical_name": "Rain",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE004",
+    "canonical_name": "Heavy Rain",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE005",
+    "canonical_name": "Thunderstorm",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE006",
+    "canonical_name": "Snow",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE007",
+    "canonical_name": "Blizzard",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE008",
+    "canonical_name": "Fog",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE009",
+    "canonical_name": "Windy",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE010",
+    "canonical_name": "Rainbow",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE011",
+    "canonical_name": "Hail",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE012",
+    "canonical_name": "Sandstorm",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE013",
+    "canonical_name": "Cherry Blossoms",
+    "aliases": [
+      "Sakura"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "WE014",
+    "canonical_name": "Falling Leaves",
+    "aliases": [],
+    "verified": "Yes"
+  }
+]

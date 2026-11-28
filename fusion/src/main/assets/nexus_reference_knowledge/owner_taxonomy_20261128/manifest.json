@@ -1,0 +1,73 @@
+{
+  "archive_sha256": "f895e4ee3083f91203205f1d4269cdfb7da81b4648408078f643bf5f67dd9bf3",
+  "taxonomy_entries": 1278,
+  "series_entries": 1621,
+  "character_knowledge_complete": false,
+  "owner_reported_character_progress": "BL",
+  "files": {
+    "actions-and-rating-tags.json": {
+      "sha256": "121701b811bb6f1ca930318a8ffbb7ffdbb74c9819c3e92bd3055368517eb192",
+      "entries": 95
+    },
+    "Age_AG001-AG006.json": {
+      "sha256": "8dc77d67499bdd04d2aa6f5a54fefc3c4210e83fb3947f497203e694e2ec76ef",
+      "entries": 6
+    },
+    "Body_BH001-SX004.json": {
+      "sha256": "5f47018a9504d04322751302abea69d463a0ad6e972d1ed641c036cb499b9d8c",
+      "entries": 28
+    },
+    "environments_weather_EN001-EN048_WE001-WE014.json": {
+      "sha256": "07faf63d166789d1aff99f7e223e5e8c852947b613e3a6caac8d0c4675fd0edb",
+      "entries": 62
+    },
+    "Expressions_70_Entries.json": {
+      "sha256": "f1ab41415876314c783b8c6694d12eca4ea755c3c9d4c4704baa2457d0d20da4",
+      "entries": 70
+    },
+    "Eye_and_Mouth_States_50_Entries-1.json": {
+      "sha256": "c72b3826883dbc656cfb0d38c527f9bf3314247f7700694361767425797942b9",
+      "entries": 50
+    },
+    "Eyes_EC001-ET013.json": {
+      "sha256": "a2f5ba1c517eceab5b492261e31477e7e42aa1444c3a97b8fa0f1ac2d37c1c83",
+      "entries": 40
+    },
+    "framing_orientation_camera_lighting.json": {
+      "sha256": "b042cdffe8a0487794cc0e20fb2abc090712a188e12bb60171fd18130378e902",
+      "entries": 50
+    },
+    "gestures_GE001-GE102.json": {
+      "sha256": "1e85da98d5df2d19fff99e2c26b3c775144205b765e40a8e19c2e48cb1dd4425",
+      "entries": 102
+    },
+    "Hair_HC001-HS043.json": {
+      "sha256": "57f4aa3592093bf7d578c7503bdebd987bd57d18df1e59ec9168d50320b29b1f",
+      "entries": 93
+    },
+    "Outfits_OF001-OF018_OF017-11.json": {
+      "sha256": "ae8dd224be5e127f592e9aca786e20a154841cb38f9b64b64ed2e773ac923965",
+      "entries": 473
+    },
+    "poses_PO001-PO011.json": {
+      "sha256": "ab25aa28768eb712df8bb300fba26ac327ed6c21c308ac5cd8b5f27906b7054b",
+      "entries": 45
+    },
+    "SkinColor_SC001-SC019.json": {
+      "sha256": "498d6764b78ba3feee92eee46ca3184102f7c27417d4bef5d77271d5381389a1",
+      "entries": 19
+    },
+    "Species_SP001-SA026.json": {
+      "sha256": "69c520543852a8b6a1a3bd14d7b6f2b0f8c5b8e664b50bc02e5be01898cc4e4a",
+      "entries": 88
+    },
+    "Weapons_WP001-WP006-11.json": {
+      "sha256": "b582766ece5765e54f1edafee1b6670e0f5ece991799f4b7ebf90a4df2804647",
+      "entries": 57
+    },
+    "series_1623_entries_strict_unique-2.json": {
+      "sha256": "93ecdc4a5c7645ce9116296cd6a6dabe76da01a2220b51e3819828947f801d32",
+      "entries": 1621
+    }
+  }
+}

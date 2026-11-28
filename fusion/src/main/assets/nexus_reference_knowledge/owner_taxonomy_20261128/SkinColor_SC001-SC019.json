@@ -1,0 +1,146 @@
+[
+  {
+    "id": "SC001",
+    "attribute": "Skin Color",
+    "canonical_name": "Very Fair",
+    "aliases": [
+      "Porcelain"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SC002",
+    "attribute": "Skin Color",
+    "canonical_name": "Fair",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC003",
+    "attribute": "Skin Color",
+    "canonical_name": "Light",
+    "aliases": [
+      "Beige"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SC004",
+    "attribute": "Skin Color",
+    "canonical_name": "Tan",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC005",
+    "attribute": "Skin Color",
+    "canonical_name": "Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC006",
+    "attribute": "Skin Color",
+    "canonical_name": "Dark Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC007",
+    "attribute": "Skin Color",
+    "canonical_name": "Black",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC008",
+    "attribute": "Skin Color",
+    "canonical_name": "Gray",
+    "aliases": [
+      "Grey"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SC009",
+    "attribute": "Skin Color",
+    "canonical_name": "White",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC010",
+    "attribute": "Skin Color",
+    "canonical_name": "Blue",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC011",
+    "attribute": "Skin Color",
+    "canonical_name": "Green",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC012",
+    "attribute": "Skin Color",
+    "canonical_name": "Red",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC013",
+    "attribute": "Skin Color",
+    "canonical_name": "Purple",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC014",
+    "attribute": "Skin Color",
+    "canonical_name": "Pink",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC015",
+    "attribute": "Skin Color",
+    "canonical_name": "Yellow",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC016",
+    "attribute": "Skin Color",
+    "canonical_name": "Orange",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC017",
+    "attribute": "Skin Color",
+    "canonical_name": "Gold",
+    "aliases": [
+      "Golden"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SC018",
+    "attribute": "Skin Color",
+    "canonical_name": "Silver",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SC019",
+    "attribute": "Skin Color",
+    "canonical_name": "Multicolored",
+    "aliases": [
+      "Multi-colored",
+      "Multi Color"
+    ],
+    "verified": true
+  }
+]

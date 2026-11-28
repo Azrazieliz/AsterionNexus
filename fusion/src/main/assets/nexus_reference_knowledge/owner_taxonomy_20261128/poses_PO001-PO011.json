@@ -1,0 +1,333 @@
+[
+  {
+    "tag_id": "PO001",
+    "parent_tag": null,
+    "canonical_name": "Standing",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO001-1",
+    "parent_tag": "PO001",
+    "canonical_name": "Contrapposto",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO001-2",
+    "parent_tag": "PO001",
+    "canonical_name": "Attention",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO001-3",
+    "parent_tag": "PO001",
+    "canonical_name": "Tiptoeing",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO001-4",
+    "parent_tag": "PO001",
+    "canonical_name": "Legs Crossed",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO001-5",
+    "parent_tag": "PO001",
+    "canonical_name": "Wide Stance",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO001-6",
+    "parent_tag": "PO001",
+    "canonical_name": "Hands-on-Knees Standing",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002",
+    "parent_tag": null,
+    "canonical_name": "Sitting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-1",
+    "parent_tag": "PO002",
+    "canonical_name": "Seiza",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-2",
+    "parent_tag": "PO002",
+    "canonical_name": "Cross-Legged",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-3",
+    "parent_tag": "PO002",
+    "canonical_name": "Side Sitting",
+    "aliases": [
+      "Side Sit"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-4",
+    "parent_tag": "PO002",
+    "canonical_name": "Knees Up",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-5",
+    "parent_tag": "PO002",
+    "canonical_name": "Lotus Position",
+    "aliases": [
+      "Lotus Pose"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-6",
+    "parent_tag": "PO002",
+    "canonical_name": "W Sitting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-7",
+    "parent_tag": "PO002",
+    "canonical_name": "Yokozuwari",
+    "aliases": [
+      "Mermaid Sitting"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO002-8",
+    "parent_tag": "PO002",
+    "canonical_name": "Straddling",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO003",
+    "parent_tag": null,
+    "canonical_name": "Kneeling",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO003-1",
+    "parent_tag": "PO003",
+    "canonical_name": "One Knee",
+    "aliases": [
+      "One-Knee Kneel"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO003-2",
+    "parent_tag": "PO003",
+    "canonical_name": "Both Knees",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO003-3",
+    "parent_tag": "PO003",
+    "canonical_name": "Dogeza",
+    "aliases": [
+      "Prostration"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO004",
+    "parent_tag": null,
+    "canonical_name": "Lying",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO004-1",
+    "parent_tag": "PO004",
+    "canonical_name": "On Back",
+    "aliases": [
+      "Supine"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO004-2",
+    "parent_tag": "PO004",
+    "canonical_name": "On Stomach",
+    "aliases": [
+      "Prone"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO004-3",
+    "parent_tag": "PO004",
+    "canonical_name": "Side-Lying",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO004-4",
+    "parent_tag": "PO004",
+    "canonical_name": "Curled Up",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO004-5",
+    "parent_tag": "PO004",
+    "canonical_name": "Fetal Position",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO004-6",
+    "parent_tag": "PO004",
+    "canonical_name": "Starfish Pose",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO005",
+    "parent_tag": null,
+    "canonical_name": "Reclining",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO005-1",
+    "parent_tag": "PO005",
+    "canonical_name": "Reclining on Side",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO005-2",
+    "parent_tag": "PO005",
+    "canonical_name": "Reclining on Back",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO006",
+    "parent_tag": null,
+    "canonical_name": "Leaning",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO006-1",
+    "parent_tag": "PO006",
+    "canonical_name": "Forward Lean",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO006-2",
+    "parent_tag": "PO006",
+    "canonical_name": "Backward Lean",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO006-3",
+    "parent_tag": "PO006",
+    "canonical_name": "Sideways Lean",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO006-4",
+    "parent_tag": "PO006",
+    "canonical_name": "Wall Lean",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO007",
+    "parent_tag": null,
+    "canonical_name": "Squatting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO008",
+    "parent_tag": null,
+    "canonical_name": "Crouching",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO009",
+    "parent_tag": null,
+    "canonical_name": "Floating",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO010",
+    "parent_tag": null,
+    "canonical_name": "Hanging",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO010-1",
+    "parent_tag": "PO010",
+    "canonical_name": "One Arm",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO010-2",
+    "parent_tag": "PO010",
+    "canonical_name": "Two Arms",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO010-3",
+    "parent_tag": "PO010",
+    "canonical_name": "Upside Down",
+    "aliases": [
+      "Inverted Hanging"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO011",
+    "parent_tag": null,
+    "canonical_name": "Balancing",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO011-1",
+    "parent_tag": "PO011",
+    "canonical_name": "One Foot",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "PO011-2",
+    "parent_tag": "PO011",
+    "canonical_name": "On Edge",
+    "aliases": [],
+    "verified": "Yes"
+  }
+]

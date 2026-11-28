@@ -1,0 +1,856 @@
+[
+  {
+    "id": "SP001",
+    "related_species": [],
+    "canonical_name": "Human",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP002",
+    "related_species": [],
+    "canonical_name": "Elf",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP002-1",
+    "related_species": [
+      "SP002"
+    ],
+    "canonical_name": "High Elf",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP002-2",
+    "related_species": [
+      "SP002"
+    ],
+    "canonical_name": "Dark Elf",
+    "aliases": [
+      "Drow"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP003",
+    "related_species": [],
+    "canonical_name": "Dwarf",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP004",
+    "related_species": [],
+    "canonical_name": "Orc",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP005",
+    "related_species": [],
+    "canonical_name": "Goblin",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP006",
+    "related_species": [],
+    "canonical_name": "Ogre",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP006-1",
+    "related_species": [
+      "SP006"
+    ],
+    "canonical_name": "Oni",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP006-2",
+    "related_species": [
+      "SP006"
+    ],
+    "canonical_name": "Kijin",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP007",
+    "related_species": [],
+    "canonical_name": "Giant",
+    "aliases": [
+      "Titan"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP007-1",
+    "related_species": [
+      "SP007"
+    ],
+    "canonical_name": "Cyclops",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP008",
+    "related_species": [],
+    "canonical_name": "Beastkin",
+    "aliases": [
+      "Beastfolk",
+      "Kemonomimi"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-1",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Catfolk",
+    "aliases": [
+      "Catgirl",
+      "Nekomimi"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-2",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Dogfolk",
+    "aliases": [
+      "Doggirl",
+      "Inumimi"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-3",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Wolffolk",
+    "aliases": [
+      "Wolfgirl",
+      "Ookami"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-4",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Foxfolk",
+    "aliases": [
+      "Foxgirl",
+      "Kitsune"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-5",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Rabbitfolk",
+    "aliases": [
+      "Rabbitgirl",
+      "Bunnygirl",
+      "Usagimimi"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-6",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Horsefolk",
+    "aliases": [
+      "Horsegirl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-7",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Cowfolk",
+    "aliases": [
+      "Cowgirl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-8",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Tigerfolk",
+    "aliases": [
+      "Tigergirl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-9",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Sheepfolk",
+    "aliases": [
+      "Sheepgirl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP008-10",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Goatfolk",
+    "aliases": [
+      "Goatgirl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP009",
+    "related_species": [],
+    "canonical_name": "Dragon",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP009-1",
+    "related_species": [
+      "SP009"
+    ],
+    "canonical_name": "Dragonoid",
+    "aliases": [
+      "Dragonkin"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP010",
+    "related_species": [],
+    "canonical_name": "Spirit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP010-1",
+    "related_species": [
+      "SP010"
+    ],
+    "canonical_name": "Elemental Spirit",
+    "aliases": [
+      "Elemental"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP010-2",
+    "related_species": [
+      "SP010"
+    ],
+    "canonical_name": "Nature Spirit",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP011",
+    "related_species": [],
+    "canonical_name": "Fairy",
+    "aliases": [
+      "Fae"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP011-1",
+    "related_species": [
+      "SP011"
+    ],
+    "canonical_name": "Pixie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP011-2",
+    "related_species": [
+      "SP011"
+    ],
+    "canonical_name": "Sylph",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP012",
+    "related_species": [],
+    "canonical_name": "Angel",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP012-1",
+    "related_species": [
+      "SP012"
+    ],
+    "canonical_name": "Fallen Angel",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP013",
+    "related_species": [],
+    "canonical_name": "Demon",
+    "aliases": [
+      "Devil"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP013-1",
+    "related_species": [
+      "SP013"
+    ],
+    "canonical_name": "Succubus",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP014",
+    "related_species": [],
+    "canonical_name": "Undead",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP014-1",
+    "related_species": [
+      "SP014"
+    ],
+    "canonical_name": "Vampire",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP014-2",
+    "related_species": [
+      "SP014"
+    ],
+    "canonical_name": "Zombie",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP014-3",
+    "related_species": [
+      "SP014"
+    ],
+    "canonical_name": "Soul",
+    "aliases": [
+      "Ghost"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP014-4",
+    "related_species": [
+      "SP014"
+    ],
+    "canonical_name": "Lich",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP014-5",
+    "related_species": [
+      "SP014"
+    ],
+    "canonical_name": "Skeleton",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP015",
+    "related_species": [],
+    "canonical_name": "Cybernetic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP015-1",
+    "related_species": [
+      "SP015"
+    ],
+    "canonical_name": "Android",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP015-2",
+    "related_species": [
+      "SP015"
+    ],
+    "canonical_name": "Cyborg",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP015-3",
+    "related_species": [
+      "SP015"
+    ],
+    "canonical_name": "Robot",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP015-4",
+    "related_species": [
+      "SP015"
+    ],
+    "canonical_name": "Doll",
+    "aliases": [
+      "Homunculus",
+      "Living Doll"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP016",
+    "related_species": [],
+    "canonical_name": "Plant",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP016-1",
+    "related_species": [
+      "SP016"
+    ],
+    "canonical_name": "Dryad",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP016-2",
+    "related_species": [
+      "SP016"
+    ],
+    "canonical_name": "Plantfolk",
+    "aliases": [
+      "Plant Humanoid"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP017",
+    "related_species": [],
+    "canonical_name": "Aquatic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP017-1",
+    "related_species": [
+      "SP017"
+    ],
+    "canonical_name": "Mermaid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP017-2",
+    "related_species": [
+      "SP017"
+    ],
+    "canonical_name": "Lamia",
+    "aliases": [
+      "Naga"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP017-3",
+    "related_species": [
+      "SP017"
+    ],
+    "canonical_name": "Sharkfolk",
+    "aliases": [
+      "Sharkgirl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP017-4",
+    "related_species": [
+      "SP017"
+    ],
+    "canonical_name": "Octopusfolk",
+    "aliases": [
+      "Octopusgirl"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP018",
+    "related_species": [],
+    "canonical_name": "Avian",
+    "aliases": [
+      "Birdfolk"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP018-1",
+    "related_species": [
+      "SP018"
+    ],
+    "canonical_name": "Harpy",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP018-2",
+    "related_species": [
+      "SP018"
+    ],
+    "canonical_name": "Tengu",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP019",
+    "related_species": [],
+    "canonical_name": "Arthropodkin",
+    "aliases": [
+      "Insectoid"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP019-1",
+    "related_species": [
+      "SP019"
+    ],
+    "canonical_name": "Arachne",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP019-2",
+    "related_species": [
+      "SP019"
+    ],
+    "canonical_name": "Insectfolk",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SP020",
+    "related_species": [],
+    "canonical_name": "Alien",
+    "aliases": [
+      "Extraterrestrial"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SP021",
+    "related_species": [],
+    "canonical_name": "Slime",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA001",
+    "related_species": [
+      "SP002"
+    ],
+    "canonical_name": "Pointed Ears",
+    "aliases": [
+      "Elven Ears"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SA002",
+    "related_species": [
+      "SP006",
+      "SP009",
+      "SP013"
+    ],
+    "canonical_name": "Horns",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA003",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Animal Ears",
+    "aliases": [
+      "Kemonomimi"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SA004",
+    "related_species": [
+      "SP008",
+      "SP009",
+      "SP013",
+      "SP017-1",
+      "SP017-2",
+      "SP017-3",
+      "SP017-4"
+    ],
+    "canonical_name": "Tail",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA005",
+    "related_species": [
+      "SP008-6",
+      "SP008-7",
+      "SP008-9",
+      "SP008-10"
+    ],
+    "canonical_name": "Hooves",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA006",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Furry Body",
+    "aliases": [
+      "Anthropomorphic",
+      "Anthro"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SA007",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Muzzle",
+    "aliases": [
+      "Snout"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SA008",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Paw Hands",
+    "aliases": [
+      "Animal Hands"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SA009",
+    "related_species": [
+      "SP008"
+    ],
+    "canonical_name": "Paw Feet",
+    "aliases": [
+      "Digitigrade Feet"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SA010",
+    "related_species": [
+      "SP009",
+      "SP011",
+      "SP012",
+      "SP013",
+      "SP018-1",
+      "SP018-2"
+    ],
+    "canonical_name": "Wings",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA011",
+    "related_species": [
+      "SP009"
+    ],
+    "canonical_name": "Scales",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA012",
+    "related_species": [
+      "SP010",
+      "SP014-3"
+    ],
+    "canonical_name": "Transparent Body",
+    "aliases": [
+      "Intangible Body"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SA013",
+    "related_species": [
+      "SP012"
+    ],
+    "canonical_name": "Halo",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA014",
+    "related_species": [
+      "SP013-1",
+      "SP014-1"
+    ],
+    "canonical_name": "Fangs",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA015",
+    "related_species": [
+      "SP015-2",
+      "SP015-3",
+      "SP015-4"
+    ],
+    "canonical_name": "Mechanical Limbs",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA016",
+    "related_species": [
+      "SP015-3",
+      "SP015-4"
+    ],
+    "canonical_name": "Jointed Limbs",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA017",
+    "related_species": [
+      "SP017-1",
+      "SP017-3",
+      "SP017-4"
+    ],
+    "canonical_name": "Fins",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA018",
+    "related_species": [
+      "SP017-1",
+      "SP017-3",
+      "SP017-4"
+    ],
+    "canonical_name": "Gills",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA019",
+    "related_species": [
+      "SP018-1",
+      "SP018-2"
+    ],
+    "canonical_name": "Feathers",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA020",
+    "related_species": [
+      "SP018-1"
+    ],
+    "canonical_name": "Talons",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA021",
+    "related_species": [
+      "SP019-1"
+    ],
+    "canonical_name": "Spider Legs",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA022",
+    "related_species": [
+      "SP019-1",
+      "SP019-2"
+    ],
+    "canonical_name": "Exoskeleton",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA023",
+    "related_species": [
+      "SP019-2"
+    ],
+    "canonical_name": "Antennae",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA024",
+    "related_species": [
+      "SP019-1"
+    ],
+    "canonical_name": "Mandibles",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA025",
+    "related_species": [
+      "SP007-1"
+    ],
+    "canonical_name": "Single Eye",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SA026",
+    "related_species": [
+      "SP017-4",
+      "SP020",
+      "SP021"
+    ],
+    "canonical_name": "Tentacles",
+    "aliases": [],
+    "verified": true
+  }
+]

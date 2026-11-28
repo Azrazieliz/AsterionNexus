@@ -248,8 +248,8 @@ object StandaloneRuntime {
                             // Restore each stored canonical JSON before migrating
                             // Knowledge to Fusion. A formerly destructive schema
                             // upgrade must not strand 10 of 15 saved sources.
-                            seedBundledReferenceKnowledge()
                             restoreInstalledReferenceKnowledge()
+                            seedBundledReferenceKnowledge()
                             val migration = FusionReferenceMigration(database, knowledgeDatabase).reconcile()
                             check(migration["ok"] == true) {
                                 "Incomplete canonical Knowledge migration: " +
@@ -996,11 +996,19 @@ object StandaloneRuntime {
             val filename = safeKnowledgePackFileName(uri)
 
             if (isZipKnowledgeDocument(uri, filename)) {
-                referenceResults += mapOf(
-                    "ok" to false,
-                    "message" to "ZIP Knowledge import is disabled. Select the JSON files individually or select several JSON files together.",
-                    "filename" to filename,
-                )
+                val decoded = runCatching {
+                    appContext.contentResolver.openInputStream(uri)?.use {
+                        ReferenceKnowledgeImporter.readZipDocuments(it)
+                    } ?: error("Unable to read reference archive")
+                }
+                decoded.onSuccess { documents ->
+                    // Reject a conflicting selection as a whole; no silent filename overwrite.
+                    if (documents.any { (name, raw) -> rawReferenceDocuments[name]?.let { it != raw } == true }) {
+                        referenceResults += mapOf("ok" to false, "message" to "Conflicting reference document names", "filename" to filename)
+                    } else rawReferenceDocuments.putAll(documents)
+                }.onFailure { error ->
+                    referenceResults += mapOf("ok" to false, "message" to (error.message ?: "Invalid reference archive"), "filename" to filename)
+                }
                 return@forEach
             }
 
@@ -1010,12 +1018,16 @@ object StandaloneRuntime {
                 null
             }
             if (raw != null && ReferenceKnowledgeParser.looksLikeReferenceDocument(filename, raw)) {
-                rawReferenceDocuments[filename] = raw
+                val prior = rawReferenceDocuments[filename]
+                if (prior != null && prior != raw) referenceResults += mapOf(
+                    "ok" to false, "message" to "Conflicting reference document names", "filename" to filename,
+                ) else rawReferenceDocuments[filename] = raw
             } else {
                 ordinaryUris += uri
             }
         }
 
+        if (referenceResults.any { it["ok"] == false }) return referenceResults
         if (rawReferenceDocuments.isNotEmpty()) {
             val sourceName = if (rawReferenceDocuments.size == 1) {
                 rawReferenceDocuments.keys.first()
@@ -5872,37 +5884,39 @@ object StandaloneRuntime {
      * differ. All sources are imported together so cross-pack parent/category
      * references can resolve regardless of original import order.
      */
-    /** Read actual owner reference source documents from the APK only for
-     * an empty Knowledge installation. Existing owner sources are authoritative.
-     * This runs after Core's migration backup and before native reconciliation. */
+    /** Admit the owner-supplied release once, on both fresh and upgraded databases.
+     * Raw source artifacts are preserved; Fusion reconciliation never replaces user edits.
+     * This is a taxonomy release, NOT character-recognition readiness.
+     */
     private fun seedBundledReferenceKnowledge() {
-        val installed = knowledgeDatabase.importedDocumentHashes()
-        val directory = knowledgePackDirectory()
-        if (installed.isNotEmpty() || directory.listFiles().orEmpty().any {
-                it.isFile && !it.name.startsWith(".") && it.extension.equals("json", true)
-            }) return
-        val root = "nexus_reference_knowledge"
-        val names = appContext.assets.list(root).orEmpty().filter {
-            it.matches(Regex("[A-Za-z0-9._-]+[.]json"))
-        }.sorted()
+        val root = "nexus_reference_knowledge/owner_taxonomy_20261128"
+        val manifest = appContext.assets.open("$root/manifest.json").bufferedReader(Charsets.UTF_8).use {
+            JSONObject(it.readText())
+        }
+        val expected = manifest.getJSONObject("files")
         val documents = linkedMapOf<String, String>()
-        for (name in names) {
-            val raw = appContext.assets.open("$root/$name").bufferedReader(Charsets.UTF_8).use {
-                it.readText()
-            }
-            require(ReferenceKnowledgeParser.looksLikeReferenceDocument(name, raw)) {
-                "Invalid bundled canonical source: $name"
-            }
-            documents[name] = raw
+        val installed = knowledgeDatabase.importedDocumentHashes()
+        fun hash(raw: String) = MessageDigest.getInstance("SHA-256")
+            .digest(raw.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        for (name in expected.keys().asSequence().sorted()) {
+            require(name.matches(Regex("[A-Za-z0-9._-]+[.]json")))
+            val raw = appContext.assets.open("$root/$name").bufferedReader(Charsets.UTF_8).use { it.readText() }
+            require(hash(raw) == expected.getJSONObject(name).getString("sha256")) { "Bundled source checksum mismatch: $name" }
+            val key = "owner-20261128-" + name
+            documents[key] = raw
         }
-        if (documents.isEmpty()) return
         val parsed = ReferenceKnowledgeParser.parseDocuments(documents)
-        if ("series_1623_entries.json" in documents) {
-            require(parsed.series.size >= 1623) { "Incomplete historical series catalog" }
+        require(documents.size == 16 && parsed.tags.size == 1278 && parsed.series.size == 1621 &&
+            parsed.characters.isEmpty()) { "Incomplete owner taxonomy release" }
+        // Separate release names avoid collisions with previous historical sources.
+        // Old series IDs, installed characters, ratings and user Fusion edits survive.
+        val pending = documents.filter { (name, raw) -> installed[name] != hash(raw) }
+        if (pending.isNotEmpty()) {
+            val report = ReferenceKnowledgeImporter(knowledgeDatabase)
+                .importDocuments(documents, "owner-taxonomy-20261128")
+            require(report["ok"] == true) { report["message"].toString() }
         }
-        for ((filename, raw) in documents) {
-            persistReferenceKnowledgeArtifact(filename, raw)
-        }
+        for ((filename, raw) in documents) persistReferenceKnowledgeArtifact(filename, raw)
     }
 
     private fun restoreInstalledReferenceKnowledge(): Map<String, Any> {
@@ -5928,7 +5942,7 @@ object StandaloneRuntime {
                 "sources_restored" to 0)
         }
         val report = ReferenceKnowledgeImporter(knowledgeDatabase)
-            .importDocuments(documents, "stored-reference-knowledge-recovery")
+            .importDocuments(unrecorded, "stored-reference-knowledge-recovery")
         require(report["ok"] == true) {
             "Existing Knowledge JSON reconciliation stopped: " +
                 report["message"].toString()

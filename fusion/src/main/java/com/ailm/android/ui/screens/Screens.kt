@@ -490,7 +490,7 @@ fun ScreenScaffold(
         knowledgeDocumentPickerLauncher.launch(arrayOf("application/json", "text/*"))
     }
     val chooseKnowledgePacks: () -> Unit = {
-        knowledgePackDocumentPickerLauncher.launch(arrayOf("application/json", "text/*"))
+        knowledgePackDocumentPickerLauncher.launch(arrayOf("application/json", "application/zip", "application/x-zip-compressed", "text/*"))
     }
     val chooseKnowledgePackReplacement: (String) -> Unit = { filename ->
         replacingKnowledgePackName = filename
@@ -5046,7 +5046,7 @@ private fun KnowledgePackManagerScreen(
                     Button(onClick = onImportPacks, enabled = selectedPackNames.isNotEmpty()) { Text("Import Selected") }
                 }
                 Text(
-                    "Import the Knowledge JSON files individually or select several JSON files together. Each JSON merges into existing Knowledge without deleting unrelated series, taxonomy, or character data.",
+                    "Import JSON documents or a taxonomy ZIP. Existing series, taxonomy and character data are preserved.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

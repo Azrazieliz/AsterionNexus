@@ -167,6 +167,7 @@ internal class FusionReferenceMigration(
                             "species_rules", "species_trait_requirements",
                             "species_trait_requirement", "trait_requirement",
                             "tag_scope", "scope", "applies_to",
+                            "related_species", "primary_eye_state", "primary_mouth_state", "verified",
                         )) {
                             if (!existing.has(key) && incoming.has(key)) {
                                 existing.put(key, incoming.get(key))

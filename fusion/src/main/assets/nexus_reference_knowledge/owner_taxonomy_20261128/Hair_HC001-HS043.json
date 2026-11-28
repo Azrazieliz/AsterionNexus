@@ -1,0 +1,693 @@
+[
+  {
+    "id": "HC001",
+    "attribute": "Hair Color",
+    "canonical_name": "Black",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC002",
+    "attribute": "Hair Color",
+    "canonical_name": "Dark Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC003",
+    "attribute": "Hair Color",
+    "canonical_name": "Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC004",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Brown",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC005",
+    "attribute": "Hair Color",
+    "canonical_name": "Chestnut",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC006",
+    "attribute": "Hair Color",
+    "canonical_name": "Auburn",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC007",
+    "attribute": "Hair Color",
+    "canonical_name": "Blonde",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC008",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Blonde",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC009",
+    "attribute": "Hair Color",
+    "canonical_name": "Golden Blonde",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC010",
+    "attribute": "Hair Color",
+    "canonical_name": "Dark Blonde",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC011",
+    "attribute": "Hair Color",
+    "canonical_name": "Platinum Blonde",
+    "aliases": [
+      "Platinum"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HC012",
+    "attribute": "Hair Color",
+    "canonical_name": "White",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC013",
+    "attribute": "Hair Color",
+    "canonical_name": "Silver",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC014",
+    "attribute": "Hair Color",
+    "canonical_name": "Gray",
+    "aliases": [
+      "Grey"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HC015",
+    "attribute": "Hair Color",
+    "canonical_name": "Red",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC016",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Red",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC017",
+    "attribute": "Hair Color",
+    "canonical_name": "Dark Red",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC018",
+    "attribute": "Hair Color",
+    "canonical_name": "Crimson",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC019",
+    "attribute": "Hair Color",
+    "canonical_name": "Orange",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC020",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Orange",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC021",
+    "attribute": "Hair Color",
+    "canonical_name": "Yellow",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC022",
+    "attribute": "Hair Color",
+    "canonical_name": "Pink",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC023",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Pink",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC024",
+    "attribute": "Hair Color",
+    "canonical_name": "Hot Pink",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC025",
+    "attribute": "Hair Color",
+    "canonical_name": "Magenta",
+    "aliases": [
+      "Fuchsia"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HC026",
+    "attribute": "Hair Color",
+    "canonical_name": "Purple",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC027",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Purple",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC028",
+    "attribute": "Hair Color",
+    "canonical_name": "Dark Purple",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC029",
+    "attribute": "Hair Color",
+    "canonical_name": "Lavender",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC030",
+    "attribute": "Hair Color",
+    "canonical_name": "Blue",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC031",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Blue",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC032",
+    "attribute": "Hair Color",
+    "canonical_name": "Dark Blue",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC033",
+    "attribute": "Hair Color",
+    "canonical_name": "Navy Blue",
+    "aliases": [
+      "Navy"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HC034",
+    "attribute": "Hair Color",
+    "canonical_name": "Cyan",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC035",
+    "attribute": "Hair Color",
+    "canonical_name": "Aqua",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC036",
+    "attribute": "Hair Color",
+    "canonical_name": "Turquoise",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC037",
+    "attribute": "Hair Color",
+    "canonical_name": "Green",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC038",
+    "attribute": "Hair Color",
+    "canonical_name": "Light Green",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC039",
+    "attribute": "Hair Color",
+    "canonical_name": "Dark Green",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC040",
+    "attribute": "Hair Color",
+    "canonical_name": "Lime Green",
+    "aliases": [
+      "Lime"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HC041",
+    "attribute": "Hair Color",
+    "canonical_name": "Emerald Green",
+    "aliases": [
+      "Emerald"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HC042",
+    "attribute": "Hair Color",
+    "canonical_name": "Teal",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HC043",
+    "attribute": "Hair Color",
+    "canonical_name": "Multicolored",
+    "aliases": [
+      "Multi-colored",
+      "Multi Color"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HL001",
+    "attribute": "Hair Length",
+    "canonical_name": "Bald",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HL002",
+    "attribute": "Hair Length",
+    "canonical_name": "Very Short",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HL003",
+    "attribute": "Hair Length",
+    "canonical_name": "Short",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HL004",
+    "attribute": "Hair Length",
+    "canonical_name": "Medium",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HL005",
+    "attribute": "Hair Length",
+    "canonical_name": "Long",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HL006",
+    "attribute": "Hair Length",
+    "canonical_name": "Very Long",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HL007",
+    "attribute": "Hair Length",
+    "canonical_name": "Floor Length",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS001",
+    "attribute": "Hair Style",
+    "canonical_name": "Straight",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS002",
+    "attribute": "Hair Style",
+    "canonical_name": "Wavy",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS003",
+    "attribute": "Hair Style",
+    "canonical_name": "Curly",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS004",
+    "attribute": "Hair Style",
+    "canonical_name": "Messy",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS005",
+    "attribute": "Hair Style",
+    "canonical_name": "Ahoge",
+    "aliases": [
+      "Idiot Hair"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS006",
+    "attribute": "Hair Style",
+    "canonical_name": "Bob Cut",
+    "aliases": [
+      "Bob"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS007",
+    "attribute": "Hair Style",
+    "canonical_name": "Long Bob",
+    "aliases": [
+      "Lob"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS008",
+    "attribute": "Hair Style",
+    "canonical_name": "Hime Cut",
+    "aliases": [
+      "Princess Cut"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS009",
+    "attribute": "Hair Style",
+    "canonical_name": "Pixie Cut",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS010",
+    "attribute": "Hair Style",
+    "canonical_name": "Bangs",
+    "aliases": [
+      "Fringe"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS011",
+    "attribute": "Hair Style",
+    "canonical_name": "Center Part",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS012",
+    "attribute": "Hair Style",
+    "canonical_name": "Side Part",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS013",
+    "attribute": "Hair Style",
+    "canonical_name": "Ponytail",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS014",
+    "attribute": "Hair Style",
+    "canonical_name": "High Ponytail",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS015",
+    "attribute": "Hair Style",
+    "canonical_name": "Low Ponytail",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS016",
+    "attribute": "Hair Style",
+    "canonical_name": "Side Ponytail",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS017",
+    "attribute": "Hair Style",
+    "canonical_name": "Twin Tails",
+    "aliases": [
+      "Twintails"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS018",
+    "attribute": "Hair Style",
+    "canonical_name": "Bun",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS019",
+    "attribute": "Hair Style",
+    "canonical_name": "Twin Buns",
+    "aliases": [
+      "Odango"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS020",
+    "attribute": "Hair Style",
+    "canonical_name": "Single Braid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS021",
+    "attribute": "Hair Style",
+    "canonical_name": "Twin Braids",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS022",
+    "attribute": "Hair Style",
+    "canonical_name": "Side Braid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS023",
+    "attribute": "Hair Style",
+    "canonical_name": "French Braid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS024",
+    "attribute": "Hair Style",
+    "canonical_name": "Drill Curls",
+    "aliases": [
+      "Drills"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS025",
+    "attribute": "Hair Style",
+    "canonical_name": "Ringlets",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS026",
+    "attribute": "Hair Style",
+    "canonical_name": "Crown Braid",
+    "aliases": [
+      "Braided Crown"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS027",
+    "attribute": "Hair Style",
+    "canonical_name": "Half Updo",
+    "aliases": [
+      "Half Up Half Down"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS028",
+    "attribute": "Hair Style",
+    "canonical_name": "Side Locks",
+    "aliases": [
+      "Payot",
+      "Face Framing Locks"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS029",
+    "attribute": "Hair Style",
+    "canonical_name": "Asymmetrical Cut",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS030",
+    "attribute": "Hair Style",
+    "canonical_name": "Side Shave",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS031",
+    "attribute": "Hair Style",
+    "canonical_name": "Wolf Cut",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS032",
+    "attribute": "Hair Style",
+    "canonical_name": "Jellyfish Cut",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS033",
+    "attribute": "Hair Style",
+    "canonical_name": "Bowl Cut",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS034",
+    "attribute": "Hair Style",
+    "canonical_name": "Curtain Bangs",
+    "aliases": [
+      "Curtain Cut"
+    ],
+    "verified": true
+  },
+  {
+    "id": "HS035",
+    "attribute": "Hair Style",
+    "canonical_name": "Slicked Back",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS036",
+    "attribute": "Hair Style",
+    "canonical_name": "Fishtail Braid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS037",
+    "attribute": "Hair Style",
+    "canonical_name": "Dutch Braid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS038",
+    "attribute": "Hair Style",
+    "canonical_name": "Waterfall Braid",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS039",
+    "attribute": "Hair Style",
+    "canonical_name": "Braided Bun",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS040",
+    "attribute": "Hair Style",
+    "canonical_name": "Looped Twin Tails",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS041",
+    "attribute": "Hair Style",
+    "canonical_name": "Twin Drills",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS042",
+    "attribute": "Hair Style",
+    "canonical_name": "Braided Ponytail",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "HS043",
+    "attribute": "Hair Style",
+    "canonical_name": "Braided Twin Tails",
+    "aliases": [],
+    "verified": true
+  }
+]

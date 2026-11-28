@@ -1,0 +1,652 @@
+{
+  "expressions": [
+    {
+      "tag_id": "EX001",
+      "canonical_name": "Neutral",
+      "primary_eye_state": "EY001",
+      "primary_mouth_state": "MO001",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX002",
+      "canonical_name": "Stoic",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO001",
+      "aliases": [
+        "Expressionless"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX003",
+      "canonical_name": "Blank",
+      "primary_eye_state": "EY013",
+      "primary_mouth_state": "MO001",
+      "aliases": [
+        "Empty Expression"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX004",
+      "canonical_name": "Happy",
+      "primary_eye_state": "EY001",
+      "primary_mouth_state": "MO003",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX005",
+      "canonical_name": "Laughing",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO006",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX006",
+      "canonical_name": "Cheerful",
+      "primary_eye_state": "EY022",
+      "primary_mouth_state": "MO003",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX007",
+      "canonical_name": "Excited",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO006",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX008",
+      "canonical_name": "Smirking",
+      "primary_eye_state": "EY002",
+      "primary_mouth_state": "MO005",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX009",
+      "canonical_name": "Grinning",
+      "primary_eye_state": "EY001",
+      "primary_mouth_state": "MO004",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX010",
+      "canonical_name": "Evil Grin",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO021",
+      "aliases": [
+        "Maniacal Smile"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX011",
+      "canonical_name": "Angry",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO008",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX012",
+      "canonical_name": "Furious",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO011",
+      "aliases": [
+        "Enraged"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX013",
+      "canonical_name": "Annoyed",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO008",
+      "aliases": [
+        "Irritated"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX014",
+      "canonical_name": "Disappointed",
+      "primary_eye_state": "EY008",
+      "primary_mouth_state": "MO008",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX015",
+      "canonical_name": "Sad",
+      "primary_eye_state": "EY008",
+      "primary_mouth_state": "MO008",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX016",
+      "canonical_name": "Crying",
+      "primary_eye_state": "EY014",
+      "primary_mouth_state": "MO008",
+      "aliases": [
+        "Weeping"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX017",
+      "canonical_name": "Worried",
+      "primary_eye_state": "EY012",
+      "primary_mouth_state": "MO013",
+      "aliases": [
+        "Concerned"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX018",
+      "canonical_name": "Shocked",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO019",
+      "aliases": [
+        "Surprised"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX019",
+      "canonical_name": "Embarrassed",
+      "primary_eye_state": "EY012",
+      "primary_mouth_state": "MO002",
+      "aliases": [
+        "Flustered"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX020",
+      "canonical_name": "Blushing",
+      "primary_eye_state": "EY012",
+      "primary_mouth_state": "MO002",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX021",
+      "canonical_name": "Shy",
+      "primary_eye_state": "EY008",
+      "primary_mouth_state": "MO002",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX022",
+      "canonical_name": "Confused",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO013",
+      "aliases": [
+        "Puzzled"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX023",
+      "canonical_name": "Thinking",
+      "primary_eye_state": "EY008",
+      "primary_mouth_state": "MO001",
+      "aliases": [
+        "Contemplating"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX024",
+      "canonical_name": "Bored",
+      "primary_eye_state": "EY025",
+      "primary_mouth_state": "MO001",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX025",
+      "canonical_name": "Sleepy",
+      "primary_eye_state": "EY025",
+      "primary_mouth_state": "MO013",
+      "aliases": [
+        "Drowsy"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX026",
+      "canonical_name": "Sleeping",
+      "primary_eye_state": "EY003",
+      "primary_mouth_state": "MO001",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX027",
+      "canonical_name": "Determined",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO001",
+      "aliases": [
+        "Resolved"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX028",
+      "canonical_name": "Scared",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO013",
+      "aliases": [
+        "Frightened"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX029",
+      "canonical_name": "Panicked",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO014",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX030",
+      "canonical_name": "Relieved",
+      "primary_eye_state": "EY003",
+      "primary_mouth_state": "MO002",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX031",
+      "canonical_name": "Ahegao",
+      "primary_eye_state": "EY015",
+      "primary_mouth_state": "MO010",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX032",
+      "canonical_name": "Doyagao",
+      "primary_eye_state": "EY002",
+      "primary_mouth_state": "MO005",
+      "aliases": [
+        "Smug Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX033",
+      "canonical_name": "Gesugao",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO021",
+      "aliases": [
+        "Scumbag Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX034",
+      "canonical_name": "Torogao",
+      "primary_eye_state": "EY002",
+      "primary_mouth_state": "MO007",
+      "aliases": [
+        "Lustful Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX035",
+      "canonical_name": "Tehepero",
+      "primary_eye_state": "EY004",
+      "primary_mouth_state": "MO010",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX036",
+      "canonical_name": "Nakigao",
+      "primary_eye_state": "EY014",
+      "primary_mouth_state": "MO008",
+      "aliases": [
+        "Crying Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX037",
+      "canonical_name": "Egao",
+      "primary_eye_state": "EY001",
+      "primary_mouth_state": "MO003",
+      "aliases": [
+        "Smiling Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX038",
+      "canonical_name": "Waruagaki",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO021",
+      "aliases": [
+        "Mischievous Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX039",
+      "canonical_name": "Jitome",
+      "primary_eye_state": "EY002",
+      "primary_mouth_state": "MO008",
+      "aliases": [
+        "Disdainful Look"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX040",
+      "canonical_name": "Kyungao",
+      "primary_eye_state": "EY016",
+      "primary_mouth_state": "MO002",
+      "aliases": [
+        "Lovestruck Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX041",
+      "canonical_name": "Teregao",
+      "primary_eye_state": "EY012",
+      "primary_mouth_state": "MO002",
+      "aliases": [
+        "Embarrassed Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX042",
+      "canonical_name": "Dokuyarugao",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO005",
+      "aliases": [
+        "Scheming Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX043",
+      "canonical_name": "Akiregao",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO013",
+      "aliases": [
+        "Dumbfounded Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX044",
+      "canonical_name": "Odorokigao",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO019",
+      "aliases": [
+        "Surprised Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX045",
+      "canonical_name": "Munegao",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO005",
+      "aliases": [
+        "Proud Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX046",
+      "canonical_name": "Smug",
+      "primary_eye_state": "EY002",
+      "primary_mouth_state": "MO005",
+      "aliases": [
+        "Conceited"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX047",
+      "canonical_name": "Mischievous",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO005",
+      "aliases": [
+        "Playful Smirk"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX048",
+      "canonical_name": "Playful",
+      "primary_eye_state": "EY001",
+      "primary_mouth_state": "MO002",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX049",
+      "canonical_name": "Satisfied",
+      "primary_eye_state": "EY003",
+      "primary_mouth_state": "MO002",
+      "aliases": [
+        "Content"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX050",
+      "canonical_name": "Proud",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO005",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX051",
+      "canonical_name": "Determined Smile",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO003",
+      "aliases": [
+        "Confident Smile"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX052",
+      "canonical_name": "Lovestruck",
+      "primary_eye_state": "EY016",
+      "primary_mouth_state": "MO002",
+      "aliases": [
+        "In Love"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX053",
+      "canonical_name": "Flustered",
+      "primary_eye_state": "EY012",
+      "primary_mouth_state": "MO013",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX054",
+      "canonical_name": "Pouting",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO009",
+      "aliases": [
+        "Sulking"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX055",
+      "canonical_name": "Sulking",
+      "primary_eye_state": "EY008",
+      "primary_mouth_state": "MO009",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX056",
+      "canonical_name": "Disgusted",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO008",
+      "aliases": [
+        "Disdain"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX057",
+      "canonical_name": "Menacing",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO001",
+      "aliases": [
+        "Intimidating"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX058",
+      "canonical_name": "Psychotic",
+      "primary_eye_state": "EY006",
+      "primary_mouth_state": "MO021",
+      "aliases": [
+        "Insane"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX059",
+      "canonical_name": "Yandere",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO003",
+      "aliases": [
+        "Yandere Smile"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX060",
+      "canonical_name": "Kuudere",
+      "primary_eye_state": "EY002",
+      "primary_mouth_state": "MO001",
+      "aliases": [
+        "Cold Expression"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX061",
+      "canonical_name": "Tsundere",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO009",
+      "aliases": [
+        "Tsun Face"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX062",
+      "canonical_name": "Dandere",
+      "primary_eye_state": "EY008",
+      "primary_mouth_state": "MO002",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX063",
+      "canonical_name": "Deredere",
+      "primary_eye_state": "EY001",
+      "primary_mouth_state": "MO003",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX064",
+      "canonical_name": "Bashful",
+      "primary_eye_state": "EY012",
+      "primary_mouth_state": "MO016",
+      "aliases": [],
+      "verified": true
+    },
+    {
+      "tag_id": "EX065",
+      "canonical_name": "Skeptical",
+      "primary_eye_state": "EY011",
+      "primary_mouth_state": "MO001",
+      "aliases": [
+        "Doubtful"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX066",
+      "canonical_name": "Exhausted",
+      "primary_eye_state": "EY025",
+      "primary_mouth_state": "MO013",
+      "aliases": [
+        "Tired"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX067",
+      "canonical_name": "Sick",
+      "primary_eye_state": "EY025",
+      "primary_mouth_state": "MO013",
+      "aliases": [
+        "Ill"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX068",
+      "canonical_name": "Drunk",
+      "primary_eye_state": "EY024",
+      "primary_mouth_state": "MO007",
+      "aliases": [
+        "Intoxicated"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX069",
+      "canonical_name": "Hungry",
+      "primary_eye_state": "EY023",
+      "primary_mouth_state": "MO018",
+      "aliases": [
+        "Starving"
+      ],
+      "verified": true
+    },
+    {
+      "tag_id": "EX070",
+      "canonical_name": "Blowing a Kiss",
+      "primary_eye_state": "EY004",
+      "primary_mouth_state": "MO015",
+      "aliases": [],
+      "verified": true
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+[
+  {
+    "id": "BH001",
+    "attribute": "Height",
+    "canonical_name": "Very Short",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BH002",
+    "attribute": "Height",
+    "canonical_name": "Short",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BH003",
+    "attribute": "Height",
+    "canonical_name": "Average",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BH004",
+    "attribute": "Height",
+    "canonical_name": "Tall",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BH005",
+    "attribute": "Height",
+    "canonical_name": "Very Tall",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT001",
+    "attribute": "Body Type",
+    "canonical_name": "Petite",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT002",
+    "attribute": "Body Type",
+    "canonical_name": "Slim",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT003",
+    "attribute": "Body Type",
+    "canonical_name": "Average",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT004",
+    "attribute": "Body Type",
+    "canonical_name": "Athletic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT005",
+    "attribute": "Body Type",
+    "canonical_name": "Toned",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT006",
+    "attribute": "Body Type",
+    "canonical_name": "Curvy",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT007",
+    "attribute": "Body Type",
+    "canonical_name": "Chubby",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT008",
+    "attribute": "Body Type",
+    "canonical_name": "Heavyset",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT009",
+    "attribute": "Body Type",
+    "canonical_name": "Muscular",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BT010",
+    "attribute": "Body Type",
+    "canonical_name": "Voluptuous",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BS001",
+    "attribute": "Breast Size",
+    "canonical_name": "Flat",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BS002",
+    "attribute": "Breast Size",
+    "canonical_name": "Small",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BS003",
+    "attribute": "Breast Size",
+    "canonical_name": "Medium",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BS004",
+    "attribute": "Breast Size",
+    "canonical_name": "Large",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BS005",
+    "attribute": "Breast Size",
+    "canonical_name": "Very Large",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BS006",
+    "attribute": "Breast Size",
+    "canonical_name": "Gigantic",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BY001",
+    "attribute": "Body Traits",
+    "canonical_name": "Amputee",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BY002",
+    "attribute": "Body Traits",
+    "canonical_name": "Freckles",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "BY003",
+    "attribute": "Body Traits",
+    "canonical_name": "Beauty Mark",
+    "aliases": [
+      "Mole"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SX001",
+    "attribute": "Sex",
+    "canonical_name": "Male",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SX002",
+    "attribute": "Sex",
+    "canonical_name": "Female",
+    "aliases": [],
+    "verified": true
+  },
+  {
+    "id": "SX003",
+    "attribute": "Sex",
+    "canonical_name": "Hermaphrodite",
+    "aliases": [
+      "Intersex",
+      "Futanari"
+    ],
+    "verified": true
+  },
+  {
+    "id": "SX004",
+    "attribute": "Sex",
+    "canonical_name": "Sexless",
+    "aliases": [
+      "None",
+      "Asexual Biology"
+    ],
+    "verified": true
+  }
+]

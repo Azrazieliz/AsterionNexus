@@ -1,0 +1,350 @@
+[
+  {
+    "tag_id": "FR001",
+    "canonical_name": "Extreme Close-Up",
+    "aliases": [
+      "ECU"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR002",
+    "canonical_name": "Close-Up",
+    "aliases": [
+      "CU"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR003",
+    "canonical_name": "Headshot",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR004",
+    "canonical_name": "Bust Shot",
+    "aliases": [
+      "Chest-Up"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR005",
+    "canonical_name": "Waist Shot",
+    "aliases": [
+      "Medium Shot"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR006",
+    "canonical_name": "Hip Shot",
+    "aliases": [
+      "Three-Quarter Shot"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR007",
+    "canonical_name": "Knee Shot",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR008",
+    "canonical_name": "Full Body",
+    "aliases": [
+      "Full Shot"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR009",
+    "canonical_name": "Long Shot",
+    "aliases": [
+      "Wide Shot"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR010",
+    "canonical_name": "Extreme Long Shot",
+    "aliases": [
+      "ELS"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR011",
+    "canonical_name": "Group Shot",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR012",
+    "canonical_name": "Portrait",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "FR013",
+    "canonical_name": "Landscape",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR001",
+    "canonical_name": "Front View",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR002",
+    "canonical_name": "Three-Quarter View",
+    "aliases": [
+      "3/4 View"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR003",
+    "canonical_name": "Profile",
+    "aliases": [
+      "Side View"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR004",
+    "canonical_name": "Back View",
+    "aliases": [
+      "Rear View"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR005",
+    "canonical_name": "Over Shoulder",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR006",
+    "canonical_name": "Looking at Viewer",
+    "aliases": [
+      "Eye Contact"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR007",
+    "canonical_name": "Looking Away",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "OR008",
+    "canonical_name": "Mirror View",
+    "aliases": [
+      "Reflection"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA001",
+    "canonical_name": "Eye Level",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA002",
+    "canonical_name": "High Angle",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA003",
+    "canonical_name": "Low Angle",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA004",
+    "canonical_name": "Bird's-Eye View",
+    "aliases": [
+      "Top View"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA005",
+    "canonical_name": "Worm's-Eye View",
+    "aliases": [
+      "Bottom View"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA006",
+    "canonical_name": "Dutch Angle",
+    "aliases": [
+      "Tilted Camera"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA007",
+    "canonical_name": "Overhead",
+    "aliases": [
+      "Top-Down"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA008",
+    "canonical_name": "Underneath",
+    "aliases": [
+      "From Below"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA009",
+    "canonical_name": "POV",
+    "aliases": [
+      "First Person"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "CA010",
+    "canonical_name": "Over-the-Shoulder",
+    "aliases": [
+      "OTS"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI001",
+    "canonical_name": "Daylight",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI002",
+    "canonical_name": "Night",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI003",
+    "canonical_name": "Sunrise",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI004",
+    "canonical_name": "Sunset",
+    "aliases": [
+      "Golden Hour"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI005",
+    "canonical_name": "Backlit",
+    "aliases": [
+      "Backlighting"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI006",
+    "canonical_name": "Rim Light",
+    "aliases": [
+      "Edge Lighting"
+    ],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI007",
+    "canonical_name": "Soft Lighting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI008",
+    "canonical_name": "Hard Lighting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI009",
+    "canonical_name": "Low-Key Lighting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI010",
+    "canonical_name": "High-Key Lighting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI011",
+    "canonical_name": "Dramatic Lighting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI012",
+    "canonical_name": "Spotlight",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI013",
+    "canonical_name": "Neon Lighting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI014",
+    "canonical_name": "Colored Lighting",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI015",
+    "canonical_name": "Candlelight",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI016",
+    "canonical_name": "Firelight",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI017",
+    "canonical_name": "Moonlight",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI018",
+    "canonical_name": "Silhouette",
+    "aliases": [],
+    "verified": "Yes"
+  },
+  {
+    "tag_id": "LI019",
+    "canonical_name": "Volumetric Lighting",
+    "aliases": [
+      "God Rays"
+    ],
+    "verified": "Yes"
+  }
+]

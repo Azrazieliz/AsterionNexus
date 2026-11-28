@@ -82,7 +82,8 @@ def check():
     assert all(x["canonical_name"] and isinstance(x["aliases"],list) for x in records)
     runtime=(ROOT/"fusion/src/main/java/com/ailm/android/runtime/StandaloneRuntime.kt").read_text(encoding="utf-8")
     assert "seedBundledReferenceKnowledge()" in runtime
-    assert "if (installed.isNotEmpty()" in runtime
+    assert "owner_taxonomy_20261128" in runtime and "parsed.tags.size == 1278" in runtime
+    owner_taxonomy_regression()
     viewer=(APP/"java/com/asterion/nexus/NexusImageViewerActivity.kt").read_text(encoding="utf-8")
     router=(APP/"java/com/asterion/nexus/NexusFileOpen.java").read_text(encoding="utf-8")
     assert 'NexusImageViewerActivity.class' in router, "Pictures must open inside Nexus"
@@ -179,6 +180,37 @@ def cloud_account_regression():
     assert 'DELETE FROM objects WHERE scope<>?' not in index
     assert 'return FgTeraboxClient.forScope(context,pinned)' in provider
     print("PASS: account-scoped ledger migration and isolation SQL fixtures")
+
+def owner_taxonomy_regression():
+    import hashlib
+    root=ROOT/"fusion/src/main/assets/nexus_reference_knowledge/owner_taxonomy_20261128"
+    manifest=json.loads((root/"manifest.json").read_text(encoding="utf-8"))
+    ids=set()
+    series=set()
+    relations=[]
+    for name,expected in manifest["files"].items():
+        raw=(root/name).read_bytes()
+        assert hashlib.sha256(raw).hexdigest()==expected["sha256"], name
+        doc=json.loads(raw)
+        rows=doc if isinstance(doc,list) else [x for v in doc.values() for x in v]
+        assert len(rows)==expected["entries"],name
+        for row in rows:
+            if "series_code" in row:
+                key=row["series_code"]
+                assert key not in series
+                series.add(key)
+            else:
+                key=row.get("tag_id",row.get("id"))
+                assert key and key not in ids
+                ids.add(key)
+                for field in ("parent_action","parent_tag","parent_outfit","parent_weapon",
+                              "related_species","primary_eye_state","primary_mouth_state"):
+                    value=row.get(field)
+                    relations.extend(value if isinstance(value,list) else [value] if value else [])
+    assert len(ids)==1278 and len(series)==1621
+    assert set(relations)<=ids
+    assert not manifest["character_knowledge_complete"]
+    print("PASS: exact owner taxonomy archive documents and relationship closure")
 
 if __name__=="__main__":
     check()
