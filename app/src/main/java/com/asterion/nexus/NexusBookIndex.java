@@ -35,7 +35,7 @@ public final class NexusBookIndex {
         }
     }
     private static final class DB extends SQLiteOpenHelper {
-        DB(Context c){super(c,"nexus_book_index_v1.sqlite",null,2);setWriteAheadLoggingEnabled(true);}
+        DB(Context c){super(c,"nexus_book_index_v1.sqlite",null,3);setWriteAheadLoggingEnabled(true);}
         @Override public void onCreate(SQLiteDatabase db){
             db.execSQL("CREATE TABLE books(sha TEXT PRIMARY KEY,title TEXT NOT NULL,mime TEXT NOT NULL,chapter_count INTEGER NOT NULL DEFAULT 0,next_chapter INTEGER NOT NULL DEFAULT 0,state TEXT NOT NULL DEFAULT 'queued',error TEXT,updated INTEGER NOT NULL)");
             db.execSQL("CREATE TABLE chapters(rowid INTEGER PRIMARY KEY AUTOINCREMENT,sha TEXT NOT NULL REFERENCES books(sha),chapter INTEGER NOT NULL,title TEXT NOT NULL,characters INTEGER NOT NULL,UNIQUE(sha,chapter))");
@@ -43,6 +43,7 @@ public final class NexusBookIndex {
             db.execSQL("CREATE INDEX idx_books_pending ON books(state,updated)");
             db.execSQL("CREATE INDEX idx_chapter_book ON chapters(sha,chapter)");
             addV2(db);
+            addV3(db);
         }
         private void addV2(SQLiteDatabase db){
             db.execSQL("ALTER TABLE chapters ADD COLUMN source_method TEXT NOT NULL DEFAULT 'legacy_text'");
@@ -54,14 +55,20 @@ public final class NexusBookIndex {
             db.execSQL("CREATE VIRTUAL TABLE book_cjk USING fts4(terms,tokenize=unicode61)");
             db.execSQL("CREATE INDEX idx_chapters_cjk ON chapters(cjk_ready,rowid)");
         }
+        private void addV3(SQLiteDatabase db){
+            db.execSQL("ALTER TABLE books ADD COLUMN translation_checked INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("CREATE INDEX idx_translation_seed ON books(translation_checked,state)");
+        }
         @Override public void onUpgrade(SQLiteDatabase db,int before,int after){
-            if(before==1&&after==2){
+            if(before==1&&after>=2){
                 addV2(db);
                 // Old partial/unsupported PDF rows must be revisited for OCR.
                 // Keep all searchable text and original identities.
                 db.execSQL("UPDATE books SET state='queued',next_chapter=0 WHERE mime='application/pdf' AND state IN ('partial','unsupported')");
-                return;
+                before=2;
             }
+            if(before==2&&after==3){addV3(db);return;}
+            if(before==after)return;
             throw new IllegalStateException("No destructive book-index migration");
         }
     }
@@ -125,13 +132,14 @@ public final class NexusBookIndex {
         if(interrupted(stop))return true;
         boolean seedMore=seedExisting();
         boolean cjkMore=backfillCjk();
+        boolean translationMore=seedTranslations();
         Pending pending=nextPending();
-        if(pending==null)return seedMore||cjkMore;
+        if(pending==null)return seedMore||cjkMore||translationMore;
         NexusRegistry.Item source=new NexusRegistry(app).find(pending.sha);
-        if(source==null){mark(pending.sha,"failed","Original registry item is unavailable",-1,-1);return seedMore||cjkMore||hasQueued();}
+        if(source==null){mark(pending.sha,"failed","Original registry item is unavailable",-1,-1);return seedMore||cjkMore||translationMore||hasQueued();}
         if(!supported(source.mime)){
             mark(pending.sha,"unsupported","No verified local-text reader",-1,-1);
-            return seedMore||cjkMore||hasQueued();
+            return seedMore||cjkMore||translationMore||hasQueued();
         }
         mark(pending.sha,"running","",pending.next,-1);
         try{
@@ -156,7 +164,7 @@ public final class NexusBookIndex {
                 mark(pending.sha,"failed",error.getClass().getSimpleName(),-1,-1);
             }
         }
-        return seedMore||cjkMore||hasQueued();
+        return seedMore||cjkMore||translationMore||hasQueued();
     }
     private static boolean interrupted(AtomicBoolean stop){
         return stop.get()||Thread.currentThread().isInterrupted();
@@ -374,6 +382,40 @@ public final class NexusBookIndex {
         db.execSQL("INSERT OR REPLACE INTO book_cjk(docid,terms) VALUES(?,?)",new Object[]{id,terms.text});
         db.execSQL("UPDATE chapters SET cjk_ready=1,cjk_full=? WHERE rowid=?",new Object[]{terms.complete?1:0,id});
     }
+    private boolean seedTranslations(){
+        DB helper=new DB(app);
+        java.util.ArrayList<String[]> rows=new java.util.ArrayList<>();
+        try{
+            SQLiteDatabase db=helper.getWritableDatabase();
+            try(Cursor c=db.rawQuery("SELECT sha,mime FROM books WHERE translation_checked=0 AND state IN ('complete','partial') AND NOT EXISTS(SELECT 1 FROM chapters WHERE chapters.sha=books.sha AND cjk_ready=0) LIMIT 8",null)){
+                while(c.moveToNext())rows.add(new String[]{c.getString(0),c.getString(1)});
+            }
+            NexusTranslationQueue queue=new NexusTranslationQueue(app);
+            NexusRegistry registry=new NexusRegistry(app);
+            for(String[] row:rows){
+                NexusRegistry.Item item=registry.find(row[0]);
+                if(item!=null&&!"nexus-translation".equals(item.sourceKind)){
+                    StringBuilder sample=new StringBuilder();
+                    Set<Integer> unique=new HashSet<>();
+                    try(Cursor c=db.rawQuery("SELECT book_cjk.terms FROM chapters JOIN book_cjk ON book_cjk.docid=chapters.rowid WHERE chapters.sha=?",new String[]{row[0]})){
+                        while(c.moveToNext()){
+                            StringTokenizer tokens=new StringTokenizer(c.getString(0));
+                            while(tokens.hasMoreTokens()){
+                                String token=tokens.nextToken();
+                                if(token.startsWith("c")){
+                                    int cp=Integer.parseInt(token.substring(1),16);
+                                    if(Character.isValidCodePoint(cp)&&unique.add(cp))sample.appendCodePoint(cp);
+                                }
+                            }
+                        }
+                    }
+                    queue.enqueue(row[0],row[1],sample.toString());
+                }
+                db.execSQL("UPDATE books SET translation_checked=1 WHERE sha=?",new Object[]{row[0]});
+            }
+        }finally{helper.close();}
+        return rows.size()==8;
+    }
     private boolean backfillCjk(){
         DB helper=new DB(app);
         SQLiteDatabase db=helper.getWritableDatabase();
@@ -394,7 +436,7 @@ public final class NexusBookIndex {
     public void retry(String sha){
         if(sha==null||!sha.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("Invalid book identity");
         DB helper=new DB(app);
-        try{helper.getWritableDatabase().execSQL("UPDATE books SET state='queued',error=NULL,next_chapter=CASE WHEN state='partial' THEN 0 ELSE next_chapter END WHERE sha=? AND state IN ('blocked_ocr','failed','partial','unsupported')",new Object[]{sha});}
+        try{helper.getWritableDatabase().execSQL("UPDATE books SET state='queued',error=NULL,translation_checked=0,next_chapter=CASE WHEN state='partial' THEN 0 ELSE next_chapter END WHERE sha=? AND state IN ('blocked_ocr','failed','partial','unsupported')",new Object[]{sha});}
         finally{helper.close();}
         schedule();
     }
