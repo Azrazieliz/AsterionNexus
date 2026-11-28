@@ -121,11 +121,12 @@ def main():
                   "source_repository":REPO,"source_revision":REV,
                   "source_sha256":source_hashes,"license":"Apache-2.0",
                   "reference_smoke":evidence,"device_certified":False}
-        (work/"model.json").write_text(json.dumps(metadata,ensure_ascii=False,indent=2))
+        metadata["artifact_sha256"]={name:digest(work/name) for name in FILES}
+        (work/"metadata.json").write_text(json.dumps(metadata,ensure_ascii=False,indent=2))
         dest=ROOT/"fusion/src/main/assets/bundled_ppocrv5_cjk.zip"
         dest.parent.mkdir(parents=True,exist_ok=True)
         with zipfile.ZipFile(dest,"w",compression=zipfile.ZIP_DEFLATED) as z:
-            for f in ("det.onnx","rec.onnx","dict.txt","model.json"):
+            for f in ("det.onnx","rec.onnx","dict.txt","metadata.json"):
                 z.write(work/f,f)
         (ROOT/"nexus_ocr_smoke.json").write_text(json.dumps({**metadata,"bundle_sha256":digest(dest)},ensure_ascii=False,indent=2))
         print("Verified candidate",dest)
