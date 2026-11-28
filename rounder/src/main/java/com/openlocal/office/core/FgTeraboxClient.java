@@ -476,10 +476,11 @@ public final class FgTeraboxClient {
     public void moveFileChecked(String source,String directory,String name,
                                 long expectedSize)throws Exception {
         String from=safePath(source),dest=safePath(directory);
-        if(from.equals("/")||dest.equals("/")||name==null||
+        String target=dest.equals("/")?"/"+name:dest+"/"+name;
+        if(from.equals("/")||name==null||
             name.isBlank()||name.contains("/")||name.contains("\\")||
             name.equals(".")||name.equals("..")||
-            from.equals(dest+"/"+name))
+            from.equals(target))
             throw new IllegalArgumentException("Invalid move");
         JSONArray files=new JSONArray();
         files.put(new JSONObject().put("path",from).put("dest",dest)
@@ -490,7 +491,6 @@ public final class FgTeraboxClient {
         form.put("async","0");form.put("filelist",files.toString());
         form.put("ondup","fail");
         postCloud("/api/filemanager",query,form);
-        String target=dest+"/"+name;
         JSONObject readBack=fileDetails(target);
         if(!target.equals(readBack.optString("path","")))
             throw new IOException("Move response unverified: destination path");
