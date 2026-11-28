@@ -140,6 +140,35 @@ object NduSettings {
             .putString(browserScope+":cipher",encoded).putString(browserScope+":scope",uploadScope)
             .putString(browserScope+":domain",domain(ctx)).commit()){"Account upload session not saved"}
     }
+    /** Encrypted, immutable account lease for a queued upload. Selection of
+     * another destination never changes credentials used by an existing job. */
+    internal class UploadAccount(val browserScope:String,val scope:String,val token:String,val host:String)
+    @Synchronized internal fun uploadAccount(ctx:Context,browserScope:String):UploadAccount?{
+        val vault=ctx.getSharedPreferences(ACCOUNT_VAULT,0)
+        val encoded=vault.getString(browserScope+":cipher",null)?:return null
+        val scope=vault.getString(browserScope+":scope",null)?:return null
+        val host=vault.getString(browserScope+":domain",null)?:return null
+        if(!browserScope.matches(Regex("[0-9a-f-]{36}"))||!scope.matches(Regex("[0-9a-f-]{36}"))||host !in allowedDomains)return null
+        val token=runCatching{
+            val parts=encoded.split(':',limit=2)
+            require(parts.size==2)
+            val cipher=Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(parts[0],Base64.NO_WRAP)))
+            String(cipher.doFinal(Base64.decode(parts[1],Base64.NO_WRAP)),Charsets.UTF_8)
+        }.getOrNull()?:return null
+        return UploadAccount(browserScope,scope,token,host)
+    }
+    @Synchronized internal fun uploadAccounts(ctx:Context):List<UploadAccount>{
+        val authorized=com.openlocal.office.core.FgTeraboxClient.accounts(ctx).map{it.scope}.toSet()
+        val accounts=authorized.mapNotNull{uploadAccount(ctx,it)}
+        // An ambiguous legacy mapping is held, never assigned by ordering.
+        return accounts.groupBy{it.scope}.values.filter{it.size==1}.map{it.single()}
+    }
+    @Synchronized internal fun stillAuthorized(ctx:Context,account:UploadAccount):Boolean{
+        val current=uploadAccount(ctx,account.browserScope)?:return false
+        return current.scope==account.scope&&current.host==account.host&&current.token==account.token&&
+            runCatching{com.openlocal.office.core.FgTeraboxClient.forScope(ctx,account.browserScope).requireScope(account.browserScope)}.isSuccess
+    }
     internal fun hasAccount(ctx:Context,browserScope:String):Boolean=
         ctx.getSharedPreferences(ACCOUNT_VAULT,0).contains(browserScope+":cipher")
     @Synchronized internal fun activateAccount(ctx:Context,browserScope:String):String{
