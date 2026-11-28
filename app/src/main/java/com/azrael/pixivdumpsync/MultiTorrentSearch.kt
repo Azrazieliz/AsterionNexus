@@ -243,11 +243,17 @@ object MultiTorrentSearch {
             if(duck)"DuckDuckGo" else "Bing")
     }
 
+    data class SearchReport(val hits:List<CatalogHit>,val failures:List<String>,val searched:Int,val successful:Int)
+
     fun search(q:String):Pair<List<CatalogHit>,List<String>> = search(q,TorrentArea.GAMES)
 
-    fun search(q:String,area:TorrentArea):Pair<List<CatalogHit>,List<String>>{
+    fun search(q:String,area:TorrentArea):Pair<List<CatalogHit>,List<String>> =
+        searchDetailed(q,area).let{it.hits to it.failures}
+
+    fun searchDetailed(q:String,area:TorrentArea=TorrentArea.GAMES):SearchReport{
         val hits=ArrayList<CatalogHit>()
         val errors=ArrayList<String>()
+        var successful=0
         val providers=ArrayList<Pair<String,()->List<CatalogHit>>>()
         val bit=when(area){
             TorrentArea.GAMES->6;TorrentArea.BOOKS->9;TorrentArea.ADULT->10
@@ -336,7 +342,7 @@ object MultiTorrentSearch {
                     java.util.concurrent.TimeUnit.NANOSECONDS)?:return@repeat
                 val (providerName,result)=outcome.get()
                 pending.remove(providerName)
-                result.onSuccess{hits+=it}.onFailure{
+                result.onSuccess{hits+=it;successful++}.onFailure{
                     errors+=providerName+": "+(it.message?:"Unavailable")
                 }
             }
@@ -352,11 +358,11 @@ object MultiTorrentSearch {
         // title to include EVERY significant search term before displaying it.
         // Adult torrent images/galleries are allowed; quality and identity are
         // still checked against the selected descriptor before downloading.
-        return mergeExactResults(hits.filter{
+        return SearchReport(mergeExactResults(hits.filter{
             SearchExactness.matches(q,it.title) &&
                 (area!=TorrentArea.GAMES ||
                     !GameTorrentPolicy.clearlyNonGameTitle(it.title))
-        }) to errors
+        }),errors,providers.size,successful)
     }
 
 }
