@@ -28,6 +28,8 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     }
     private static final int LIMIT=96;
     private final FgTeraboxClient cloud;
+    private final String boundScope;
+    private volatile boolean closed=false;
     private final Listener listener;
     private final ExecutorService scanner=Executors.newSingleThreadExecutor();
     private final ExecutorService queries=Executors.newSingleThreadExecutor();
@@ -38,6 +40,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     public FgTeraboxSearchIndex(Context context,FgTeraboxClient cloud,Listener listener) {
         super(context.getApplicationContext(),"rounder-terabox-search-v1.db",null,3);
         this.cloud=cloud;
+        this.boundScope=cloud.metadataScope();
         this.listener=listener;
         setWriteAheadLoggingEnabled(true);
     }
@@ -98,9 +101,9 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
         }
     }
     private String connectedScope(){
-        if(!cloud.configured())return "";
+        if(closed||!cloud.configured())return "";
         String scope=cloud.metadataScope();
-        return scope==null?"":scope;
+        return scope==null||!scope.equals(boundScope)?"":scope;
     }
     public void ensure(boolean force){
         String scope=connectedScope();
@@ -122,15 +125,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
     }
     private void scan(String scope,boolean force)throws Exception {
         SQLiteDatabase db=getWritableDatabase();
-        // Names of a disconnected/replaced account must not remain searchable.
-        db.beginTransactionNonExclusive();
-        try{
-            db.execSQL("DELETE FROM objects WHERE scope<>?",new Object[]{scope});
-            db.execSQL("DELETE FROM pending WHERE scope<>?",new Object[]{scope});
-            db.execSQL("DELETE FROM accounts WHERE scope<>?",new Object[]{scope});
-            db.execSQL("DELETE FROM preview_marks WHERE scope<>?",new Object[]{scope});
-            db.setTransactionSuccessful();
-        }finally{db.endTransaction();}
+        // Every query and write is scoped. Preserve sibling account indexes.
         State s=state(db,scope);
         if(s.building==0 && s.active>0 && !force){progress(scope,true);return;}
         int generation=s.building;
@@ -154,6 +149,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
             // A failed metadata page is retried on the next scan, at this exact
             // folder/page. Cursor is persisted after each committed page.
             JSONArray rows=cloud.listPageCached(task.path,task.page);
+            if(!scope.equals(connectedScope()))throw new java.io.IOException("Cloud account changed");
             if(rows==null)throw new java.io.IOException("Cloud directory page is unavailable");
             writePage(db,scope,generation,task,rows);
             progress(scope,false);
@@ -307,6 +303,7 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
                         }
                     }
                 }
+                if(!scope.equals(connectedScope()))return;
                 reply.put("items",results).put("hasMore",more);
                 listener.onSearch(reply.toString());
             }catch(Exception e){
@@ -537,12 +534,17 @@ public final class FgTeraboxSearchIndex extends SQLiteOpenHelper {
             db.setTransactionSuccessful();
         }finally{db.endTransaction();}
     }
+    @Override public synchronized void close(){
+        closed=true;
+        scanner.shutdownNow();queries.shutdownNow();
+        super.close();
+    }
     public void clear(){
         try{
             SQLiteDatabase db=getWritableDatabase();
-            db.execSQL("DELETE FROM objects");db.execSQL("DELETE FROM pending");
-            db.execSQL("DELETE FROM accounts");
-            db.execSQL("DELETE FROM preview_marks");
+            String scope=connectedScope();if(scope.isEmpty())return;
+            for(String table:new String[]{"objects","pending","accounts","preview_marks"})
+                db.execSQL("DELETE FROM "+table+" WHERE scope=?",new Object[]{scope});
         }catch(Exception ignored){}
     }
 }

@@ -145,6 +145,8 @@ public final class FgTeraboxClient {
         if(token.length()<12||token.length()>8192||token.contains("\n")||
            token.contains("\r")||token.contains(" "))return false;
         try{
+            // Same exact credential reconnect retains the established account namespace.
+            if(configured()&&validScope(metadataScope())&&cookie().equals("ndus="+token))return true;
             Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE,key());
             byte[] ciphertext=cipher.doFinal(token.getBytes(StandardCharsets.UTF_8));
@@ -154,8 +156,8 @@ public final class FgTeraboxClient {
             prefs.edit().putString("preview_scope",accountSlot==null?java.util.UUID.randomUUID().toString():accountSlot)
                 .putString("ndus",Base64.encodeToString(ciphertext,Base64.NO_WRAP))
                 .putString("iv",Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP))
-                .apply();
-            return true;
+                .commit();
+            return configured();
         }catch(Exception error){
             android.util.Log.w("FG_TERA","Keystore failed: "+error.getClass().getSimpleName());
             return false;

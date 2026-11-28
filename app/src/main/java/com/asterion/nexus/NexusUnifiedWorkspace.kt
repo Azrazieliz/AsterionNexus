@@ -182,13 +182,15 @@ private fun NexusUnifiedSearch(
     var hits by remember{mutableStateOf<List<NexusUnifiedEntry>>(emptyList())}
     var selected by remember{mutableStateOf<NexusUnifiedEntry?>(null)}
     val generation=remember{AtomicInteger()}
-    val cloud=remember(ctx){FgTeraboxClient(ctx.applicationContext)}
-    val cloudIndex=remember(ctx){
+    val cloudAccounts=remember(ctx){FgTeraboxClient.accounts(ctx)}
+    val cloudIndexes=remember(ctx){cloudAccounts.mapNotNull{account->
+        val cloud=runCatching{FgTeraboxClient.forScope(ctx,account.scope)}.getOrNull()?:return@mapNotNull null
         FgTeraboxSearchIndex(ctx,cloud,object:FgTeraboxSearchIndex.Listener{
             override fun onSearch(raw:String){main.post{
                 runCatching{
                     val response=JSONObject(raw)
-                    if(response.optInt("token",-1)!=generation.get())return@runCatching
+                    if(response.optInt("token",-1)!=generation.get()||response.optString("scope")!=account.scope)return@runCatching
+                    cloud.requireScope(account.scope)
                     val a=response.optJSONArray("items")?:JSONArray()
                     val rows=mutableListOf<NexusUnifiedEntry>()
                     for(i in 0 until a.length()){
@@ -196,16 +198,17 @@ private fun NexusUnifiedSearch(
                         val path=j.optString("path")
                         if(!path.startsWith("/"))continue
                         val name=j.optString("name",path)
-                        rows.add(NexusUnifiedEntry(name,"Cloud metadata","Cloud",
+                        rows.add(NexusUnifiedEntry(name,"Cloud metadata",account.label,
                             mime=FgTeraboxClient.mime(name),path=path,
-                            size=j.optLong("size",-1),folder=j.optBoolean("folder")))
+                            size=j.optLong("size",-1),folder=j.optBoolean("folder"),account=account.scope))
                     }
-                    hits=hits+rows
+                    hits=(hits+rows).distinctBy{it.account+":"+(it.path?:it.uri?.toString()?:it.web?:it.title)}
+                    status="Found "+hits.size+" matches"+if(response.optBoolean("building"))" · cloud index building" else ""
                 }
             }}
             override fun onProgress(raw:String){}
         })
-    }
+    }}
     val safIndex=remember(ctx){
         FgSearchIndex(ctx,object:FgSearchIndex.Listener{
             override fun onResult(raw:String){main.post{
@@ -229,8 +232,8 @@ private fun NexusUnifiedSearch(
             override fun onProgress(raw:String){}
         })
     }
-    DisposableEffect(cloudIndex,safIndex){
-        onDispose{generation.incrementAndGet();cloudIndex.close();safIndex.close()}
+    DisposableEffect(cloudIndexes,safIndex){
+        onDispose{generation.incrementAndGet();cloudIndexes.forEach{it.close()};safIndex.close()}
     }
     fun execute(){
         val query=term.trim()
@@ -275,10 +278,7 @@ private fun NexusUnifiedSearch(
                     safIndex.ensure(tree,false)
                     safIndex.search(tree,query,"all",0,token)
                 }
-                if(cloud.configured()){
-                    cloudIndex.ensure(false)
-                    cloudIndex.search(query,"all",0,token)
-                }
+                cloudIndexes.forEach{index->index.ensure(false);index.search(query,"all",0,token)}
                 if(online){
                     val response=withContext(Dispatchers.IO){
                         AsterionSearchHub.searchForNexus(ctx as Activity,query,onlineMode,0)
@@ -330,8 +330,8 @@ private fun NexusUnifiedSearch(
             items(hits){item->UnifiedEntryCard(item){
                 if(item.web!=null){selected=item}
                 else if(item.path!=null){
-                    if(!item.folder)
-                        onOpen(FgTeraboxDocumentsProvider.uriFor(item.path,item.size),
+                    if(!item.folder&&item.account.isNotBlank()&&item.size>=0)
+                        onOpen(FgTeraboxDocumentsProvider.uriForAccount(item.account,item.path,item.size),
                             item.mime,item.title,item.chapter)
                     else status="Open cloud folders from Library / TeraBox"
                 }else if(item.folder)status="Open authorized folders from Library / TeraBox"

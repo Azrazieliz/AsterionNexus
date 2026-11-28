@@ -116,6 +116,7 @@ object NexusCloudPublication {
         if(existing?.hashVerified==true)return existing
         check(!stop()){"Publication cancelled"}
         val browserScope=publicationScope(context)
+        check(browserScope.isNotBlank()&&!stop()){"Cloud account no longer selected"}
         val cloud=FgTeraboxClient.forScope(context,browserScope)
         val stageFolder=NduSettings.validateDirectory(folder+"/Nexus publishing")
         val stageName=sha+"-"+safeName.takeLast(120)
