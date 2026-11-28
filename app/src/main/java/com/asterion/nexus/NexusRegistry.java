@@ -472,9 +472,13 @@ public final class NexusRegistry {
             SQLiteDatabase db=helper.getWritableDatabase();
             ContentValues row=new ContentValues();
             row.put("chapter",chapter);row.put("fraction",fraction);row.put("updated_at",System.currentTimeMillis());
-            if(db.update("reader_bookmarks",row,"sha256=?",new String[]{sha})==0){
-                row.put("sha256",sha);db.insertOrThrow("reader_bookmarks",null,row);
-            }
+            db.beginTransaction();
+            try{
+                if(db.update("reader_bookmarks",row,"sha256=?",new String[]{sha})==0){
+                    row.put("sha256",sha);db.insertOrThrow("reader_bookmarks",null,row);
+                }
+                db.setTransactionSuccessful();
+            }finally{db.endTransaction();}
         }finally{helper.close();}
     }
     public void bindRounderBookmark(String exportSha,String key,String sha,int chapter,double fraction){
