@@ -24,6 +24,9 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
     val ctx=LocalContext.current
     val scope=rememberCoroutineScope()
     val migration=remember{LegacyCatalogMigration(ctx.applicationContext)}
+    val donorSqlite=remember{NexusDonorSqliteMigration(ctx.applicationContext)}
+    var donorReceipts by remember{mutableStateOf<List<NexusDonorSqliteMigration.Receipt>>(emptyList())}
+    var donorRollback by remember{mutableStateOf<NexusDonorSqliteMigration.Receipt?>(null)}
     var kind by remember{mutableStateOf("Downloader")}
     var rounder by remember{mutableStateOf(false)}
     if(rounder){NexusRounderMigrationDialog{rounder=false};return}
@@ -34,7 +37,7 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
     var ready by remember{mutableStateOf(false)}
     var rollback by remember{mutableStateOf<String?>(null)}
     var receipts by remember{mutableStateOf<List<Pair<String,String>>>(emptyList())}
-    suspend fun refreshReceipts(){receipts=withContext(Dispatchers.IO){migration.receipts()}}
+    suspend fun refreshReceipts(){val all=withContext(Dispatchers.IO){migration.receipts() to donorSqlite.receipts()};receipts=all.first;donorReceipts=all.second}
     LaunchedEffect(Unit){runCatching{refreshReceipts()}}
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri:Uri?->
         if(uri!=null){
@@ -48,6 +51,8 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
                         if(domain=="Downloader"){
                             val report=migration.preview(source)
                             Triple(source,null,report.description())
+                        }else if(domain=="Downloader SQLite"){
+                            Triple(source,null,donorSqlite.process(source,false).detail())
                         }else{
                             StandaloneRuntime.initialize(ctx.applicationContext)
                             val request=mapOf<String,Any>(
@@ -70,7 +75,7 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
                         }
                     }
                     staged=result.first;coreRequest=result.second;status=result.third
-                    ready=domain=="Downloader"||result.second!=null
+                    ready=domain.startsWith("Downloader")||result.second!=null
                 }catch(e:Exception){status="Export preflight failed: "+e.javaClass.simpleName}
                 finally{busy=false}
             }
@@ -81,7 +86,7 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
         title={Text("Donor data migration")},
         text={
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                listOf("Downloader","Core JSON","Core SQLite").forEach{label->
+                listOf("Downloader","Downloader SQLite","Core JSON","Core SQLite").forEach{label->
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
                         RadioButton(selected=kind==label,enabled=!busy,onClick={
                             kind=label;staged=null;ready=false;coreRequest=null
@@ -95,6 +100,10 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
                 Text(status)
                 TextButton(enabled=!busy,onClick={rounder=true}){Text("Rounder reader migration")}
                 Text("Reconnect each TeraBox account and authorized SAF root. No foreign credentials or permissions are copied.")
+                donorReceipts.forEach{receipt->
+                    Text(receipt.kind+" · "+receipt.digest.take(12))
+                    TextButton(enabled=!busy,onClick={donorRollback=receipt}){Text("Review rollback")}
+                }
                 if(receipts.isNotEmpty()){
                     Text("Downloader migration receipts",style=MaterialTheme.typography.titleSmall)
                     receipts.take(10).forEach{(digest,receipt)->
@@ -112,7 +121,8 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
                 scope.launch{
                     try{
                         status=withContext(Dispatchers.IO){
-                            if(request==null)migration.apply(source).description()
+                            if(kind=="Downloader SQLite")donorSqlite.process(source,true).detail()
+                            else if(request==null)migration.apply(source).description()
                             else{
                                 val result=StandaloneRuntime.importDatabase(request)
                                 if(result["ok"]==true)"Fusion import committed. Receipt: "+result["import_id"]
@@ -127,6 +137,11 @@ internal fun NexusMigrationDialog(onClose:()->Unit){
         },
         dismissButton={TextButton(enabled=!busy,onClick=onClose){Text("Close")}}
     )
+    donorRollback?.let{receipt->
+        AlertDialog(onDismissRequest={donorRollback=null},title={Text("Rollback "+receipt.kind+" import?")},text={Text("Only unchanged imported records are removed. Original files and existing catalog entries are retained.")},confirmButton={TextButton(onClick={
+            donorRollback=null;busy=true;ready=false;scope.launch{try{val count=withContext(Dispatchers.IO){donorSqlite.rollback(receipt.kind,receipt.digest)};status="Rolled back "+count+" unchanged records";refreshReceipts()}catch(e:Exception){status="Rollback refused: "+e.message.orEmpty().take(140)}finally{busy=false}}
+        }){Text("Rollback")}},dismissButton={TextButton(onClick={donorRollback=null}){Text("Cancel")}})
+    }
     rollback?.let{digest->
         AlertDialog(onDismissRequest={rollback=null},title={Text("Rollback this catalog import?")},
             text={Text("Only unchanged rows inserted by this import may be removed. Existing catalog entries and media files are not deleted. Any later change or reference prevents rollback.")},
