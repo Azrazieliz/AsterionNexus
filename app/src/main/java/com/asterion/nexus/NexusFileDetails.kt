@@ -94,6 +94,26 @@ object NexusFileDetails {
                 }
             })
         }
+        if(NexusArchiveOperation.available(activity,uri)&&NexusBookIndex.supported(type)){
+            val indexButton=android.widget.Button(activity).apply{text="Book index"}
+            body.addView(indexButton)
+            indexButton.setOnClickListener{
+                worker.execute{
+                    val sha=uri.lastPathSegment.orEmpty()
+                    val index=NexusBookIndex(activity)
+                    val state=runCatching{index.status(sha)}.getOrDefault("Index status unavailable")
+                    activity.runOnUiThread{
+                        if(!activity.isFinishing&&!activity.isDestroyed){
+                            AlertDialog.Builder(activity).setTitle("Private book index").setMessage(state)
+                                .setPositiveButton("Close",null)
+                                .setNeutralButton("Retry"){_,_->
+                                    worker.execute{runCatching{index.retry(sha)}}
+                                }.show()
+                        }
+                    }
+                }
+            }
+        }
         var target:Target?=null
         var selected:Int?=null
         var saving=false
