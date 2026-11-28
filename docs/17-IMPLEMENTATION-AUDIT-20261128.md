@@ -8,7 +8,9 @@ Authority: docs/00–16, especially owner-confirmed docs/16, and spec/acceptance
 - 9e3c26b13fea617258f55344ab03c86d327738d7: exact owner archive JSON embedded; 16 files, 1,278 unique tags, 1,621 strict series entries. Source tests 46093280562 and 46093285948 passed. Native compilation failed on the malformed ZIP-path Kotlin escape; corrected at 8f94cb587b40255349e82473dc6c8473be275938.
 - 8f94cb587b40255349e82473dc6c8473be275938: EPUB indexing constructor corrected, TXT support, GIF viewer, EPUB/audio covers, PDF/CBZ layout controls.
 - 2bfe7b2e203e3b4d0e401dfc845a370e54ebc321: account-scoped cloud Books/Videos/Assets panes and native taxonomy parser test; source UI/spec checks 46093657250 and 46093662130 passed. Native compile/regression and premium compilation had not completed at the time of this audit.
-- This audit commit extends PDF text-layer extraction and explicit partial coverage, TXT deterministic chunk indexing, archive directory viewing and correct JPEG response type. These are source changes, not device receipts.
+- f806f6c0ff29ad982d36ff487fbcfb6d1adcedd8 extends PDF text-layer extraction and explicit partial coverage, TXT deterministic chunk indexing, archive directory viewing and correct JPEG response type. These are source changes, not device receipts.
+
+- 663f04ebbb8cac05b182ff934142491a201d8bd6 implements exact repeated edge detection across at least three episodes using video keyframe intervals and packet-level evidence from both audio and video. First opening and last ending are retained. The next revision preflights every proposed cut and falls back to full content when synchronization is uncertain. Unit fixtures are added; real-media verification is outstanding.
 
 ## Requirement review
 
@@ -22,7 +24,7 @@ Authority: docs/00–16, especially owner-confirmed docs/16, and spec/acceptance
 | READ-001, IDX-001 | Rounder native archive, PDF, EPUB and playback; pages and continuous layout modes, GIF, actual cover, EPUB/DOCX/TXT and Android 15+ PDF text extraction | Actual progressive device reading, older OS PDF, scanned-page/comic OCR, CBR, 3D and spreadsheet parity, full index coverage/privacy and position tests |
 | CTRL-001, ASSET-001 | Existing authenticated read-only Control provider; direct independent Nexus operation | Verified specialist capability discovery and signed scoped asset operations, revocation/recovery/receipts |
 | TXT-001 | Private extraction and existing Core OCR runtime source | Validated packaged multilingual OCR/translation model and native execution; automatic durable translation, layout-preserving translated editions and offline quality acceptance remain incomplete |
-| VID-001–002 | Native lossless compatible H264/AAC assembly with source hashes, journal and verified output, source retention | Reliable OP/ED/recap/preview segmentation and nonredundant scene preservation, unsupported codec conversion, durable restart and device playback |
+| VID-001–002 | Native lossless compatible H264/AAC assembly with source hashes, journal and verified output, source retention, conservative exact audio/video repeated edge detection | General OP/ED/recap/preview segmentation beyond exact shared edge packets and nonredundant scene preservation, unsupported codec conversion, durable restart and device playback |
 | REP-001 | Existing archive integrity verification and bounded preview; real archive file listing | Safe batch extraction, actual corrupt-file repair outputs and verification |
 | SEM-001 | Donor native Core model and intelligent library components retained | Complete real-embedding semantic search, smart collections and scale/quality evidence |
 | ORG-027, BOOK-027 | Core naming policy and existing complete-title archive assembly paths retained | Full authorized cloud moves and rollback, all media naming and complete-title acquisition evidence |

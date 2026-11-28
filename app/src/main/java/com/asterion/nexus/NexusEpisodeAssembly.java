@@ -160,7 +160,7 @@ public final class NexusEpisodeAssembly {
         // No audio means exact audio+video evidence cannot be established.
         if(duration<=0||l.tracks[1]<0)return new NexusRepeatedEdges.Episode(Math.max(1,duration),Collections.emptyList());
         long origin;
-        tryExtractor: {
+        {
             MediaExtractor both=open(file);
             try{for(int track:l.tracks)if(track>=0)both.selectTrack(track);origin=both.getSampleTime();}
             finally{both.release();}
@@ -267,13 +267,31 @@ public final class NexusEpisodeAssembly {
                 require(NexusOriginalStore.matches(original,item.length,item.sha256),"Source integrity verification failed");
                 bytes=Math.addExact(bytes,item.length);inputs.add(original);
                 MediaExtractor extractor=open(original);
-                try{Layout l=layout(extractor);if(expected==null)expected=l;else compatible(expected,l);}
+                Layout sourceLayout;
+                try{sourceLayout=layout(extractor);if(expected==null)expected=sourceLayout;else compatible(expected,sourceLayout);}
                 finally{extractor.release();}
-                try{episodeEdges.add(scanEdges(original,expected));}
+                try{episodeEdges.add(scanEdges(original,sourceLayout));}
                 catch(Exception uncertain){episodeEdges.add(new NexusRepeatedEdges.Episode(1,Collections.emptyList()));}
                 sources.put(new JSONObject().put("sha256",sha).put("name",item.displayName).put("bytes",item.length));
             }
             List<NexusRepeatedEdges.Cut> cuts=NexusRepeatedEdges.plan(episodeEdges);
+            // Reject the entire automatic cut plan if any boundary does not
+            // preserve source A/V synchronization. Full assembly remains available.
+            boolean cutsVerified=true;
+            for(int i=0;i<inputs.size();i++){
+                NexusRepeatedEdges.Cut cut=cuts.get(i);
+                long until=cut.end==episodeEdges.get(i).duration?Long.MAX_VALUE:cut.end;
+                if(cut.start==0&&until==Long.MAX_VALUE)continue;
+                MediaExtractor check=open(inputs.get(i));
+                try{transfer(check,layout(check),null,null,0,new Evidence(),cut.start,until);}
+                catch(Exception uncertain){cutsVerified=false;break;}
+                finally{check.release();}
+            }
+            if(!cutsVerified){
+                cuts=new ArrayList<>();
+                for(NexusRepeatedEdges.Episode ep:episodeEdges)cuts.add(new NexusRepeatedEdges.Cut(0,ep.duration));
+                project.put("cut_plan_status","unproven_boundaries_preserved");
+            }else project.put("cut_plan_status","validated_sample_boundaries");
             require(projects.getUsableSpace()>Math.addExact(Math.multiplyExact(bytes,2),64L*1024*1024),"Insufficient free space for verified output");
             output=File.createTempFile("assembly-",".mp4",projects);
             muxer=new MediaMuxer(output.getAbsolutePath(),MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
