@@ -9,6 +9,7 @@ import java.security.MessageDigest
 internal object NexusMigrationSimulation {
     fun run(instrumentation:Instrumentation,status:(String)->Unit){
         val context=instrumentation.targetContext
+        verifyCoreRecovery(instrumentation,status)
         val file=File(context.cacheDir,"nexus-donor-fixture.sqlite")
         file.delete()
         val userId="90000000000001"
@@ -38,5 +39,52 @@ internal object NexusMigrationSimulation {
             check(AppDb(context).use{it.artist(userId)}==null)
             status("DONOR_MIGRATION_OK actual SQLite dry run, disabled subscription, history, idempotency and rollback")
         }finally{file.delete()}
+    }
+
+    /** Reproduce the reported same-version and upgraded legacy revision-table
+     * loss using an isolated actual Core SQLite database, never owner data. */
+    private fun verifyCoreRecovery(instrumentation:Instrumentation,status:(String)->Unit){
+        val context=instrumentation.targetContext
+        val name="nexus-core-regression-"+java.util.UUID.randomUUID()+".sqlite"
+        fun revision(db:SQLiteDatabase):Long=db.rawQuery("SELECT revision FROM fusion_taxonomy_revision WHERE id=1",null).use{
+            check(it.moveToFirst()){"Missing taxonomy revision row"};it.getLong(0)
+        }
+        fun rating(db:SQLiteDatabase,table:String):Int=db.rawQuery("SELECT rating FROM "+table+" WHERE image_id=1",null).use{
+            check(it.moveToFirst()){"Lost manual artwork rating in "+table};it.getInt(0)
+        }
+        try{
+            com.ailm.android.runtime.LocalDatabase(context,name).use{helper->
+                val db=helper.writableDatabase
+                db.execSQL("INSERT INTO images(image_id,uri,filename,folder_uri,imported_order,rating,scanned_at_ms) VALUES(1,'content://fixture/artwork','source.png','content://fixture',1,73,1)")
+                db.execSQL("INSERT INTO fusion_tags(tag_id,canonical_name,created_at_ms,updated_at_ms) VALUES('fixture-tag','Fixture tag',1,1)")
+                check(revision(db)>0L)
+                check(rating(db,"images")==73&&rating(db,"fusion_image_profiles")==73)
+                db.execSQL("DROP TABLE fusion_taxonomy_revision")
+                // Reopen with exactly the same schema version (the owner failure).
+            }
+            com.ailm.android.runtime.LocalDatabase(context,name).use{helper->
+                val db=helper.writableDatabase
+                val before=revision(db)
+                check(rating(db,"images")==73&&rating(db,"fusion_image_profiles")==73)
+                db.execSQL("UPDATE fusion_tags SET canonical_name='Recovered fixture' WHERE tag_id='fixture-tag'")
+                check(revision(db)==before+1)
+                db.execSQL("DROP TABLE fusion_taxonomy_revision")
+                db.version=17
+            }
+            com.ailm.android.runtime.LocalDatabase(context,name).use{helper->
+                val db=helper.writableDatabase
+                val before=revision(db)
+                check(db.version==18)
+                check(rating(db,"images")==73&&rating(db,"fusion_image_profiles")==73)
+                db.execSQL("INSERT INTO fusion_tag_aliases(alias_id,tag_id,alias_value,created_at_ms) VALUES('fixture-alias','fixture-tag','Fixture alias',1)")
+                check(revision(db)==before+1)
+                check(db.rawQuery("SELECT COUNT(*) FROM fusion_tags WHERE tag_id='fixture-tag'",null).use{it.moveToFirst();it.getInt(0)}==1)
+            }
+            com.ailm.android.runtime.LocalDatabase(context,name).use{helper->
+                check(revision(helper.writableDatabase)>0)
+                check(rating(helper.readableDatabase,"images")==73&&rating(helper.readableDatabase,"fusion_image_profiles")==73)
+            }
+            status("CORE_LEGACY_RECOVERY_OK missing taxonomy table, revision triggers, upgrade and preserved manual ratings")
+        }finally{context.deleteDatabase(name)}
     }
 }
