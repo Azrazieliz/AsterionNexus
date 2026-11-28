@@ -116,7 +116,8 @@ public final class NexusRegistry {
                 location.put("display_name",label(displayName,bytes.sha256));
                 location.put("created_at",now);
                 db.insertWithOnConflict("locations",null,location,SQLiteDatabase.CONFLICT_IGNORE);
-                db.delete("local_evictions","sha256=?",new String[]{bytes.sha256});
+                if(new File(new File(privateRoot,"originals"),bytes.sha256).isFile())
+                    db.delete("local_evictions","sha256=?",new String[]{bytes.sha256});
                 db.setTransactionSuccessful();
             }finally{db.endTransaction();}
             try(Cursor c=db.rawQuery("SELECT l.id,l.sha256,l.display_name,o.mime,l.source_kind,l.account_key,o.byte_length FROM locations l JOIN originals o ON l.sha256=o.sha256 WHERE l.sha256=? AND l.source_kind=? AND l.account_key=? AND l.origin_key=? LIMIT 1",new String[]{bytes.sha256,kind,account,origin})){
@@ -511,7 +512,7 @@ public final class NexusRegistry {
         if(recorded==null||recorded.length!=item.length)throw new IOException("Original identity no longer recorded");
         NexusOriginalStore.Recovery result=NexusOriginalStore.recoverExact(replacement,privateRoot,recorded.length,recorded.sha256);
         Database helper=new Database(app);
-        try{helper.getWritableDatabase().delete("local_evictions","sha256=?",new String[]{recorded.sha256});}finally{helper.close();}
+        try{if(localPresent(recorded))helper.getWritableDatabase().delete("local_evictions","sha256=?",new String[]{recorded.sha256});}finally{helper.close();}
         return result;
     }
     public void job(String sourceIdentifier,String stage,long received,String errorCode){
